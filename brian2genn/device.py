@@ -11,7 +11,6 @@ from brian2.core.variables import *
 from brian2.utils.filetools import copy_directory
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
-from brian2.codegen.codeobject import CodeObjectUpdater
 from brian2.groups.neurongroup import *
 
 from .genn_generator import c_data_type, GeNNCodeGenerator

@@ -12,6 +12,7 @@ from brian2.core.preferences import brian_prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
 
 from brian2.codegen.generators.base import CodeGenerator
+from brian2.codegen.generators.cpp_generator import CPPCodeGenerator, c_data_type
 
 from .renderer import GeNNNodeRenderer
 
@@ -20,37 +21,6 @@ logger = get_logger(__name__)
 __all__ = ['GeNNCodeGenerator',
            'c_data_type',
            ]
-
-
-def c_data_type(dtype):
-    '''
-    Gives the C language specifier for numpy data types. For example,
-    ``numpy.int32`` maps to ``int32_t`` in C.
-    '''
-    # this handles the case where int is specified, it will be int32 or int64
-    # depending on platform
-    if dtype is int:
-        dtype = numpy.array([1]).dtype.type
-    if dtype is float:
-        dtype = numpy.array([1.]).dtype.type
-
-    if dtype == numpy.float32:
-        dtype = 'float'
-    elif dtype == numpy.float64:
-        dtype = 'double'
-    elif dtype == numpy.int32:
-        dtype = 'int32_t'
-    elif dtype == numpy.int64:
-        dtype = 'int64_t'
-    elif dtype == numpy.uint16:
-        dtype = 'uint16_t'
-    elif dtype == numpy.uint32:
-        dtype = 'uint32_t'
-    elif dtype == numpy.bool_ or dtype is bool:
-        dtype = 'bool'
-    else:
-        raise ValueError("dtype " + str(dtype) + " not known.")
-    return dtype
 
 
 # Preferences
@@ -84,7 +54,7 @@ brian_prefs.register_preferences(
     )
 
 
-class GeNNCodeGenerator(CodeGenerator):
+class GeNNCodeGenerator(CPPCodeGenerator):
     '''
     GeNN interface language
     
@@ -109,170 +79,16 @@ class GeNNCodeGenerator(CodeGenerator):
 
     def __init__(self, c_data_type=c_data_type):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
-        self.restrict = brian_prefs['codegen.languages.cpp.restrict_keyword'] + ' '
-        self.flush_denormals = brian_prefs['codegen.languages.cpp.flush_denormals']
+        self.restrict = brian_prefs['codegen.generators.genn.restrict_keyword'] + ' '
+        self.flush_denormals = brian_prefs['codegen.generators.genn.flush_denormals']
         self.c_data_type = c_data_type
 
-    def translate_expression(self, expr, namespace, codeobj_class):
-        for varname, var in namespace.iteritems():
+    def translate_expression(self, expr):
+        for varname, var in self.variables.iteritems():
             if isinstance(var, Function):
-                impl_name = var.implementations[codeobj_class].name
+                impl_name = var.implementations[self.codeobj_class].name
                 if impl_name is not None:
                     expr = word_substitute(expr, {varname: impl_name})
         return GeNNNodeRenderer().render_expr(expr).strip()
 
-    def translate_statement(self, statement, namespace, codeobj_class):
-        var, op, expr = statement.var, statement.op, statement.expr
-        if op == ':=':
-            decl = self.c_data_type(statement.dtype) + ' '
-            op = '='
-            if statement.constant:
-                decl = 'const ' + decl
-        else:
-            decl = ''
-        return decl + var + ' ' + op + ' ' + self.translate_expression(expr,
-                                                                       namespace,
-                                                                       codeobj_class) + ';'
-
-    def translate_statement_sequence(self, statements, variables, namespace,
-                                     variable_indices, iterate_all,
-                                     codeobj_class):
-
-        read, write = self.array_read_write(statements, variables)
-        lines = []
-        # the actual code
-        lines.extend([self.translate_statement(stmt, namespace, codeobj_class)
-                      for stmt in statements])
-        code = '\n'.join(lines)
-        
-        # set up the functions
-        user_functions = []
-        support_code = ''
-        hash_defines = ''
-        for varname, variable in namespace.items():
-            if isinstance(variable, Function):
-                user_functions.append((varname, variable))
-                speccode = variable.implementations[codeobj_class].code
-                if speccode is not None:
-                    support_code += '\n' + deindent(speccode.get('support_code', ''))
-                    hash_defines += deindent(speccode.get('hashdefine_code', ''))
-                # add the Python function with a leading '_python', if it
-                # exists. This allows the function to make use of the Python
-                # function via weave if necessary (e.g. in the case of randn)
-                if not variable.pyfunc is None:
-                    pyfunc_name = '_python_' + varname
-                    if pyfunc_name in namespace:
-                        logger.warn(('Namespace already contains function %s, '
-                                     'not replacing it') % pyfunc_name)
-                    else:
-                        namespace[pyfunc_name] = variable.pyfunc
-
-        
-        # delete the user-defined functions from the namespace and add the
-        # function namespaces (if any)
-        for funcname, func in user_functions:
-            del namespace[funcname]
-            func_namespace = func.implementations[codeobj_class].namespace
-            if func_namespace is not None:
-                namespace.update(func_namespace)
-
-        return (stripped_deindented_lines(code),
-                {#'pointers_lines': stripped_deindented_lines(pointers),
-                 'support_code_lines': stripped_deindented_lines(support_code),
-                 'hashdefine_lines': stripped_deindented_lines(hash_defines),
-                 'denormals_code_lines': stripped_deindented_lines(self.denormals_to_zero_code()),
-                 })
-
-    def denormals_to_zero_code(self):
-        if self.flush_denormals:
-            return '''
-            #define CSR_FLUSH_TO_ZERO         (1 << 15)
-            unsigned csr = __builtin_ia32_stmxcsr();
-            csr |= CSR_FLUSH_TO_ZERO;
-            __builtin_ia32_ldmxcsr(csr);
-            '''
-        else:
-            return ''
-
-################################################################################
-# Implement functions
-################################################################################
-
-# Functions that exist under the same name in C++
-for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
-             'log10', 'sqrt', 'ceil', 'floor']:
-    DEFAULT_FUNCTIONS[func].implementations[GeNNCodeGenerator] = FunctionImplementation()
-
-# Functions that need a name translation
-for func, func_cpp in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan'),
-                       ('abs', 'fabs'), ('mod', 'fmod')]:
-    DEFAULT_FUNCTIONS[func].implementations[GeNNCodeGenerator] = FunctionImplementation(func_cpp)
-
-# Functions that need to be implemented specifically
-randn_code = {'support_code': '''
-
-    inline double _ranf()
-    {
-        return (double)rand()/RAND_MAX;
-    }
-
-    double _randn(const int vectorisation_idx)
-    {
-         double x1, x2, w;
-         static double y1, y2;
-         static bool need_values = true;
-         if (need_values)
-         {
-             do {
-                     x1 = 2.0 * _ranf() - 1.0;
-                     x2 = 2.0 * _ranf() - 1.0;
-                     w = x1 * x1 + x2 * x2;
-             } while ( w >= 1.0 );
-
-             w = sqrt( (-2.0 * log( w ) ) / w );
-             y1 = x1 * w;
-             y2 = x2 * w;
-
-             need_values = false;
-             return y1;
-         } else
-         {
-            need_values = true;
-            return y2;
-         }
-    }
-        '''}
-DEFAULT_FUNCTIONS['randn'].implementations[GeNNCodeGenerator] = FunctionImplementation('_randn',
-                                                                           code=randn_code)
-
-rand_code = {'support_code': '''
-        double _rand(int vectorisation_idx)
-        {
-            return (double)rand()/RAND_MAX;
-        }
-        '''}
-DEFAULT_FUNCTIONS['rand'].implementations[GeNNCodeGenerator] = FunctionImplementation('_rand',
-                                                                          code=rand_code)
-
-clip_code = {'support_code': '''
-        double _clip(const float value, const float a_min, const float a_max)
-        {
-            if (value < a_min)
-                return a_min;
-            if (value > a_max)
-                return a_max;
-            return value;
-        }
-        '''}
-DEFAULT_FUNCTIONS['clip'].implementations[GeNNCodeGenerator] = FunctionImplementation('_clip',
-                                                                          code=clip_code)
-
-int_code = {'support_code':
-        '''
-        int int_(const bool value)
-        {
-            return value ? 1 : 0;
-        }
-        '''}
-DEFAULT_FUNCTIONS['int_'].implementations[GeNNCodeGenerator] = FunctionImplementation('int_',
-                                                                          code=int_code)
+# No need to implement functions, they're just the same as C++
