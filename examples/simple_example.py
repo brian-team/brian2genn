@@ -1,5 +1,5 @@
 from brian2 import *
-import brian2.devices.genn
+import brian2genn
 
 set_device('genn')
 

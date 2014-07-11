@@ -6,17 +6,18 @@ import numpy
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
-from brian2.parsing.rendering import GeNNNodeRenderer
 from brian2.core.functions import (Function, FunctionImplementation,
                                    DEFAULT_FUNCTIONS)
 from brian2.core.preferences import brian_prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
 
-from .base import Language
+from brian2.codegen.generators.base import CodeGenerator
+
+from .renderer import GeNNNodeRenderer
 
 logger = get_logger(__name__)
 
-__all__ = ['GeNNLanguage',
+__all__ = ['GeNNCodeGenerator',
            'c_data_type',
            ]
 
@@ -54,7 +55,7 @@ def c_data_type(dtype):
 
 # Preferences
 brian_prefs.register_preferences(
-    'codegen.languages.genn',
+    'codegen.generators.genn',
     'GeNN codegen preferences',
     restrict_keyword = BrianPreference(
         default='__restrict__',
@@ -83,7 +84,7 @@ brian_prefs.register_preferences(
     )
 
 
-class GeNNLanguage(Language):
+class GeNNCodeGenerator(CodeGenerator):
     '''
     GeNN interface language
     
@@ -104,9 +105,10 @@ class GeNNLanguage(Language):
         
     '''
 
-    language_id = 'genn'
+    class_name = 'genn'
 
     def __init__(self, c_data_type=c_data_type):
+        super(GeNNCodeGenerator, self).__init__(*args, **kwds)
         self.restrict = brian_prefs['codegen.languages.cpp.restrict_keyword'] + ' '
         self.flush_denormals = brian_prefs['codegen.languages.cpp.flush_denormals']
         self.c_data_type = c_data_type
@@ -199,12 +201,12 @@ class GeNNLanguage(Language):
 # Functions that exist under the same name in C++
 for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
              'log10', 'sqrt', 'ceil', 'floor']:
-    DEFAULT_FUNCTIONS[func].implementations[GeNNLanguage] = FunctionImplementation()
+    DEFAULT_FUNCTIONS[func].implementations[GeNNCodeGenerator] = FunctionImplementation()
 
 # Functions that need a name translation
 for func, func_cpp in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan'),
                        ('abs', 'fabs'), ('mod', 'fmod')]:
-    DEFAULT_FUNCTIONS[func].implementations[GeNNLanguage] = FunctionImplementation(func_cpp)
+    DEFAULT_FUNCTIONS[func].implementations[GeNNCodeGenerator] = FunctionImplementation(func_cpp)
 
 # Functions that need to be implemented specifically
 randn_code = {'support_code': '''
@@ -240,7 +242,7 @@ randn_code = {'support_code': '''
          }
     }
         '''}
-DEFAULT_FUNCTIONS['randn'].implementations[GeNNLanguage] = FunctionImplementation('_randn',
+DEFAULT_FUNCTIONS['randn'].implementations[GeNNCodeGenerator] = FunctionImplementation('_randn',
                                                                            code=randn_code)
 
 rand_code = {'support_code': '''
@@ -249,7 +251,7 @@ rand_code = {'support_code': '''
             return (double)rand()/RAND_MAX;
         }
         '''}
-DEFAULT_FUNCTIONS['rand'].implementations[GeNNLanguage] = FunctionImplementation('_rand',
+DEFAULT_FUNCTIONS['rand'].implementations[GeNNCodeGenerator] = FunctionImplementation('_rand',
                                                                           code=rand_code)
 
 clip_code = {'support_code': '''
@@ -262,7 +264,7 @@ clip_code = {'support_code': '''
             return value;
         }
         '''}
-DEFAULT_FUNCTIONS['clip'].implementations[GeNNLanguage] = FunctionImplementation('_clip',
+DEFAULT_FUNCTIONS['clip'].implementations[GeNNCodeGenerator] = FunctionImplementation('_clip',
                                                                           code=clip_code)
 
 int_code = {'support_code':
@@ -272,5 +274,5 @@ int_code = {'support_code':
             return value ? 1 : 0;
         }
         '''}
-DEFAULT_FUNCTIONS['int_'].implementations[GeNNLanguage] = FunctionImplementation('int_',
+DEFAULT_FUNCTIONS['int_'].implementations[GeNNCodeGenerator] = FunctionImplementation('int_',
                                                                           code=int_code)

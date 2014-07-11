@@ -3,7 +3,7 @@ import os
 from brian2.core.variables import Variable, Subexpression
 from brian2.codegen.codeobject import CodeObject
 from brian2.codegen.templates import Templater
-from brian2.codegen.languages.genn_lang import GeNNLanguage
+from .genn_generator import GeNNCodeGenerator
 
 __all__ = ['GeNNCodeObject']
 
@@ -18,7 +18,8 @@ class GeNNCodeObject(CodeObject):
     '''
     templater = Templater(os.path.join(os.path.split(__file__)[0],
                                        'templates'))
-    language = GeNNLanguage()
+    generator_class = GeNNCodeGenerator
+    class_name = 'genn'
 
     def variables_to_namespace(self):
         # We only copy constant scalar values to the namespace here
@@ -27,4 +28,4 @@ class GeNNCodeObject(CodeObject):
                 self.namespace[varname] = var.get_value()
 
     def run(self):
-        raise RuntimeError("Cannot run in C++ standalone mode")
+        raise RuntimeError("Cannot run in GeNN mode")
