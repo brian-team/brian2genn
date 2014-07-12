@@ -11,3 +11,5 @@ dv/dt = -v/tau : 1
 G = NeuronGroup(N, eqs, threshold='v>1', reset='v=0')
 
 run(100*ms)
+
+device.build()

@@ -6,9 +6,10 @@ from collections import defaultdict
 from brian2.units import second
 from brian2.core.clocks import defaultclock
 from brian2.devices.device import Device, set_device, all_devices
+from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.core.preferences import brian_prefs
 from brian2.core.variables import *
-from brian2.utils.filetools import copy_directory
+from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
@@ -41,52 +42,28 @@ class neuronModel(object):
         self.thresh_cond_lines= [ ]
         self.reset_code_lines= [ ]
 
-class GeNNDevice(Device):
+class GeNNDevice(CPPStandaloneDevice):
     '''
     '''
     def __init__(self):
         self.neuron_models = [ ]
-        self.dynamic_arrays = {}
-        self.code_objects = {}
+        super(GeNNDevice, self).__init__()        
+
+    def build(self, project_dir='output'):
+
+        if len(self.dynamic_arrays) or len(self.dynamic_arrays_2d):
+            raise NotImplementedError("GeNN does not support objects that use dynamic arrays (Synapses, SpikeMonitor, etc.)")
         
-    def array(self, owner, name, size, unit, dtype=None):
-#        if dtype is None:
-#            dtype = brian_prefs['core.default_scalar_dtype']
-        arr = numpy.zeros(size, dtype=dtype)
-#        self.arrays['_array_%s_%s' % (owner.name, name)] = arr
-        return arr
-
-    def dynamic_array_1d(self, owner, name, size, unit, dtype):
-#        if dtype is None:
-#            dtype = brian_prefs['core.default_scalar_dtype']
-        arr = DynamicArray1D(size, dtype=dtype)
-#        self.dynamic_arrays['_dynamic_array_%s_%s' % (owner.name, name)] = arr
-        return arr
+        self.project_dir = project_dir
+        ensure_directory(project_dir)        
+        
+        raise NotImplementedError
     
-    def dynamic_array(self):
-        raise NotImplentedError
-
-    def code_object_class(self, codeobj_class=None):
-        if codeobj_class is not None:
-            raise ValueError("Cannot specify codeobj_class for C++ standalone device.")
-        return GeNNCodeObject
-
-    def code_object(self, owner, name, abstract_code, namespace, variables, template_name,
-                    indices, variable_indices, codeobj_class=None,
-                    template_kwds=None):
-        codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, namespace, variables,
-                                                               template_name, indices, variable_indices,
-                                                               codeobj_class=codeobj_class,
-                                                               template_kwds=template_kwds,
-                                                               )
-        self.code_objects[codeobj.name] = codeobj
-        return codeobj
-
-    def build(self, net):
+        ######### WHAT FOLLOWS IS THE GENN CODE THAT THOMAS NOWOTNY WROTE IN 2013
+        ######### This needs to be updated to work with the changes in Brian's standalone design
+        ######### To do so, I derived the class from CPPStandaloneDevice so that we only need to rewrite the
+        ######### build() method, following the way it is done in CPPStandaloneDevice.build.
        
-        if not os.path.exists('output'):
-            os.mkdir('output')
-
         # assemble the model descriptions:
         self.model_name= net.name+'_model'
         for obj in net.objects:
