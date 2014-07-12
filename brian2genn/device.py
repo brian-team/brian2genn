@@ -14,7 +14,6 @@ from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
 
-from .genn_generator import c_data_type, GeNNCodeGenerator
 from .codeobject import GeNNCodeObject
 
 __all__ = ['GeNNDevice']
