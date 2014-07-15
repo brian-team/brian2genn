@@ -22,9 +22,13 @@ class GeNNCodeGenerator(CPPCodeGenerator):
     def translate_statement(self, statement):
         var, op, expr, comment = (statement.var, statement.op,
                                   statement.expr, statement.comment)
+        print(var,op,expr,comment);
         if op == ':=':
+            decl= self.c_data_type(statement.dtype) + ' '
             op = '='
-        code = var + ' ' + op + ' ' + self.translate_expression(expr) + ';'
+        else:
+            decl= ''
+        code = decl + var + ' ' + op + ' ' + self.translate_expression(expr) + ';'
         if len(comment):
             code += ' // ' + comment
         return code
