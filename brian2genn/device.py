@@ -27,7 +27,7 @@ def decorate(code, variables, parameters):
         code = word_substitute(code, {v[0] : '$('+v[0]+')'})
     for p in parameters:
         code = word_substitute(code, {p : '$('+p+')'})
-    code= word_substitute(code, {'dt' : 'DT'});
+    code= word_substitute(code, {'dt' : 'DT'}).strip()
     code= code.replace('\n', '\\n\\\n')
     code = code.replace('"', '\\"')
     return code
@@ -103,7 +103,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
                       
-                code = decorate(codeobj.code, neuron_model.variables, neuron_model.parameters)
+                code = decorate(codeobj.code, neuron_model.variables, neuron_model.parameters).strip()
                 lines.append(code)                    
             
             self.neuron_models.append(neuron_model)

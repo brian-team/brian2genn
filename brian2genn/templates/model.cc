@@ -53,11 +53,11 @@ void modelDefinition(NNmodel &model)
   n.pNames.push_back(tS("{{par}}"));
   {% endfor %}
   // step 3: add simcode
-  n.simCode= tS("{% for line in neuron_model.code_lines %} {{line}} {% endfor %}");
+  n.simCode= tS("{% for line in neuron_model.code_lines %}{{line}}{% endfor %}");
   // step 4: add thresholder code
-  n.thresholdConditionCode= tS("{% for line in neuron_model.thresh_cond_lines %} {{line}} {% endfor %}");
+  n.thresholdConditionCode= tS("{% for line in neuron_model.thresh_cond_lines %}{{line}}{% endfor %}");
   // step 5: add resetter code
-  n.resetCode= tS("{% for line in neuron_model.reset_code_lines %} {{line}} {% endfor %}");
+  n.resetCode= tS("{% for line in neuron_model.reset_code_lines %}{{line}}{% endfor %}");
   nModels.push_back(n);
   {{neuron_model.name}}NEURON= nModels.size()-1;
   cerr << nModels.size() << endl;
