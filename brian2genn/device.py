@@ -103,7 +103,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
                       
-                code = decorate(codeobj.code.cpp_file, neuron_model.variables, neuron_model.parameters)
+                code = decorate(codeobj.code, neuron_model.variables, neuron_model.parameters)
                 lines.append(code)                    
             
             self.neuron_models.append(neuron_model)
@@ -134,6 +134,10 @@ class GeNNDevice(CPPStandaloneDevice):
                                                         ) 
         open('output/Makefile', 'w').write(Makefile_tmp);
 
+    def code_object_class(self, codeobj_class=None):
+        if codeobj_class is not None:
+            raise ValueError("Cannot specify codeobj_class for GeNN device.")
+        return GeNNCodeObject
 
 genn_device = GeNNDevice()
 
