@@ -5,10 +5,11 @@ set_device('genn')
 
 N = 100
 tau = 10*ms
+Iin = 0.11/ms 
 eqs = '''
-dv/dt = -v/tau : 1
+dV/dt = -V/tau + Iin : 1
 '''
-G = NeuronGroup(N, eqs, threshold='v>1', reset='v=0')
+G = NeuronGroup(N, eqs, threshold='V>1', reset='V=0')
 
 run(100*ms)
 

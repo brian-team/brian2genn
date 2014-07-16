@@ -17,12 +17,13 @@
 
 int main(int argc, char *argv[])
 {
-  if (argc != 3)
+  if (argc != 4)
   {
-    fprintf(stderr, "usage: runner <basename> <CPU=0, GPU=1> \n");
+    fprintf(stderr, "usage: runner <basename> <time (ms)> <CPU=0, GPU=1> \n");
     return 1;
   }
-  int which= atoi(argv[2]);
+  double totalTime= atof(argv[2]);
+  int which= atoi(argv[3]);
   string OutDir = toString(argv[1]) +"_output";
   string cmd= toString("mkdir ") +OutDir;
   system(cmd.c_str());
@@ -32,10 +33,14 @@ int main(int argc, char *argv[])
 
   timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
-  fprintf(stderr, "# TOTAL_TME %d \n", TOTAL_TME);
+  fprintf(stderr, "# totalTime %d \n", totalTime);
   
-  name= OutDir+ "/"+ toString(argv[1]) + toString(".out.st"); 
+  name= OutDir+ "/"+ toString(argv[1]) + toString(".out.dat"); 
   FILE *osf= fopen(name.c_str(),"w");
+  name.clear();
+  name= OutDir+ "/"+ toString(argv[1]) + toString(".out.st"); 
+  FILE *osfs= fopen(name.c_str(),"w");
+
   //-----------------------------------------------------------------
   // build the neuronal circuitery
   engine eng;
@@ -44,25 +49,33 @@ int main(int argc, char *argv[])
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation
-
   fprintf(stderr, "# We are running with fixed time step %f \n", DT);
 
   t= 0.0;
   void *devPtr;
   int done= 0;
   eng.output_state(osf, which);  
+  eng.output_spikes(osfs, which);
   eng.run(DT, which);
   while (!done) 
   {
-    if (which == GPU) eng.getSpikesFromGPU();
+    if (which == GPU) {
+      eng.getStateFromGPU();
+      eng.getSpikesFromGPU();
+    }
     eng.run(DT, which); // run next batch
     eng.output_state(osf, which);
+    eng.output_spikes(osfs, which);
     t+=DT;
     cerr << t << endl;
-    done= (t >= TOTAL_TME);
+    done= (t >= totalTime);
   }
-  if (which == GPU) eng.getSpikesFromGPU();
+  if (which == GPU) {
+    eng.getStateFromGPU();
+    eng.getSpikesFromGPU();
+  }
   eng.output_state(osf, which);
+  eng.output_spikes(osfs, which);
 
   cerr << "output files are created under the current directory." << endl;
   {% for neuron_model in neuron_models %}
@@ -70,6 +83,8 @@ int main(int argc, char *argv[])
   {% endfor %}
   fprintf(timef,"%d \n", timer.getElapsedTime());
 
+  fclose(osf);
+  fclose(osfs);
   return 0;
 }
 
@@ -106,8 +121,6 @@ CStopWatch timer;
 
 //----------------------------------------------------------------------
 // other stuff:
-
-#define TOTAL_TME 500000
 
 #include "engine.cc"
 

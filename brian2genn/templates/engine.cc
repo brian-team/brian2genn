@@ -36,6 +36,7 @@ class engine
   void free_device_mem(); 
   void run(float, unsigned int); 
   void output_state(FILE *, unsigned int); 
+  void getStateFromGPU(); 
   void getSpikesFromGPU(); 
   void getSpikeNumbersFromGPU(); 
   void output_spikes(FILE *, unsigned int); 
@@ -141,6 +142,18 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
 }
 
 //--------------------------------------------------------------------------
+/*! \brief Method for copying all variables of the last time step from the GPU
+ 
+  This is a simple wrapper for the convenience function copyStateFromDevice() which is provided by GeNN.
+*/
+//--------------------------------------------------------------------------
+
+void engine::getStateFromGPU()
+{
+  copyStateFromDevice();
+}
+
+//--------------------------------------------------------------------------
 /*! \brief Method for copying all spikes of the last time step from the GPU
  
   This is a simple wrapper for the convenience function copySpikesFromDevice() which is provided by GeNN.
@@ -149,6 +162,7 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
 
 void engine::getSpikesFromGPU()
 {
+  copySpikeNFromDevice();
   copySpikesFromDevice();
 }
 
