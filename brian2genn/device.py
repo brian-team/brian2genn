@@ -133,6 +133,7 @@ class GeNNDevice(CPPStandaloneDevice):
         Makefile_tmp= GeNNCodeObject.templater.Makefile(None, None,
                                                         neuron_models= self.neuron_models,
                                                         model_name= self.model_name,
+                                                        ROOTDIR=os.path.abspath(project_dir)
                                                         ) 
         open(os.path.join(project_dir, 'Makefile'), 'w').write(Makefile_tmp)
 

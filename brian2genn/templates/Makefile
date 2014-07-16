@@ -1,5 +1,5 @@
 
-ROOTDIR         := $(CURDIR)
+ROOTDIR         := {{ROOTDIR}}
 EXECUTABLE      := runner
 SOURCES         := runner.cu
 
