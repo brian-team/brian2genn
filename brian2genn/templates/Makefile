@@ -1,5 +1,5 @@
 
-ROOTDIR         := $(PWD)
+ROOTDIR         := $(CURDIR)
 EXECUTABLE      := runner
 SOURCES         := runner.cu
 

@@ -1,5 +1,6 @@
 import numpy
 import os
+from subprocess import call
 import inspect
 from collections import defaultdict
 
@@ -50,9 +51,10 @@ class GeNNDevice(CPPStandaloneDevice):
     '''
     def __init__(self):
         self.neuron_models = [ ]
+        self.run_duration = None
         super(GeNNDevice, self).__init__()        
 
-    def build(self, project_dir='output'):
+    def build(self, project_dir='output', compile_project=True, run_project=True, use_GPU=True):
 
         # Check for GeNN compatibility
         
@@ -61,7 +63,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 
         networks = [net() for net in Network.__instances__() if net().name!='_fake_network']
         synapses = [S() for S in Synapses.__instances__()]
-        
+
         if len(synapses):
             raise NotImplementedError("GeNN does not support Synapses (yet).")
         
@@ -81,7 +83,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.model_name= net.name+'_model'
         for obj in neuron_groups:
             # Extract the variables
-            neuron_model= neuronModel();
+            neuron_model= neuronModel()
             neuron_model.name= obj.name
             neuron_model.N= obj.N
             for k, v in obj.variables.iteritems():
@@ -113,31 +115,48 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    dtDef= self.dtDef,
                                                    model_name= self.model_name,
                                                    )
-        open('output/'+self.model_name+'.cc', 'w').write(model_tmp)
+        open(os.path.join(project_dir,self.model_name+'.cc'), 'w').write(model_tmp)
 
         runner_tmp = GeNNCodeObject.templater.runner(None, None,
                                                      neuron_models= self.neuron_models,
                                                      model_name= self.model_name,
                                                      )        
-        open('output/runner.cu', 'w').write(runner_tmp.cpp_file)
-        open('output/runner.h', 'w').write(runner_tmp.h_file)
+        open(os.path.join(project_dir, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
+        open(os.path.join(project_dir, 'runner.h'), 'w').write(runner_tmp.h_file)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
                                                      model_name= self.model_name,
                                                      )        
-        open('output/engine.cc', 'w').write(engine_tmp.cpp_file)
-        open('output/engine.h', 'w').write(engine_tmp.h_file) 
+        open(os.path.join(project_dir, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
+        open(os.path.join(project_dir, 'engine.h'), 'w').write(engine_tmp.h_file)
 
         Makefile_tmp= GeNNCodeObject.templater.Makefile(None, None,
                                                         neuron_models= self.neuron_models,
                                                         model_name= self.model_name,
                                                         ) 
-        open('output/Makefile', 'w').write(Makefile_tmp);
+        open(os.path.join(project_dir, 'Makefile'), 'w').write(Makefile_tmp)
+
+        if compile_project:
+            call(["buildmodel", self.model_name], cwd=project_dir)
+            call(["pwd"], cwd=project_dir)
+            call(["make"], cwd=project_dir)
+        if run_project:
+            gpu_arg = "1" if use_GPU else "0"
+            call(["bin/linux/release/runner", "test",
+                  str(self.run_duration), gpu_arg], cwd=project_dir)
 
     def code_object_class(self, codeobj_class=None):
         if codeobj_class is not None:
             raise ValueError("Cannot specify codeobj_class for GeNN device.")
         return GeNNCodeObject
+
+    def network_run(self, net, duration, report=None, report_period=10*second,
+                    namespace=None, level=0):
+        net.before_run(run_namespace=namespace, level=level+2)
+        if self.run_duration is not None:
+            raise NotImplementedError('Only a single run statement is supported.')
+        self.run_duration = float(duration)
+
 
 genn_device = GeNNDevice()
 
