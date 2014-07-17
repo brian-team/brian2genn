@@ -139,7 +139,6 @@ class GeNNDevice(CPPStandaloneDevice):
 
         if compile_project:
             call(["buildmodel", self.model_name], cwd=project_dir)
-            call(["pwd"], cwd=project_dir)
             call(["make"], cwd=project_dir)
         if run_project:
             gpu_arg = "1" if use_GPU else "0"

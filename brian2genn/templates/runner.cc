@@ -29,11 +29,11 @@ int main(int argc, char *argv[])
   system(cmd.c_str());
   string name;
   name= OutDir+ "/"+ toString(argv[1]) + toString(".time");
-  FILE *timef= fopen(name.c_str(),"w");  
+  FILE *timef= fopen(name.c_str(),"a");  
 
   timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
-  fprintf(stderr, "# totalTime %d \n", totalTime);
+  fprintf(stderr, "# totalTime %f \n", totalTime);
   
   name= OutDir+ "/"+ toString(argv[1]) + toString(".out.dat"); 
   FILE *osf= fopen(name.c_str(),"w");
@@ -54,8 +54,9 @@ int main(int argc, char *argv[])
   t= 0.0;
   void *devPtr;
   int done= 0;
-  eng.output_state(osf, which);  
+//  eng.output_state(osf, which);  
   eng.output_spikes(osfs, which);
+  eng.sum_spikes();
   eng.run(DT, which);
   while (!done) 
   {
@@ -64,24 +65,26 @@ int main(int argc, char *argv[])
       eng.getSpikesFromGPU();
     }
     eng.run(DT, which); // run next batch
-    eng.output_state(osf, which);
+//    eng.output_state(osf, which);
     eng.output_spikes(osfs, which);
+    eng.sum_spikes();
     t+=DT;
-    cerr << t << endl;
     done= (t >= totalTime);
   }
   if (which == GPU) {
     eng.getStateFromGPU();
     eng.getSpikesFromGPU();
   }
-  eng.output_state(osf, which);
+//  eng.output_state(osf, which);
   eng.output_spikes(osfs, which);
+  eng.sum_spikes();
+  timer.stopTimer();
 
   cerr << "output files are created under the current directory." << endl;
   {% for neuron_model in neuron_models %}
   fprintf(timef, "%d ", eng.sum{{neuron_model.name}});
   {% endfor %}
-  fprintf(timef,"%d \n", timer.getElapsedTime());
+  fprintf(timef,"%f \n", timer.getElapsedTime());
 
   fclose(osf);
   fclose(osfs);
@@ -115,7 +118,7 @@ using namespace std;
 #define DBG_SIZE 10000
 
 // and some global variables
-float t= 0.0f;
+double t= 0.0f;
 unsigned int iT= 0;
 CStopWatch timer;
 

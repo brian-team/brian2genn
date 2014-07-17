@@ -34,7 +34,7 @@ class engine
   ~engine();
   void init(unsigned int); 
   void free_device_mem(); 
-  void run(float, unsigned int); 
+  void run(double, unsigned int); 
   void output_state(FILE *, unsigned int); 
   void getStateFromGPU(); 
   void getSpikesFromGPU(); 
@@ -99,7 +99,7 @@ engine::~engine()
  */
 //--------------------------------------------------------------------------
 
-void engine::run(float runtime, //!< Duration of time to run the model for 
+void engine::run(double runtime, //!< Duration of time to run the model for 
 		  unsigned int which //!< Flag determining whether to run on GPU or CPU only
 		  )
 {
@@ -135,7 +135,9 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
   fprintf(f, "%f ", t);
   {% for neuron_model in neuron_models %}
   for (int i= 0; i < model.neuronN[{{loop.index-1}}]; i++) {
-    fprintf(f, "%f ", V{{neuron_model.name}}[i]);
+      {% for var in neuron_model.variables %}
+      fprintf(f, "%f ", {{var[0]}}{{neuron_model.name}}[i]);
+      {% endfor %}
   }
   {% endfor %}
   fprintf(f,"\n");
