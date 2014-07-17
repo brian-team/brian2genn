@@ -60,7 +60,6 @@ void modelDefinition(NNmodel &model)
   n.resetCode= tS("{% for line in neuron_model.reset_code_lines %}{{line}}{% endfor %}");
   nModels.push_back(n);
   {{neuron_model.name}}NEURON= nModels.size()-1;
-  cerr << nModels.size() << endl;
   {% endfor %}
   
   model.setName("{{model_name}}");
