@@ -54,28 +54,27 @@ int main(int argc, char *argv[])
   t= 0.0;
   void *devPtr;
   int done= 0;
-//  eng.output_state(osf, which);  
+  //  eng.output_state(osf, which);  
   eng.output_spikes(osfs, which);
   eng.sum_spikes();
   eng.run(DT, which);
   while (!done) 
   {
     if (which == GPU) {
-      eng.getStateFromGPU();
+      //      eng.getStateFromGPU();
       eng.getSpikesFromGPU();
     }
     eng.run(DT, which); // run next batch
-//    eng.output_state(osf, which);
+    //    eng.output_state(osf, which);
     eng.output_spikes(osfs, which);
     eng.sum_spikes();
-    t+=DT;
     done= (t >= totalTime);
   }
   if (which == GPU) {
-    eng.getStateFromGPU();
+    //    eng.getStateFromGPU();
     eng.getSpikesFromGPU();
   }
-//  eng.output_state(osf, which);
+  //  eng.output_state(osf, which);
   eng.output_spikes(osfs, which);
   eng.sum_spikes();
   timer.stopTimer();

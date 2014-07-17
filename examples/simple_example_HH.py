@@ -3,7 +3,7 @@ import brian2genn
 
 set_device('genn')
 
-N = 10000
+N = 50000
 Iin = 10
 gNa= 120
 ENa= 55
@@ -24,5 +24,5 @@ run(500*ms)
 
 device.build(project_dir='simple_example_HH',
              compile_project=True,
-             run_project=True,
-             use_GPU=True)
+             run_project=False,
+             use_GPU=False)

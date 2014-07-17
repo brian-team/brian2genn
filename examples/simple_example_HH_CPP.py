@@ -3,7 +3,7 @@ import brian2genn
 
 set_device('cpp_standalone')
 
-N = 10000
+N = 50000
 Iin = 10
 gNa= 120
 ENa= 55
@@ -18,8 +18,9 @@ dm/dt= ((3.5+0.1*V)/(1-exp(-3.5-0.1*V))*(1-m)-4*exp(-(V+60)/18)*m)/ms : 1
 dh/dt= (0.07*exp(-V/20-3)*(1-h)-1/(exp(-3-0.1*V)+1)*h)/ms : 1
 dn/dt= ((-0.5-0.01*V)/(exp(-5-0.1*V)-1)*(1-n)-0.125*exp(-(V+60)/80)*n)/ms : 1
 '''
-G = NeuronGroup(N, eqs, threshold='V> 32.755')
-mon = SpikeMonitor(G)
+G = NeuronGroup(N, eqs, threshold='V> 30', refractory='3*ms')
+mon = SpikeMonitor(G,record=True)
+mon2= StateMonitor(G,'V',record=True)
 
 run(500*ms)
 
