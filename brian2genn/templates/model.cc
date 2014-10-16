@@ -1,6 +1,7 @@
 // define the time step
 {{ dtDef }}
 
+#include <inttypes.h>
 #include "modelSpec.h"
 #include "modelSpec.cc"
 
@@ -14,8 +15,13 @@
 {% for neuron_model in neuron_models %}
 unsigned int {{neuron_model.name}}NEURON;
 {% endfor %}
+{% for synapse_model in synapse_models %}
+unsigned int {{synapse_model.name}}WEIGHTUPDATE;
+unsigned int {{synapse_model.name}}POSTSYN;
+{% endfor %}
 
 // parameter values
+// neurons
 {% for neuron_model in neuron_models %}
 float {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
   {% for k in neuron_model.pvalue %} {{k}},
@@ -24,10 +30,39 @@ float {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
 
 {% endfor %}
 
-// initial variables
+// synapses
+{% for synapse_model in synapse_models %}
+float {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
+  {% for k in synapse_model.pvalue %} {{k}},
+  {% endfor %}
+};
+
+float {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}]= {
+  {% for k in synapse_model.postsyn_pvalue %} {{k}},
+  {% endfor %}
+};
+
+
+{% endfor %}
+
+// initial variables (neurons)
 {% for neuron_model in neuron_models %}
 float {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
   {% for k in neuron_model.variables %} 0.0,
+  {% endfor %}
+};
+
+{% endfor %}
+ 
+// initial variables (synapses)
+{% for synapse_model in synapse_models %}
+float {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
+  {% for k in synapse_model.variables %} 0.0,
+  {% endfor %}
+};
+
+float {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
+  {% for k in synapse_model.postsyn_variables %} 0.0,
   {% endfor %}
 };
 
@@ -61,11 +96,51 @@ void modelDefinition(NNmodel &model)
   nModels.push_back(n);
   {{neuron_model.name}}NEURON= nModels.size()-1;
   {% endfor %}
-  
+
+  weightUpdateModel s;
+  postSynModel ps;  
+  {% for synapse_model in synapse_models %}
+  s.varNames.clear();
+  s.varTypes.clear();
+  s.pNames.clear(); 
+  s.dpNames.clear();
+  ps.varNames.clear();
+  ps.varTypes.clear();
+  ps.pNames.clear(); 
+  ps.dpNames.clear();
+  {% for var in synapse_model.variables %}
+  s.varNames.push_back(tS("{{var[0]}}"));
+  s.varTypes.push_back(tS("{{var[1]}}"));
+  {% endfor %}
+  {% for var in synapse_model.postsyn_variables %}
+  ps.varNames.push_back(tS("{{var[0]}}"));
+  ps.varTypes.push_back(tS("{{var[1]}}"));
+  {% endfor %}
+  // step2: add parameters
+  {% for par in synapse_model.parameters %}
+  s.pNames.push_back(tS("{{par}}"));
+  {% endfor %}
+  {% for par in synapse_model.postsyn_parameters %}
+  ps.pNames.push_back(tS("{{par}}"));
+  {% endfor %}
+  // step 3: add simcode
+  s.simCode= tS("{% for line in synapse_model.pre_code_lines %}{{line}}{% endfor %}");
+  s.simLearnPost= tS("{% for line in synapse_model.post_code_lines %}{{line}}{% endfor %}");
+  weightUpdateModels.push_back(s);
+  {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()+MAXSYN-1;
+  ps.postSynDecay= tS("{% for line in synapse_model.postsyn_code_lines %}{{line}}{% endfor %}");
+  postSynModels.push_back(ps); 
+  {{synapse_model.name}}POSTSYN= postSynModels.size()-1;
+  {% endfor %}
+
   model.setName("{{model_name}}");
   model.setPrecision(DOUBLE);
   {% for neuron_model in neuron_models %} 
   model.addNeuronPopulation("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}NEURON, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
   {% endfor %}
+  {% for synapse_model in synapse_models %} 
+  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, ALLTOALL, GLOBALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+  {% endfor %}
+
 }
 
