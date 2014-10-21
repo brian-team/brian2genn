@@ -48,12 +48,12 @@ class engine
 
 
 {% macro cpp_file() %}
-#ifndef _MAP_CLASSOL_CC_
-#define _MAP_CLASSOL_CC_
+#ifndef _ENGINE_CC_
+#define _ENGINE_CC_
 
 
 //--------------------------------------------------------------------------
-/*! \file map_classol.cc
+/*! \file engine.cc
 \brief Implementation of the engine class.
 */
 //--------------------------------------------------------------------------

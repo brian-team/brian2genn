@@ -19,6 +19,7 @@ from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
 from brian2.utils.logger import get_logger
+from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
 
@@ -26,10 +27,25 @@ __all__ = ['GeNNDevice']
 
 logger = get_logger(__name__)
 
+def freeze(code, ns):
+    # this is a bit of a hack, it should be passed to the template somehow
+    for k, v in ns.items():
+        if isinstance(v, (int, float)): # for the namespace provided for functions
+            code = word_substitute(code, {k: str(v)})
+        elif (isinstance(v, Variable) and not isinstance(v, AttributeVariable) and
+              v.scalar and v.constant and v.read_only):
+            value = v.get_value()
+            if value < 0:
+                string_value = '(%r)' % value
+            else:
+                string_value = '%r' % value
+            code = word_substitute(code, {k: string_value})
+    return code
+
 def decorate(code, variables, parameters):
     # this is a bit of a hack, it should be part of the language probably
     for v in variables:
-        code = word_substitute(code, {v[0] : '$('+v[0]+')'})
+        code = word_substitute(code, {v : '$('+v+')'})
     for p in parameters:
         code = word_substitute(code, {p : '$('+p+')'})
     code= word_substitute(code, {'dt' : 'DT'}).strip()
@@ -43,12 +59,13 @@ class neuronModel(object):
     def __init__(self):
         self.name=''
         self.N= 0
-        self.variables= [ ]
-        self.parameters= [ ]
-        self.pvalue= [ ]
-        self.code_lines= [ ]
-        self.thresh_cond_lines= [ ]
-        self.reset_code_lines= [ ]
+        self.variables= []
+        self.variabletypes= []
+        self.parameters= []
+        self.pvalue= []
+        self.code_lines= []
+        self.thresh_cond_lines= []
+        self.reset_code_lines= []
 
 class synapseModel(object):
     '''
@@ -56,14 +73,18 @@ class synapseModel(object):
     def __init__(self):
         self.name=''
         self.srcname=''
+        self.srcN= 0
         self.trgname=''
+        self.trgN= 0
         self.N= 0
-        self.variables= [ ]
-        self.parameters= [ ]
-        self.pvalue= [ ]
-        self.pre_code_lines= [ ]
-        self.post_code_lines= [ ]
-        self.postsyn_variables= [ ]
+        self.variables= []
+        self.variabletypes= []
+        self.parameters= []
+        self.pvalue= []
+        self.pre_code_lines= []
+        self.post_code_lines= []
+        self.postsyn_variables= []
+        self.postsyn_variabletypes= []
         self.postsyn_parameters= [ ]
         self.postsyn_pvalue= [ ]
         self.postsyn_code_lines= [ ]
@@ -95,8 +116,8 @@ class GeNNDevice(CPPStandaloneDevice):
     '''
     def __init__(self):
         super(GeNNDevice, self).__init__()        
-        self.neuron_models = [ ]
-        self.synapse_models = [ ]
+        self.neuron_models = []
+        self.synapse_models = []
         self.run_duration = None
          #: Dictionary mapping `ArrayVariable` objects to their globally
         #: unique name
@@ -124,6 +145,10 @@ class GeNNDevice(CPPStandaloneDevice):
         self.main_queue = []
         self.report_func = ''
         self.synapses = []
+        
+        #: List of all source and header files (to be included in runner)
+        self.source_files= []
+        self.header_files= []
 
         self.clocks = set([])
         
@@ -296,12 +321,12 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
-        #print(name)
-        #print(template_name)
+        print(name)
+        print(template_name)
         #print('abstract_code')
         #print(abstract_code)
         #print(variables)
-        #print('--------------------------')
+        print('--------------------------')
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
         else:
@@ -317,7 +342,64 @@ class GeNNDevice(CPPStandaloneDevice):
         #print('=========================')
         self.code_objects[codeobj.name] = codeobj
         return codeobj
+        
 
+    #---------------------------------------------------------------------------------
+    def make_main_lines(self):
+        main_lines = []
+        procedures = [('', main_lines)]
+        runfuncs = {}
+        for func, args in self.main_queue:
+            if func=='run_code_object':
+                codeobj, = args
+                # a bit of a hack to explicitly exclude spike queue related code objects here: TODO
+                if ('initialise_queue' not in codeobj.name) and ('push_spikes' not in codeobj.name): 
+                    main_lines.append('_run_%s();' % codeobj.name)
+            elif func=='run_network':
+                net, netcode = args
+                main_lines.extend(netcode)
+            elif func=='set_by_array':
+                arrayname, staticarrayname = args
+                code = '''
+                for(int i=0; i<_num_{staticarrayname}; i++)
+                {{
+                    {arrayname}[i] = {staticarrayname}[i];
+                }}
+                '''.format(arrayname=arrayname, staticarrayname=staticarrayname)
+                main_lines.extend(code.split('\n'))
+            elif func=='set_array_by_array':
+                arrayname, staticarrayname_index, staticarrayname_value = args
+                code = '''
+                for(int i=0; i<_num_{staticarrayname_index}; i++)
+                {{
+                    {arrayname}[{staticarrayname_index}[i]] = {staticarrayname_value}[i];
+                }}
+                '''.format(arrayname=arrayname, staticarrayname_index=staticarrayname_index,
+                           staticarrayname_value=staticarrayname_value)
+                main_lines.extend(code.split('\n'))
+            elif func=='insert_code':
+                main_lines.append(args)
+            elif func=='start_run_func':
+                name, include_in_parent = args
+                if include_in_parent:
+                    main_lines.append('%s();' % name)
+                main_lines = []
+                procedures.append((name, main_lines))
+            elif func=='end_run_func':
+                name, include_in_parent = args
+                name, main_lines = procedures.pop(-1)
+                runfuncs[name] = main_lines
+                name, main_lines = procedures[-1]
+            else:
+                raise NotImplementedError("Unknown main queue function type "+func)
+                
+        # generate the finalisations
+        for codeobj in self.code_objects.itervalues():
+            if hasattr(codeobj.code, 'main_finalise'):
+                main_lines.append(codeobj.code.main_finalise)
+        return main_lines
+
+    #---------------------------------------------------------------------------------
     def build(self, project_dir='output', compile_project=True, run_project=True, use_GPU=True):
         '''
         TODO: comments here
@@ -377,6 +459,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         )
         writer.write('objects.*', arr_tmp)
 
+        main_lines = self.make_main_lines()
+
         # Generate data for non-constant values
         code_object_defs = defaultdict(list)
         for codeobj in self.code_objects.itervalues():
@@ -414,7 +498,8 @@ class GeNNDevice(CPPStandaloneDevice):
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
-            #code = freeze(codeobj.code.cpp_file, ns)
+            if isinstance(codeobj.code, MultiTemplate):
+                code = freeze(codeobj.code.cpp_file, ns)
             #print(codeobj.name)
             #print(type(codeobj.code))
             if isinstance(codeobj.code, MultiTemplate):
@@ -423,6 +508,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 code = '#include "objects.h"\n'+code
             
                 writer.write('code_objects/'+codeobj.name+'.cpp', code)
+                self.source_files.append('code_objects/'+codeobj.name+'.cpp')
                 writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
 
 
@@ -440,7 +526,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
                 elif isinstance(v, ArrayVariable):
-                    neuron_model.variables.append((k, c_data_type(v.dtype)))
+                    neuron_model.variables.append(k)
+                    neuron_model.variabletypes.append(c_data_type(v.dtype))
    
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_thresholder', neuron_model.thresh_cond_lines),
@@ -468,16 +555,14 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model= synapseModel()
             synapse_model.name= obj.name
             synapse_model.srcname= obj.source.name
+            synapse_model.srcN= obj.source._N
             synapse_model.trgname= obj.target.name
+            synapse_model.trgN= obj.target._N
             for suffix, lines in [('_pre', synapse_model.pre_code_lines),
                                   ('_post', synapse_model.post_code_lines),
                                   ]:          # mem= inspect.getmembers(obj)
                 code_name= obj.name+suffix
                 if code_name in objects:
-                    #print(code_name)
-                    # print(inspect.getmembers(objects[code_name]))
-                    # codeobj= objects[code_name].codeobj 
-                    # print(codeobj.code.__str__())
                     for k, v in codeobj.variables.iteritems():
                         if k == '_spikespace' or k == 't' or k == 'dt' or k == 'lastupdate':
                             pass
@@ -488,26 +573,21 @@ class GeNNDevice(CPPStandaloneDevice):
                         elif isinstance(v, ArrayVariable):
                             if k in codeobj.code.__str__():
                                 if k not in synapse_model.variables:
-                                    synapse_model.variables.append((k, c_data_type(v.dtype)))
-                    #print('parameters:')    
-                    #for var in synapse_model.parameters:
-                    #    print(var)
-                    #print('variables:')    
-                    #for var in synapse_model.variables:
-                    #    print(var)
-                    #print(type(codeobj.code))
+                                    print('appending ', k);
+                                    print synapse_model.variables
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
                     if isinstance(codeobj.code, str):
                         thecode = decorate(codeobj.code, synapse_model.variables, synapse_model.parameters).strip()
                     else:
                         thecode = decorate(codeobj.code._templates['cpp_file'], synapse_model.variables, synapse_model.parameters).strip()
                     lines.append(thecode) 
+
             code_name= obj.name+'_stateupdater'
             if code_name in objects:
-                #print(code_name)
                 codeobj= objects[code_name].codeobj 
-                #print(codeobj.code.__str__())
                 for k, v in codeobj.variables.iteritems():
-                        if k == '_spikespace' or k == 't' or k == 'dt':
+                        if k == '_spikespace' or k == 't' or k == 'dt' or k == 'lastupdate':
                             pass
                         if isinstance(v, Constant):
                             if k not in synapse_model.parameters:
@@ -515,13 +595,34 @@ class GeNNDevice(CPPStandaloneDevice):
                                 synapse_model.postsyn_pvalue.append(repr(v.value))
                         elif isinstance(v, ArrayVariable):
                             if k in codeobj.code.__str__():
-                                if v not in synapse_model.variables:
-                                    synapse_model.postsyn_variables.append((k, c_data_type(v.dtype)))
+                                if k not in synapse_model.variables:
+                                    synapse_model.postsyn_variables.append(k)
+                                    synapse_model.postsyn_variabletypes.append(c_data_type(v.dtype))
                 thecode = decorate(codeobj.code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
-                synapse_model.postsyn_code_lines.append(thecode) 
+                synapse_model.postsyn_code_lines.append(thecode)
+                
             self.synapse_models.append(synapse_model)
                                
-        exit
+        # Copy the brianlib directory
+        brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
+                                    'brianlib')
+        brianlib_files = copy_directory(brianlib_dir, os.path.join(project_dir, 'brianlib'))
+        for file in brianlib_files:
+            if file.lower().endswith('.cpp'):
+                self.source_files.append('brianlib/'+file)
+            elif file.lower().endswith('.h'):
+                self.header_files.append('brianlib/'+file)
+
+        # Copy the b2glib directory
+        b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
+                                    'b2glib')
+        b2glib_files = copy_directory(b2glib_dir, os.path.join(project_dir, 'b2glib'))
+        for file in b2glib_files:
+            if file.lower().endswith('.cc'):
+                self.source_files.append('b2glib/'+file)
+            elif file.lower().endswith('.h'):
+                self.header_files.append('b2glib/'+file)
+
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models= self.neuron_models,
                                                    synapse_models= self.synapse_models,
@@ -532,7 +633,11 @@ class GeNNDevice(CPPStandaloneDevice):
 
         runner_tmp = GeNNCodeObject.templater.runner(None, None,
                                                      neuron_models= self.neuron_models,
+                                                     synapse_models= self.synapse_models,
                                                      model_name= self.model_name,
+                                                     main_lines= main_lines,
+                                                     header_files= self.header_files,
+                                                     source_files= self.source_files,
                                                      )        
         open(os.path.join(project_dir, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
         open(os.path.join(project_dir, 'runner.h'), 'w').write(runner_tmp.h_file)
@@ -553,6 +658,7 @@ class GeNNDevice(CPPStandaloneDevice):
         if compile_project:
             call(["buildmodel", self.model_name], cwd=project_dir)
             call(["make"], cwd=project_dir)
+
         if run_project:
             gpu_arg = "1" if use_GPU else "0"
             call(["bin/linux/release/runner", "test",

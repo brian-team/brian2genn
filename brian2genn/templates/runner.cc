@@ -8,6 +8,16 @@
 
 
 #include "runner.h"
+#include "objects.cpp"
+
+{% for header in header_files %}
+#include "{{header}}"
+{% endfor %}
+
+{% for source in source_files %}
+#include "{{source}}"
+{% endfor %}
+
 
 //--------------------------------------------------------------------------
 /*! \brief This function is the entry point for running the simulation of the MBody1 model network.
@@ -45,6 +55,22 @@ int main(int argc, char *argv[])
   // build the neuronal circuitery
   engine eng;
 
+  //-----------------------------------------------------------------
+  // load variables and parameters and translate them from Brian to Genn
+  _init_arrays();
+  _load_arrays();
+
+  {% for line in main_lines %}
+  {{line}}
+  {% endfor %}
+
+  // translate to GeNN synaptic arrays
+  {% for synapses in synapse_models %}
+  convert_dynamic_arrays_2_dense_matrix(_dynamic_array__synaptic_pre_{{synapses.name}}, _dynamic_array__synaptic_post_{{synapses.name}}, _dynamic_array_g_{{synapses.name}}, gp{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {% endfor %}
+
+
+  //-----------------------------------------------------------------
   eng.init(which);         // this includes copying g's for the GPU version
 
   //------------------------------------------------------------------

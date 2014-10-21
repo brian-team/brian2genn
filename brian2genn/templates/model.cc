@@ -79,8 +79,10 @@ void modelDefinition(NNmodel &model)
   n.varNames.clear();
   n.varTypes.clear();
   {% for var in neuron_model.variables %}
-  n.varNames.push_back(tS("{{var[0]}}"));
-  n.varTypes.push_back(tS("{{var[1]}}"));
+  n.varNames.push_back(tS("{{var}}"));
+  {% endfor %}
+  {% for var in neuron_model.variabletypes %}
+  n.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
   // step2: add parameters
   n.pNames.clear(); 
@@ -109,12 +111,16 @@ void modelDefinition(NNmodel &model)
   ps.pNames.clear(); 
   ps.dpNames.clear();
   {% for var in synapse_model.variables %}
-  s.varNames.push_back(tS("{{var[0]}}"));
-  s.varTypes.push_back(tS("{{var[1]}}"));
+  s.varNames.push_back(tS("{{var}}"));
+  {% endfor %}
+  {% for var in synapse_model.variabletypes %}
+  s.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
   {% for var in synapse_model.postsyn_variables %}
-  ps.varNames.push_back(tS("{{var[0]}}"));
-  ps.varTypes.push_back(tS("{{var[1]}}"));
+  ps.varNames.push_back(tS("{{var}}"));
+  {% endfor %}
+  {% for var in synapse_model.postsyn_variabletypes %}  
+  ps.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
   // step2: add parameters
   {% for par in synapse_model.parameters %}
@@ -139,7 +145,8 @@ void modelDefinition(NNmodel &model)
   model.addNeuronPopulation("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}NEURON, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
   {% endfor %}
   {% for synapse_model in synapse_models %} 
-  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, ALLTOALL, GLOBALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+// TODO: Consider felxible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
+  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, DENSE, INDIVIDUALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
   {% endfor %}
 
 }
