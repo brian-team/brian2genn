@@ -6,7 +6,6 @@ set_device('genn')
 
 N = 1000
 tau = 10*ms
-Iin = 0.11/ms 
 eqs = '''
 dV/dt = -V/tau + Iin : 1
 '''
@@ -20,7 +19,7 @@ S= Synapses(G, G2,
             ds/dt= alpha*(1-s) - beta*s: 1
             g: 1
             ''',
-            pre='s+= g*(tanh(V-10))',
+            pre='Iin_post+= g*(tanh(V-10))',
             name='ex_syns')
 
 alpha2= 40*ms
@@ -32,7 +31,7 @@ S2= Synapses(G2, G,
              ds/dt= alpha2*(1-s) - beta2*s: 1
              g: 1
              ''',
-             pre='s+= g*p_pre',
+             pre='Iin_post+= g*p_pre',
              post='''
              g*= p_post-0.9;
              ''',
