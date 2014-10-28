@@ -135,6 +135,7 @@ void modelDefinition(NNmodel &model)
   weightUpdateModels.push_back(s);
   {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()+MAXSYN-1;
   ps.postSynDecay= tS("{% for line in synapse_model.postsyn_code_lines %}{{line}}{% endfor %}");
+ ps.synapseDynamics= tS("{% for line in synapse_model.synapsedynamics_code_lines %}{{line}}{% endfor %}");
   postSynModels.push_back(ps); 
   {{synapse_model.name}}POSTSYN= postSynModels.size()-1;
   {% endfor %}

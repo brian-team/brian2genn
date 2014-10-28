@@ -5,6 +5,7 @@ import inspect
 from collections import defaultdict
 
 from brian2.units import second
+from brian2.units import have_same_dimensions
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
@@ -88,6 +89,7 @@ class synapseModel(object):
         self.postsyn_parameters= [ ]
         self.postsyn_pvalue= [ ]
         self.postsyn_code_lines= [ ]
+        self.synapsedynamics_code_lines= [ ]
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -203,8 +205,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # use the same name in the two dictionaries, not for example
             # ``_dynamic_array_source_name_2`` and ``_array_source_name_1``
             # (this would work fine, but it would make the code harder to read).
-            orig_dynamic_name = dynamic_name = '_dynamic_array_%s_%s' % (var.name, var.owner.name)
-            orig_array_name = array_name = '_array_%s_%s' % (var.name, var.owner.name)
+            orig_dynamic_name = dynamic_name = '_dynamic_array_%s_%s' % (var.owner.name, var.name)
+            orig_array_name = array_name = '_array_%s_%s' % (var.owner.name, var.name)
             suffix = 0
 
             if var.dimensions == 1:
@@ -222,7 +224,7 @@ class GeNNDevice(CPPStandaloneDevice):
             dynamic_dict[var] = dynamic_name
             self.arrays[var] = array_name
         else:
-            orig_array_name = array_name = '_array_%s_%s' % (var.name, var.owner.name)
+            orig_array_name = array_name = '_array_%s_%s' % (var.owner.name, var.name)
             suffix = 0
             while (array_name in self.arrays.values()):
                 suffix += 1
@@ -310,11 +312,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                   'standalone scripts.')
 
     def code_object_class(self, codeobj_class=None):
-        if codeobj_class is not None:
-            if codeobj_class in (GeNNCodeObject, GeNNUserCodeObject):
-                return codeobj_class
-            else:
-                raise ValueError("Cannot specify codeobj_class %s for genn device.", codeobj_class.name)
+        if codeobj_class is GeNNCodeObject:
+            return codeobj_class
         else:
             return GeNNUserCodeObject
 
@@ -327,6 +326,8 @@ class GeNNDevice(CPPStandaloneDevice):
         #print(abstract_code)
         #print(variables)
         print('--------------------------')
+        if template_name in [ 'summed_variable', 'ratemonitor', 'spikemonitor', 'statemonitor' ]:
+            raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
         else:
@@ -400,7 +401,7 @@ class GeNNDevice(CPPStandaloneDevice):
         return main_lines
 
     #---------------------------------------------------------------------------------
-    def build(self, project_dir='output', compile_project=True, run_project=True, use_GPU=True):
+    def build(self, directory='output', compile=True, run=True, use_GPU=True):
         '''
         TODO: comments here
         '''
@@ -412,14 +413,14 @@ class GeNNDevice(CPPStandaloneDevice):
 
         # Start building the project
 
-        self.project_dir = project_dir
-        ensure_directory(project_dir)
+        self.project_dir = directory
+        ensure_directory(directory)
         for d in ['code_objects', 'results', 'static_arrays']:
-            ensure_directory(os.path.join(project_dir, d))
+            ensure_directory(os.path.join(directory, d))
 
-        writer = CPPWriter(project_dir)
+        writer = CPPWriter(directory)
 
-        logger.debug("Writing GeNN project to directory "+os.path.normpath(project_dir))
+        logger.debug("Writing GeNN project to directory "+os.path.normpath(directory))
 
 # DO WE NEED TO WORRY ABOUT THESE? ARE THERE USER-DEFINED ONES IN THERE?
 #        arange_arrays = sorted([(var, start)
@@ -432,7 +433,7 @@ class GeNNDevice(CPPStandaloneDevice):
         logger.debug("static arrays: "+str(sorted(self.static_arrays.keys())))
         static_array_specs = []
         for name, arr in sorted(self.static_arrays.items()):
-            arr.tofile(os.path.join(project_dir, 'static_arrays', name))
+            arr.tofile(os.path.join(directory, 'static_arrays', name))
             static_array_specs.append((name, c_data_type(arr.dtype), arr.size, name))
         
         networks = [net() for net in Network.__instances__() if net().name!='_fake_network']
@@ -577,6 +578,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                     print synapse_model.variables
                                     synapse_model.variables.append(k)
                                     synapse_model.variabletypes.append(c_data_type(v.dtype))
+ # look to get multi-templates always (if necessary have empty .h block)
                     if isinstance(codeobj.code, str):
                         thecode = decorate(codeobj.code, synapse_model.variables, synapse_model.parameters).strip()
                     else:
@@ -599,14 +601,14 @@ class GeNNDevice(CPPStandaloneDevice):
                                     synapse_model.postsyn_variables.append(k)
                                     synapse_model.postsyn_variabletypes.append(c_data_type(v.dtype))
                 thecode = decorate(codeobj.code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
-                synapse_model.postsyn_code_lines.append(thecode)
+                synapse_model.synapsedynamics_code_lines.append(thecode)
                 
             self.synapse_models.append(synapse_model)
                                
         # Copy the brianlib directory
         brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
                                     'brianlib')
-        brianlib_files = copy_directory(brianlib_dir, os.path.join(project_dir, 'brianlib'))
+        brianlib_files = copy_directory(brianlib_dir, os.path.join(directory, 'brianlib'))
         for file in brianlib_files:
             if file.lower().endswith('.cpp'):
                 self.source_files.append('brianlib/'+file)
@@ -616,7 +618,7 @@ class GeNNDevice(CPPStandaloneDevice):
         # Copy the b2glib directory
         b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
                                     'b2glib')
-        b2glib_files = copy_directory(b2glib_dir, os.path.join(project_dir, 'b2glib'))
+        b2glib_files = copy_directory(b2glib_dir, os.path.join(directory, 'b2glib'))
         for file in b2glib_files:
             if file.lower().endswith('.cc'):
                 self.source_files.append('b2glib/'+file)
@@ -629,7 +631,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    dtDef= self.dtDef,
                                                    model_name= self.model_name,
                                                    )
-        open(os.path.join(project_dir,self.model_name+'.cc'), 'w').write(model_tmp)
+        open(os.path.join(directory,self.model_name+'.cc'), 'w').write(model_tmp)
 
         runner_tmp = GeNNCodeObject.templater.runner(None, None,
                                                      neuron_models= self.neuron_models,
@@ -639,37 +641,37 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      header_files= self.header_files,
                                                      source_files= self.source_files,
                                                      )        
-        open(os.path.join(project_dir, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
-        open(os.path.join(project_dir, 'runner.h'), 'w').write(runner_tmp.h_file)
+        open(os.path.join(directory, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
+        open(os.path.join(directory, 'runner.h'), 'w').write(runner_tmp.h_file)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
                                                      model_name= self.model_name,
                                                      )        
-        open(os.path.join(project_dir, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
-        open(os.path.join(project_dir, 'engine.h'), 'w').write(engine_tmp.h_file)
+        open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
+        open(os.path.join(directory, 'engine.h'), 'w').write(engine_tmp.h_file)
 
         Makefile_tmp= GeNNCodeObject.templater.Makefile(None, None,
                                                         neuron_models= self.neuron_models,
                                                         model_name= self.model_name,
-                                                        ROOTDIR=os.path.abspath(project_dir)
+                                                        ROOTDIR=os.path.abspath(directory)
                                                         ) 
-        open(os.path.join(project_dir, 'Makefile'), 'w').write(Makefile_tmp)
+        open(os.path.join(directory, 'Makefile'), 'w').write(Makefile_tmp)
 
-        if compile_project:
-            call(["buildmodel", self.model_name], cwd=project_dir)
-            call(["make"], cwd=project_dir)
+        if compile:
+            call(["buildmodel.sh", self.model_name], cwd=directory)
+            call(["make"], cwd=directory)
 
-        if run_project:
+        if run:
             gpu_arg = "1" if use_GPU else "0"
             call(["bin/linux/release/runner", "test",
-                  str(self.run_duration), gpu_arg], cwd=project_dir)
+                  str(self.run_duration), gpu_arg], cwd=directory)
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, level=0):
-        net.before_run(run_namespace=namespace, level=level+2)
         if self.run_duration is not None:
             raise NotImplementedError('Only a single run statement is supported.')
         self.run_duration = float(duration)
+        super(GeNNDevice, self).network_run(net= net, duration= duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
 
 
 genn_device = GeNNDevice()
