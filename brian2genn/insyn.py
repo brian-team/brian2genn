@@ -47,7 +47,7 @@ call this function and rewrite the appropriate statement.
 from brian2.utils.stringtools import get_identifiers
 from brian2.codegen.statements import Statement
 
-def check_pre_code(codeobj, stmts, vars_pre, vars_syn, vars_post):
+def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
     '''
     Given a set of statements stmts where the variables names in vars_pre are
     presynaptic, in vars_syn are synaptic and in vars_post are postsynaptic,
@@ -55,12 +55,12 @@ def check_pre_code(codeobj, stmts, vars_pre, vars_syn, vars_post):
     a new statement sequence translated for compatibility with GeNN, along
     with the name of the targeted variable.
     '''
-    read, write, indices = codeobj.array_read_write(stmts)
+    read, write, indices = codegen.array_read_write(stmts)
     
     post_write = set(write).intersection(set(vars_post))
     if len(post_write)==0:
         raise NotImplementedError("GeNN does not support Synapses with no postsynaptic effect.")
-    if len(post_write)>2:
+    if len(post_write)>1:
         raise NotImplementedError("GeNN only supports writing to a single postsynaptic variable.")
     
     post_write_var = list(post_write)[0]
@@ -77,7 +77,7 @@ def check_pre_code(codeobj, stmts, vars_pre, vars_syn, vars_post):
             if stmt.inplace:
                 if stmt.op!='+=':
                     raise NotImplementedError("GeNN only supports the += in place operation on postsynaptic variables.")
-                if set(ids).intersection(set(vars_pre)+set(vars_post)):
+                if set(ids).intersection(set(vars_pre).union(set(vars_post))):
                     raise NotImplementedError("GeNN only supports postsynaptic operations using only synaptic variables.")
                 accumulation_expr = stmt.expr
             else:
@@ -88,24 +88,22 @@ def check_pre_code(codeobj, stmts, vars_pre, vars_syn, vars_post):
             new_stmt = Statement('addtoinSyn', '=', accumulation_expr,
                                  comment=stmt.comment, dtype=stmt.dtype)
             new_stmts.append(new_stmt)
+            if found_write_statement:
+                raise NotImplementedError("GeNN does not support multiple writes to postsynaptic variables.")
+            found_write_statement = True
         else:
             new_stmts.append(stmt)
     
     return post_write_var, new_stmts
 
 
-def check_post_code(stmts, vars_pre, vars_syn, vars_post):
-    read, write, indices = codeobj.array_read_write(stmts)
+def check_post_code(codegen, stmts, vars_pre, vars_syn, vars_post):
+    read, write, indices = codegen.array_read_write(stmts)
 
     post_write = set(write).intersection(set(vars_post))
-    if len(pre_write):
+    if len(post_write):
         raise NotImplementedError("GeNN does not support writing to postsynaptic variables in postsynaptic code.")
     
     pre_write = set(write).intersection(set(vars_pre))
     if len(pre_write):
         raise NotImplementedError("GeNN does not support writing to presynaptic variables in postsynaptic code.")
-
-
-if __name__=='__main__':
-    # TODO: some example code
-    pass
