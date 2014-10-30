@@ -66,6 +66,8 @@ int main(int argc, char *argv[])
   {% for var in synapses.variables %}
   convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
   {% endfor %}
+  create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
+
   {% for var in synapses.postsyn_variables %}
   convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
   {% endfor %}
@@ -80,7 +82,9 @@ int main(int argc, char *argv[])
   
 
   //-----------------------------------------------------------------
+  
   eng.init(which);         // this includes copying g's for the GPU version
+  copyStateToDevice();
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation

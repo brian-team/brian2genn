@@ -110,9 +110,11 @@ void modelDefinition(NNmodel &model)
   {% for var in synapse_model.variables %}
   s.varNames.push_back(tS("{{var}}"));
   {% endfor %}
+  s.varNames.push_back(tS("_hidden_weightmatrix"));
   {% for var in synapse_model.variabletypes %}
   s.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
+  s.varTypes.push_back(tS("char"));
   // step2: add parameters
   {% for par in synapse_model.parameters %}
   s.pNames.push_back(tS("{{par}}"));

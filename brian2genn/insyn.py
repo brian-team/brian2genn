@@ -85,7 +85,7 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
                 # namely, for an expression like v = expr we need to check if (expr-v) when simplified reduces to
                 # an expression that only has postsynaptic variables using sympy
                 raise NotImplementedError("GeNN only supports in-place modification of postsynaptic variables")
-            new_stmt = Statement('addtoinSyn', '=', accumulation_expr,
+            new_stmt = Statement('addtoinSyn', '=', '_hidden_weightmatrix*('+accumulation_expr+')',
                                  comment=stmt.comment, dtype=stmt.dtype)
             new_stmts.append(new_stmt)
             if found_write_statement:

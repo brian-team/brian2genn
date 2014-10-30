@@ -18,12 +18,3 @@ class GeNNConfiguration(Configuration):
         brian2.device.build(directory='testing_dir', compile=True, run=True,
                             use_GPU=True)
 
-if __name__=='__main__':
-    from brian2.tests.features.synapses import SynapsesPre
-    c = GeNNConfiguration()
-    c.before_run()
-    f = SynapsesPre()
-    f.run()
-    c.after_run()
-    #run_single_feature_test(GeNNConfiguration, NeuronGroupLIF)
-    #print run_feature_tests(configurations=[DefaultConfiguration, GeNNConfiguration])

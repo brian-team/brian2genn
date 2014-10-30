@@ -57,6 +57,7 @@ def decorate(code, variables, parameters, do_final= True):
         code= code.replace('\n', '\\n\\\n')
         code = code.replace('"', '\\"')
         code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
+        code = word_substitute(code, {'_hidden_weightmatrix' : '$(_hidden_weightmatrix)'})
     return code
 
 class neuronModel(object):
@@ -420,11 +421,11 @@ class GeNNDevice(CPPStandaloneDevice):
         logger.debug("Writing GeNN project to directory "+os.path.normpath(directory))
 
 # DO WE NEED TO WORRY ABOUT THESE? ARE THERE USER-DEFINED ONES IN THERE?
-#        arange_arrays = sorted([(var, start)
-#                                for var, start in self.arange_arrays.iteritems()],
-#                               key=lambda (var, start): var.name)
+        arange_arrays = sorted([(var, start)
+                                for var, start in self.arange_arrays.iteritems()],
+                               key=lambda (var, start): var.name)
         
-        arange_arrays = []
+        #arange_arrays = []
         
         # write the static arrays
         logger.debug("static arrays: "+str(sorted(self.static_arrays.keys())))
@@ -437,7 +438,7 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses = []
         for net in networks:
             synapses.extend(s for s in net.objects if isinstance(s, Synapses))
-
+        
 #        if len(synapses):
 #            raise NotImplementedError("GeNN does not support Synapses (yet).")
         
@@ -449,8 +450,8 @@ class GeNNDevice(CPPStandaloneDevice):
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
         # for repeated runs of standalone (e.g. in the test suite).
-        for net in networks:
-            net.after_run()
+        # for net in networks:
+        #     net.after_run()
 
         arr_tmp = GeNNUserCodeObject.templater.objects(
                         None, None,
@@ -525,6 +526,7 @@ class GeNNDevice(CPPStandaloneDevice):
         neuron_groups = [obj for obj in net.objects if isinstance(obj, NeuronGroup)]
         synapse_groups=[ obj for obj in net.objects if isinstance(obj, Synapses)]
         self.model_name= net.name+'_model'
+        self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
         for obj in neuron_groups:
             # Extract the variables
             neuron_model= neuronModel()
@@ -548,9 +550,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         
                 codeobj = objects[obj.name+suffix].codeobj
                 for k, v in codeobj.variables.iteritems():
-                    if k == 'dt':
-                        self.dtDef= '#define DT '+repr(getattr(v.obj, v.attribute))
-                    elif isinstance(v, Constant):
+                    if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
@@ -646,7 +646,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.synapseDynamics= thecode  
                 
                 
-            synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn);'
+            synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
                 
             self.synapse_models.append(synapse_model)
                                
@@ -724,6 +724,7 @@ class GeNNDevice(CPPStandaloneDevice):
                   str(self.run_duration), gpu_arg]
             call(["./runner", "test",
                   str(self.run_duration), gpu_arg], cwd=directory)
+            self.has_been_run= True
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, level=0):
