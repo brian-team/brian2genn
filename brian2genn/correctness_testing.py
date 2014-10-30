@@ -19,11 +19,11 @@ class GeNNConfiguration(Configuration):
                             use_GPU=True)
 
 if __name__=='__main__':
-    #from brian2.tests.features.neurongroup import NeuronGroupLIF
-    #c = GeNNConfiguration()
-    #c.before_run()
-    #f = NeuronGroupLIF()
-    #f.run()
-    #c.after_run()
+    from brian2.tests.features.synapses import SynapsesPre
+    c = GeNNConfiguration()
+    c.before_run()
+    f = SynapsesPre()
+    f.run()
+    c.after_run()
     #run_single_feature_test(GeNNConfiguration, NeuronGroupLIF)
-    print run_feature_tests(configurations=[DefaultConfiguration, GeNNConfiguration])
+    #print run_feature_tests(configurations=[DefaultConfiguration, GeNNConfiguration])

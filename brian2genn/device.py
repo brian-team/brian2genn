@@ -1,4 +1,5 @@
 import numpy
+import numpy as np
 import os
 from subprocess import call
 import inspect
@@ -533,6 +534,11 @@ class GeNNDevice(CPPStandaloneDevice):
                                   ('_thresholder', neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
                                   ]:
+                if obj.name+suffix not in objects:
+                    if suffix == '_thresholder':
+                        lines.append('0')
+                    continue
+                        
                 codeobj = objects[obj.name+suffix].codeobj
                 for k, v in codeobj.variables.iteritems():
                     if k == 'dt':
@@ -573,8 +579,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.variables:
                                 print('appending ', k);
                                 print synapse_model.variables
-                                synapse_model.variables.append(k)
-                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                if codeobj.indices[k] == '_idx':
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
@@ -600,8 +607,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.variables:
                                 print('appending ', k);
                                 print synapse_model.variables
-                                synapse_model.variables.append(k)
-                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                if codeobj.indices[k] == '_idx':
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
                 thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
                 synapse_model.simLearnPost= thecode  
@@ -622,8 +630,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.synapseDynamics_variables:
                                 print('appending ', k);
                                 print synapse_model.synapseDynamics_variables
-                                synapse_model.synapseDynamics_variables.append(k)
-                                synapse_model.synapseDynamics_variabletypes.append(c_data_type(v.dtype))
+                                if codeobj.indices[k] == '_idx':
+                                    synapse_model.synapseDynamics_variables.append(k)
+                                    synapse_model.synapseDynamics_variabletypes.append(c_data_type(v.dtype))
                                     
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters).strip()
                 thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()                
