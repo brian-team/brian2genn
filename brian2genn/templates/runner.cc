@@ -56,9 +56,10 @@ int main(int argc, char *argv[])
   _init_arrays();
   _load_arrays();
 
-  {% for line in main_lines %}
-  {{line}}
-  {% endfor %}
+  {
+	  using namespace brian;
+	  {{ main_lines | autoindent }}
+  }
 
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}

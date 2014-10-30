@@ -434,14 +434,23 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append((name, c_data_type(arr.dtype), arr.size, name))
         
         networks = [net() for net in Network.__instances__() if net().name!='_fake_network']
-        synapses = [S() for S in Synapses.__instances__()]
+        synapses = []
+        for net in networks:
+            synapses.extend(s for s in net.objects if isinstance(s, Synapses))
 
 #        if len(synapses):
 #            raise NotImplementedError("GeNN does not support Synapses (yet).")
         
         if len(networks)!=1:
-            raise NotImplementedError("GeNN only supports a single Network object")
+            raise NotImplementedError("GeNN only supports MagicNetwork")
         net = networks[0]
+
+        # Not sure what the best place is to call Network.after_run -- at the
+        # moment the only important thing it does is to clear the objects stored
+        # in magic_network. If this is not done, this might lead to problems
+        # for repeated runs of standalone (e.g. in the test suite).
+        for net in networks:
+            net.after_run()
 
         arr_tmp = GeNNUserCodeObject.templater.objects(
                         None, None,
