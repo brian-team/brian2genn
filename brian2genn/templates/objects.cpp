@@ -1,23 +1,18 @@
+{# IS_OPENMP_COMPATIBLE #}
 {% macro cpp_file() %}
 
 #include<stdint.h>
 #include<vector>
 #include "objects.h"
-#include "brianlib/synapses.h"
+#include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
-#include "brianlib/network.h"
 #include<iostream>
 #include<fstream>
 
 //////////////// clocks ///////////////////
 {% for clock in clocks | sort(attribute='name') %}
 Clock brian::{{clock.name}}({{clock.dt_}});
-{% endfor %}
-
-//////////////// networks /////////////////
-{% for net in networks | sort(attribute='name') %}
-Network brian::{{net.name}};
 {% endfor %}
 
 //////////////// arrays ///////////////////
@@ -57,8 +52,7 @@ SynapticPathway<double> brian::{{path.name}}(
 		{{dynamic_array_specs[path.variables['delay']]}},
 		{{dynamic_array_specs[path.synapse_sources]}},
 		{{path.source.dt_}},
-		{{path.source.start}}, {{path.source.stop}}
-		);
+		{{path.source.start}}, {{path.source.stop}});
 {% endfor %}
 {% endfor %}
 
@@ -71,6 +65,7 @@ void _init_arrays()
 	{% for var in zero_arrays | sort(attribute='name') %}
 	{% set varname = array_specs[var] %}
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+	{{ openmp_pragma('parallel-static') }}
 	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
 	{% endfor %}
 
@@ -78,6 +73,7 @@ void _init_arrays()
 	{% for var, start in arange_arrays %}
 	{% set varname = array_specs[var] %}
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+	{{ openmp_pragma('parallel-static') }}
 	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
 	{% endfor %}
 
@@ -102,7 +98,7 @@ void _load_arrays()
 		std::cout << "Error opening static array {{name}}." << endl;
 	}
 	{% endfor %}
-}
+}	
 
 void _write_arrays()
 {
@@ -188,22 +184,16 @@ void _dealloc_arrays()
 
 #include<vector>
 #include<stdint.h>
-#include "brianlib/synapses.h"
+#include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
-#include "brianlib/network.h"
+{{ openmp_pragma('include') }}
 
 namespace brian {
 
 //////////////// clocks ///////////////////
 {% for clock in clocks %}
 extern Clock {{clock.name}};
-{% endfor %}
-
-//////////////// networks /////////////////
-extern Network magicnetwork;
-{% for net in networks %}
-extern Network {{net.name}};
 {% endfor %}
 
 //////////////// dynamic arrays ///////////

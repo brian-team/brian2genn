@@ -2,6 +2,7 @@ import numpy
 import os
 from subprocess import call
 import inspect
+import shutil
 from collections import defaultdict
 
 from brian2.units import second
@@ -52,6 +53,7 @@ def decorate(code, variables, parameters):
     code= word_substitute(code, {'dt' : 'DT'}).strip()
     code= code.replace('\n', '\\n\\\n')
     code = code.replace('"', '\\"')
+    code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
     return code
 
 class neuronModel(object):
@@ -82,14 +84,19 @@ class synapseModel(object):
         self.variabletypes= []
         self.parameters= []
         self.pvalue= []
-        self.pre_code_lines= []
-        self.post_code_lines= []
+        self.simCode= []
+        self.simLearnPost= []
         self.postsyn_variables= []
         self.postsyn_variabletypes= []
-        self.postsyn_parameters= [ ]
-        self.postsyn_pvalue= [ ]
-        self.postsyn_code_lines= [ ]
-        self.synapsedynamics_code_lines= [ ]
+        self.postsyn_parameters= []
+        self.postsyn_pvalue= []
+        self.postsSynDecay= []
+        self.postSyntoCurrent= []
+        self.synapseDynamics_variables= []
+        self.synapseDynamics_variabletypes= []
+        self.synapseDynamics_parameters= []
+        self.synapseDynamics_pvalue= []
+        self.synapseDynamics= []
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -320,12 +327,6 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
-        print(name)
-        print(template_name)
-        #print('abstract_code')
-        #print(abstract_code)
-        #print(variables)
-        print('--------------------------')
         if template_name in [ 'summed_variable', 'ratemonitor', 'spikemonitor', 'statemonitor' ]:
             raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
@@ -338,9 +339,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                                       template_kwds=template_kwds,
                                                       override_conditional_write=override_conditional_write,
         )
-        #print('Codeobj_class ', codeobj_class)
-        #print(codeobj.code)
-        #print('=========================')
         self.code_objects[codeobj.name] = codeobj
         return codeobj
         
@@ -357,8 +355,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 if ('initialise_queue' not in codeobj.name) and ('push_spikes' not in codeobj.name): 
                     main_lines.append('_run_%s();' % codeobj.name)
             elif func=='run_network':
-                net, netcode = args
-                main_lines.extend(netcode)
+                 net, netcode = args
+                 #                 main_lines.extend(netcode)
             elif func=='set_by_array':
                 arrayname, staticarrayname = args
                 code = '''
@@ -459,6 +457,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         networks= [net],
                         )
         writer.write('objects.*', arr_tmp)
+        self.header_files.append('objects.h');
+        self.source_files.append('objects.cpp');
 
         main_lines = self.make_main_lines()
 
@@ -499,19 +499,18 @@ class GeNNDevice(CPPStandaloneDevice):
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            # print(codeobj.name)
+            # print(type(codeobj.code))
             if isinstance(codeobj.code, MultiTemplate):
                 code = freeze(codeobj.code.cpp_file, ns)
-            #print(codeobj.name)
-            #print(type(codeobj.code))
-            if isinstance(codeobj.code, MultiTemplate):
-                code= codeobj.code.cpp_file
                 code = code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
                 code = '#include "objects.h"\n'+code
             
                 writer.write('code_objects/'+codeobj.name+'.cpp', code)
                 self.source_files.append('code_objects/'+codeobj.name+'.cpp')
                 writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
-
+                self.header_files.append('code_objects/'+codeobj.name+'.h')
+                
 
         # assemble the model descriptions:
         objects = dict((obj.name, obj) for obj in net.objects)
@@ -559,49 +558,80 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.srcN= obj.source._N
             synapse_model.trgname= obj.target.name
             synapse_model.trgN= obj.target._N
-            for suffix, lines in [('_pre', synapse_model.pre_code_lines),
-                                  ('_post', synapse_model.post_code_lines),
-                                  ]:          # mem= inspect.getmembers(obj)
-                code_name= obj.name+suffix
-                if code_name in objects:
-                    for k, v in codeobj.variables.iteritems():
-                        if k == '_spikespace' or k == 't' or k == 'dt' or k == 'lastupdate':
-                            pass
-                        elif isinstance(v, Constant):
-                            if k not in synapse_model.parameters:
-                                synapse_model.parameters.append(k)
-                                synapse_model.pvalue.append(repr(v.value))
-                        elif isinstance(v, ArrayVariable):
-                            if k in codeobj.code.__str__():
-                                if k not in synapse_model.variables:
-                                    print('appending ', k);
-                                    print synapse_model.variables
-                                    synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
- # look to get multi-templates always (if necessary have empty .h block)
-                    if isinstance(codeobj.code, str):
-                        thecode = decorate(codeobj.code, synapse_model.variables, synapse_model.parameters).strip()
-                    else:
-                        thecode = decorate(codeobj.code._templates['cpp_file'], synapse_model.variables, synapse_model.parameters).strip()
-                    lines.append(thecode) 
 
-            code_name= obj.name+'_stateupdater'
-            if code_name in objects:
-                codeobj= objects[code_name].codeobj 
+            if hasattr(obj, 'pre'):
+                codeobj= obj.pre.codeobj
                 for k, v in codeobj.variables.iteritems():
-                        if k == '_spikespace' or k == 't' or k == 'dt' or k == 'lastupdate':
-                            pass
-                        if isinstance(v, Constant):
-                            if k not in synapse_model.parameters:
-                                synapse_model.postsyn_parameters.append(k)
-                                synapse_model.postsyn_pvalue.append(repr(v.value))
-                        elif isinstance(v, ArrayVariable):
-                            if k in codeobj.code.__str__():
-                                if k not in synapse_model.variables:
-                                    synapse_model.postsyn_variables.append(k)
-                                    synapse_model.postsyn_variabletypes.append(c_data_type(v.dtype))
-                thecode = decorate(codeobj.code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
-                synapse_model.synapsedynamics_code_lines.append(thecode)
+                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                        pass
+                    elif isinstance(v, Constant):
+                        if k not in synapse_model.parameters:
+                            synapse_model.parameters.append(k)
+                            synapse_model.pvalue.append(repr(v.value))
+                    elif isinstance(v, ArrayVariable):
+                        if k in codeobj.code.__str__():
+                            if k not in synapse_model.variables:
+                                print('appending ', k);
+                                print synapse_model.variables
+                                synapse_model.variables.append(k)
+                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                code= codeobj.code
+                code_lines = [line.strip() for line in code.split('\n')]
+                new_code_lines = []
+                for line in code_lines:
+                    new_code_lines.append(line)
+                    if line.startswith('addtoinSyn'):
+                        new_code_lines.append('$(updatelinsyn);')
+                code = '\n'.join(new_code_lines)
+                thecode = decorate(code, synapse_model.variables, synapse_model.parameters).strip()
+                synapse_model.simCode= thecode
+
+            if hasattr(obj, 'post'):
+                codeobj= obj.post.codeobj
+                for k, v in codeobj.variables.iteritems():
+                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                        pass
+                    elif isinstance(v, Constant):
+                        if k not in synapse_model.parameters:
+                            synapse_model.parameters.append(k)
+                            synapse_model.pvalue.append(repr(v.value))
+                    elif isinstance(v, ArrayVariable):
+                        if k in codeobj.code.__str__():
+                            if k not in synapse_model.variables:
+                                print('appending ', k);
+                                print synapse_model.variables
+                                synapse_model.variables.append(k)
+                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                code= codeobj.code
+                thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
+                synapse_model.simLearnPost= thecode  
+
+            
+            if obj.state_updater != None:
+                codeobj= obj.state_updater.codeobj
+                code= codeobj.code
+                for k, v in codeobj.variables.iteritems():
+                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                        pass
+                    elif isinstance(v, Constant):
+                        if k not in synapse_model.synapseDynamics_parameters:
+                            synapse_model.synapseDynamics_parameters.append(k)
+                            synapse_model.synapseDynamics_pvalue.append(repr(v.value))
+                    elif isinstance(v, ArrayVariable):
+                        if k in codeobj.code.__str__():
+                            if k not in synapse_model.synapseDynamics_variables:
+                                print('appending ', k);
+                                print synapse_model.synapseDynamics_variables
+                                synapse_model.synapseDynamics_variables.append(k)
+                                synapse_model.synapseDynamics_variabletypes.append(c_data_type(v.dtype))
+                                    
+                thecode = decorate(code, synapse_model.variables, synapse_model.parameters).strip()
+                thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()                
+                thecode = decorate(code, synapse_model.synapseDynamics_variables, synapse_model.synapseDynamics_parameters).strip()                
+                synapse_model.synapseDynamics= thecode  
+                
+                
+            synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn);'
                 
             self.synapse_models.append(synapse_model)
                                
@@ -615,6 +645,12 @@ class GeNNDevice(CPPStandaloneDevice):
             elif file.lower().endswith('.h'):
                 self.header_files.append('brianlib/'+file)
 
+        # Copy the CSpikeQueue implementation
+        spikequeue_h = os.path.join(directory, 'brianlib', 'spikequeue.h')
+        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
+                     spikequeue_h)
+        
+
         # Copy the b2glib directory
         b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
                                     'b2glib')
@@ -624,6 +660,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.source_files.append('b2glib/'+file)
             elif file.lower().endswith('.h'):
                 self.header_files.append('b2glib/'+file)
+        
+        synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
+        writer.write('synapses_classes.*', synapses_classes_tmp)
 
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models= self.neuron_models,
@@ -645,6 +684,7 @@ class GeNNDevice(CPPStandaloneDevice):
         open(os.path.join(directory, 'runner.h'), 'w').write(runner_tmp.h_file)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
+                                                     synapse_models= self.synapse_models,
                                                      model_name= self.model_name,
                                                      )        
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
@@ -653,7 +693,8 @@ class GeNNDevice(CPPStandaloneDevice):
         Makefile_tmp= GeNNCodeObject.templater.Makefile(None, None,
                                                         neuron_models= self.neuron_models,
                                                         model_name= self.model_name,
-                                                        ROOTDIR=os.path.abspath(directory)
+                                                        ROOTDIR= os.path.abspath(directory),
+                                                        source_files= self.source_files,
                                                         ) 
         open(os.path.join(directory, 'Makefile'), 'w').write(Makefile_tmp)
 
@@ -663,7 +704,10 @@ class GeNNDevice(CPPStandaloneDevice):
 
         if run:
             gpu_arg = "1" if use_GPU else "0"
-            call(["bin/linux/release/runner", "test",
+            print directory
+            print ["./runner", "test",
+                  str(self.run_duration), gpu_arg]
+            call(["./runner", "test",
                   str(self.run_duration), gpu_arg], cwd=directory)
 
     def network_run(self, net, duration, report=None, report_period=10*second,

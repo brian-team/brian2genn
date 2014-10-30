@@ -4,13 +4,16 @@ import brian2genn
 set_device('genn')
 #set_device('cpp_standalone')
 
-N = 1000
+N = 100
 tau = 10*ms
 eqs = '''
-dV/dt = -V/tau + Iin : 1
+dV/dt = -V/tau + Iin/tau : 1
+Iin : 1
 '''
 G = NeuronGroup(N, eqs, threshold='V>1', reset='V=0', name='PN')
+G.V= rand()
 G2= NeuronGroup(N, eqs, threshold='V>1', reset='V=0', name='LN')
+G2.V= 2*rand()
 
 alpha= 20*ms
 beta= 30*ms
@@ -19,7 +22,7 @@ S= Synapses(G, G2,
             ds/dt= alpha*(1-s) - beta*s: 1
             g: 1
             ''',
-            pre='Iin_post+= g*(tanh(V-10))',
+            pre='Iin_post+= g',
             name='ex_syns')
 
 alpha2= 40*ms

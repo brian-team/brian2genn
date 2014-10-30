@@ -8,15 +8,11 @@
 
 
 #include "runner.h"
-#include "objects.cpp"
 
 {% for header in header_files %}
 #include "{{header}}"
 {% endfor %}
 
-{% for source in source_files %}
-#include "{{source}}"
-{% endfor %}
 
 
 //--------------------------------------------------------------------------
@@ -29,7 +25,7 @@ int main(int argc, char *argv[])
 {
   if (argc != 4)
   {
-    fprintf(stderr, "usage: runner <basename> <time (ms)> <CPU=0, GPU=1> \n");
+    fprintf(stderr, "usage: runner <basename> <time (s)> <CPU=0, GPU=1> \n");
     return 1;
   }
   double totalTime= atof(argv[2]);
@@ -66,9 +62,21 @@ int main(int argc, char *argv[])
 
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
-  convert_dynamic_arrays_2_dense_matrix(_dynamic_array__synaptic_pre_{{synapses.name}}, _dynamic_array__synaptic_post_{{synapses.name}}, _dynamic_array_g_{{synapses.name}}, gp{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {% for var in synapses.variables %}
+  convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {% endfor %}
+  {% for var in synapses.postsyn_variables %}
+  convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {% endfor %}
   {% endfor %}
 
+  // copy variable arrays
+  {% for neuron in neuron_models %} 
+  {% for var in neuron.variables %}
+  copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, {{var}}{{neuron.name}}, {{neuron.N}});
+  {% endfor %}
+  {% endfor %}
+  
 
   //-----------------------------------------------------------------
   eng.init(which);         // this includes copying g's for the GPU version
@@ -83,6 +91,7 @@ int main(int argc, char *argv[])
   //  eng.output_state(osf, which);  
   eng.output_spikes(osfs, which);
   eng.sum_spikes();
+  cerr << "first run command" << endl;
   eng.run(DT, which);
   while (!done) 
   {
@@ -91,17 +100,18 @@ int main(int argc, char *argv[])
       eng.getSpikesFromGPU();
     }
     eng.run(DT, which); // run next batch
-    //    eng.output_state(osf, which);
     eng.output_spikes(osfs, which);
+    eng.output_state(osf, which);
     eng.sum_spikes();
+    cerr << t << " done ..." << endl;
     done= (t >= totalTime);
   }
   if (which == GPU) {
     //    eng.getStateFromGPU();
     eng.getSpikesFromGPU();
   }
-  //  eng.output_state(osf, which);
   eng.output_spikes(osfs, which);
+  eng.output_state(osf, which);
   eng.sum_spikes();
   timer.stopTimer();
 
@@ -113,6 +123,26 @@ int main(int argc, char *argv[])
 
   fclose(osf);
   fclose(osfs);
+
+// translate to GeNN synaptic arrays
+  {% for synapses in synapse_models %}
+  {% for var in synapses.variables %}
+  convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}},brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
+  {% endfor %}
+  {% for var in synapses.postsyn_variables %}
+  convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
+  {% endfor %}
+  {% endfor %}
+
+  // copy variable arrays
+  {% for neuron in neuron_models %} 
+  {% for var in neuron.variables %}
+  copy_genn_to_brian({{var}}{{neuron.name}}, brian::_array_{{neuron.name}}_{{var}}, {{neuron.N}});
+  {% endfor %}
+  {% endfor %}
+  
+  _write_arrays();
+  _dealloc_arrays();
   return 0;
 }
 

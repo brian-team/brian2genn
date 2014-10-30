@@ -18,6 +18,7 @@ unsigned int {{neuron_model.name}}NEURON;
 {% for synapse_model in synapse_models %}
 unsigned int {{synapse_model.name}}WEIGHTUPDATE;
 unsigned int {{synapse_model.name}}POSTSYN;
+unsigned int {{synapse_model.name}}SYNDYN;
 {% endfor %}
 
 // parameter values
@@ -42,6 +43,11 @@ float {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}
   {% endfor %}
 };
 
+float {{synapse_model.name}}_syndynp[{{synapse_model.synapseDynamics_pvalue.__len__()}}]= {
+  {% for k in synapse_model.synapseDynamics_pvalue %} {{k}},
+  {% endfor %}
+};
+
 
 {% endfor %}
 
@@ -63,6 +69,11 @@ float {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
 
 float {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
   {% for k in synapse_model.postsyn_variables %} 0.0,
+  {% endfor %}
+};
+
+float {{synapse_model.name}}_synDyn_ini[{{synapse_model.synapseDynamics_variables.__len__()}}]= {
+  {% for k in synapse_model.synapseDynamics_variables %} 0.0,
   {% endfor %}
 };
 
@@ -101,43 +112,63 @@ void modelDefinition(NNmodel &model)
 
   weightUpdateModel s;
   postSynModel ps;  
+  synapseDynamicsModel sd;  
   {% for synapse_model in synapse_models %}
+  // synaptic model
   s.varNames.clear();
   s.varTypes.clear();
   s.pNames.clear(); 
   s.dpNames.clear();
-  ps.varNames.clear();
-  ps.varTypes.clear();
-  ps.pNames.clear(); 
-  ps.dpNames.clear();
   {% for var in synapse_model.variables %}
   s.varNames.push_back(tS("{{var}}"));
   {% endfor %}
   {% for var in synapse_model.variabletypes %}
   s.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
+  // step2: add parameters
+  {% for par in synapse_model.parameters %}
+  s.pNames.push_back(tS("{{par}}"));
+  {% endfor %}
+  // step 3: add simcode
+  s.simCode= tS("{% for line in synapse_model.simCode %}{{line}}{% endfor %}");
+  s.simLearnPost= tS("{% for line in synapse_model.simLearnPost %}{{line}}{% endfor %}");
+  weightUpdateModels.push_back(s);
+  {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()+MAXSYN-1;
+  // post-synaptic model
+  ps.varNames.clear();
+  ps.varTypes.clear();
+  ps.pNames.clear(); 
+  ps.dpNames.clear();
   {% for var in synapse_model.postsyn_variables %}
   ps.varNames.push_back(tS("{{var}}"));
   {% endfor %}
   {% for var in synapse_model.postsyn_variabletypes %}  
   ps.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
-  // step2: add parameters
-  {% for par in synapse_model.parameters %}
-  s.pNames.push_back(tS("{{par}}"));
-  {% endfor %}
   {% for par in synapse_model.postsyn_parameters %}
   ps.pNames.push_back(tS("{{par}}"));
   {% endfor %}
-  // step 3: add simcode
-  s.simCode= tS("{% for line in synapse_model.pre_code_lines %}{{line}}{% endfor %}");
-  s.simLearnPost= tS("{% for line in synapse_model.post_code_lines %}{{line}}{% endfor %}");
-  weightUpdateModels.push_back(s);
-  {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()+MAXSYN-1;
-  ps.postSynDecay= tS("{% for line in synapse_model.postsyn_code_lines %}{{line}}{% endfor %}");
- ps.synapseDynamics= tS("{% for line in synapse_model.synapsedynamics_code_lines %}{{line}}{% endfor %}");
+  ps.postSyntoCurrent= tS("{% for line in synapse_model.postSyntoCurrent %}{{line}}{% endfor %}");
   postSynModels.push_back(ps); 
   {{synapse_model.name}}POSTSYN= postSynModels.size()-1;
+  // synapse_dynamics model
+  sd.varNames.clear();
+  sd.varTypes.clear();
+  sd.pNames.clear(); 
+  sd.dpNames.clear();
+  {% for var in synapse_model.postsyn_variables %}
+  sd.varNames.push_back(tS("{{var}}"));
+  {% endfor %}
+  {% for var in synapse_model.postsyn_variabletypes %}  
+  sd.varTypes.push_back(tS("{{var}}"));
+  {% endfor %}
+  {% for par in synapse_model.postsyn_parameters %}
+  sd.pNames.push_back(tS("{{par}}"));
+  {% endfor %}
+  sd.simCode= tS("{% for line in synapse_model.synapseDynamics %}{{line}}{% endfor %}");
+  synapseDynamicsModels.push_back(sd); 
+  {{synapse_model.name}}SYNDYN= synapseDynamicsModels.size()-1;
+  
   {% endfor %}
 
   model.setName("{{model_name}}");
@@ -148,6 +179,9 @@ void modelDefinition(NNmodel &model)
   {% for synapse_model in synapse_models %} 
 // TODO: Consider felxible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
   model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, DENSE, INDIVIDUALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+  {% if synapse_model.synapseDynamics != [] %} 
+  model.addSynapseDynamics(tS("{{synapse_model.name}}"), {{synapse_model.name}}SYNDYN, {{synapse_model.name}}_synDyn_ini, {{synapse_model.name}}_syndynp);
+{% endif %}
   {% endfor %}
 
 }

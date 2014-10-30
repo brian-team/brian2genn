@@ -136,10 +136,25 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
   {% for neuron_model in neuron_models %}
   for (int i= 0; i < model.neuronN[{{loop.index-1}}]; i++) {
       {% for var in neuron_model.variables %}
-      fprintf(f, "%f ", {{var[0]}}{{neuron_model.name}}[i]);
+      fprintf(f, "%f ", (float) {{var}}{{neuron_model.name}}[i]);
       {% endfor %}
   }
   {% endfor %}
+
+  {% for synapse_model in synapse_models %}
+  for (int i= 0; i < model.neuronN[model.synapseSource[{{loop.index-1}}]]*model.neuronN[model.synapseTarget[{{loop.index-1}}]]; i++) {
+      {% for var in synapse_model.variables %}
+      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
+      {% endfor %}
+      {% for var in synapse_model.postsyn_variables %}
+      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
+      {% endfor %}
+      {% for var in synapse_model.synapseDynamics_variables %}
+      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
+      {% endfor %}
+  }
+  {% endfor %}
+  
   fprintf(f,"\n");
 }
 
