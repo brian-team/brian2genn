@@ -1,3 +1,4 @@
+import pprint
 import numpy
 import numpy as np
 import os
@@ -45,16 +46,17 @@ def freeze(code, ns):
             code = word_substitute(code, {k: string_value})
     return code
 
-def decorate(code, variables, parameters):
+def decorate(code, variables, parameters, do_final= True):
     # this is a bit of a hack, it should be part of the language probably
     for v in variables:
         code = word_substitute(code, {v : '$('+v+')'})
     for p in parameters:
         code = word_substitute(code, {p : '$('+p+')'})
     code= word_substitute(code, {'dt' : 'DT'}).strip()
-    code= code.replace('\n', '\\n\\\n')
-    code = code.replace('"', '\\"')
-    code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
+    if do_final: 
+        code= code.replace('\n', '\\n\\\n')
+        code = code.replace('"', '\\"')
+        code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
     return code
 
 class neuronModel(object):
@@ -87,17 +89,13 @@ class synapseModel(object):
         self.pvalue= []
         self.simCode= []
         self.simLearnPost= []
+        self.synapseDynamics= []
         self.postsyn_variables= []
         self.postsyn_variabletypes= []
         self.postsyn_parameters= []
         self.postsyn_pvalue= []
         self.postsSynDecay= []
         self.postSyntoCurrent= []
-        self.synapseDynamics_variables= []
-        self.synapseDynamics_variabletypes= []
-        self.synapseDynamics_parameters= []
-        self.synapseDynamics_pvalue= []
-        self.synapseDynamics= []
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -579,9 +577,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.variables:
                                 print('appending ', k);
                                 print synapse_model.variables
-                                if codeobj.indices[k] == '_idx':
-                                    synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
+#                                if codeobj.indices[k] == '_idx':
+                                synapse_model.variables.append(k)
+                                synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
@@ -607,9 +605,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.variables:
                                 print('appending ', k);
                                 print synapse_model.variables
-                                if codeobj.indices[k] == '_idx':
-                                    synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
+#                                if codeobj.indices[k] == '_idx':
+                                synapse_model.variables.append(k)
+                                synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
                 thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
                 synapse_model.simLearnPost= thecode  
@@ -622,21 +620,20 @@ class GeNNDevice(CPPStandaloneDevice):
                     if k == '_spikespace' or k == 't' or k == 'dt' :
                         pass
                     elif isinstance(v, Constant):
-                        if k not in synapse_model.synapseDynamics_parameters:
-                            synapse_model.synapseDynamics_parameters.append(k)
-                            synapse_model.synapseDynamics_pvalue.append(repr(v.value))
+                        if k not in synapse_model.synapse_parameters:
+                            synapse_model.synapse_parameters.append(k)
+                            synapse_model.synapse_pvalue.append(repr(v.value))
                     elif isinstance(v, ArrayVariable):
                         if k in codeobj.code.__str__():
-                            if k not in synapse_model.synapseDynamics_variables:
+                            if k not in synapse_model.variables:
                                 print('appending ', k);
-                                print synapse_model.synapseDynamics_variables
-                                if codeobj.indices[k] == '_idx':
-                                    synapse_model.synapseDynamics_variables.append(k)
-                                    synapse_model.synapseDynamics_variabletypes.append(c_data_type(v.dtype))
-                                    
-                thecode = decorate(code, synapse_model.variables, synapse_model.parameters).strip()
-                thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()                
-                thecode = decorate(code, synapse_model.synapseDynamics_variables, synapse_model.synapseDynamics_parameters).strip()                
+#                               if codeobj.indices[k] == '_idx':
+                                synapse_model.variables.append(k)
+                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                print synapse_model.variables
+  
+                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, True).strip()               
                 synapse_model.synapseDynamics= thecode  
                 
                 
