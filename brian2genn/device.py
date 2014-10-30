@@ -577,9 +577,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             if k not in synapse_model.variables:
                                 print('appending ', k);
                                 print synapse_model.variables
-#                                if codeobj.indices[k] == '_idx':
-                                synapse_model.variables.append(k)
-                                synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                if codeobj.variable_indices[k] == '_idx':
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
@@ -620,9 +620,9 @@ class GeNNDevice(CPPStandaloneDevice):
                     if k == '_spikespace' or k == 't' or k == 'dt' :
                         pass
                     elif isinstance(v, Constant):
-                        if k not in synapse_model.synapse_parameters:
-                            synapse_model.synapse_parameters.append(k)
-                            synapse_model.synapse_pvalue.append(repr(v.value))
+                        if k not in synapse_model.parameters:
+                            synapse_model.parameters.append(k)
+                            synapse_model.pvalue.append(repr(v.value))
                     elif isinstance(v, ArrayVariable):
                         if k in codeobj.code.__str__():
                             if k not in synapse_model.variables:
