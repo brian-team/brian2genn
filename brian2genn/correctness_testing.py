@@ -2,8 +2,9 @@ import brian2
 import os
 import shutil
 import sys
+import brian2genn
 from brian2.tests.features import (Configuration, DefaultConfiguration,
-                                   run_feature_tests)
+                                   run_feature_tests, run_single_feature_test)
 
 class GeNNConfiguration(Configuration):
     name = 'GeNN'
@@ -18,5 +19,11 @@ class GeNNConfiguration(Configuration):
                             use_GPU=True)
 
 if __name__=='__main__':
+    #from brian2.tests.features.neurongroup import NeuronGroupLIF
+    #c = GeNNConfiguration()
+    #c.before_run()
+    #f = NeuronGroupLIF()
+    #f.run()
+    #c.after_run()
+    #run_single_feature_test(GeNNConfiguration, NeuronGroupLIF)
     print run_feature_tests(configurations=[DefaultConfiguration, GeNNConfiguration])
-    
