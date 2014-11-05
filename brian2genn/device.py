@@ -24,12 +24,13 @@ from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
 from brian2.utils.logger import get_logger
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
-
+from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
 
 __all__ = ['GeNNDevice']
 
 logger = get_logger(__name__)
+prefs['codegen.generators.cpp.restrict_keyword']= '__restrict'
 
 def freeze(code, ns):
     # this is a bit of a hack, it should be passed to the template somehow
@@ -705,25 +706,55 @@ class GeNNDevice(CPPStandaloneDevice):
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
         open(os.path.join(directory, 'engine.h'), 'w').write(engine_tmp.h_file)
 
-        Makefile_tmp= GeNNCodeObject.templater.Makefile(None, None,
+        if os.sys.platform == 'win32':
+            Makefile_tmp= GeNNCodeObject.templater.WINmakefile(None, None,
                                                         neuron_models= self.neuron_models,
                                                         model_name= self.model_name,
                                                         ROOTDIR= os.path.abspath(directory),
                                                         source_files= self.source_files,
                                                         ) 
-        open(os.path.join(directory, 'Makefile'), 'w').write(Makefile_tmp)
+            open(os.path.join(directory, 'WINmakefile'), 'w').write(Makefile_tmp)
+        else:
+            Makefile_tmp= GeNNCodeObject.templater.GNUmakefile(None, None,
+                                                        neuron_models= self.neuron_models,
+                                                        model_name= self.model_name,
+                                                        ROOTDIR= os.path.abspath(directory),
+                                                        source_files= self.source_files,
+                                                        ) 
+            open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
 
         if compile:
-            call(["buildmodel.sh", self.model_name], cwd=directory)
-            call(["make"], cwd=directory)
+            if os.sys.platform == 'win32':
+                bitversion= ''
+                if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
+                    bitversion= 'x64'
+                elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
+                    bitversion= 'x64'
+                else:
+                    bitversion= 'x86'
+
+                # Users are required to set their path to "Visual Studio/VC", e.g.
+                # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
+                cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
+                print(cmd)
+                cmd= cmd+" && buildmodel.bat "+self.model_name + " && nmake /f WINmakefile clean && nmake /f WINmakefile"
+                call(cmd, cwd=directory)
+            else:
+                call(["buildmodel.sh", self.model_name], cwd=directory)
+                call(["make clean && make"], cwd=directory)
 
         if run:
             gpu_arg = "1" if use_GPU else "0"
-            print directory
-            print ["./runner", "test",
-                  str(self.run_duration), gpu_arg]
-            call(["./runner", "test",
-                  str(self.run_duration), gpu_arg], cwd=directory)
+            if  os.sys.platform == 'win32':
+                print directory
+                cmd= directory + "\\runner.exe test " + str(self.run_duration) + " " + gpu_arg
+                print cmd
+                #os.system(cmd)
+                call(cmd, cwd=directory)
+            else:
+                print directory
+                print ["./runner", "test", str(self.run_duration), gpu_arg]
+                call(["./runner", "test", str(self.run_duration), gpu_arg], cwd=directory)
             self.has_been_run= True
 
     def network_run(self, net, duration, report=None, report_period=10*second,

@@ -1,5 +1,5 @@
 // scalar can be any scalar type such as float, double
-#include <inttypes.h>
+
 #include <stdint.h>
 
 #ifndef COPY_STATIC_ARRAYS

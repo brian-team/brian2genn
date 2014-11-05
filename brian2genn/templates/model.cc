@@ -1,7 +1,8 @@
 // define the time step
 {{ dtDef }}
 
-#include <inttypes.h>
+
+#include <stdint.h>
 #include "modelSpec.h"
 #include "modelSpec.cc"
 
@@ -10,7 +11,7 @@
 */
 //--------------------------------------------------------------------------
 
-
+// 
 // define the neuron model types as integer variables
 {% for neuron_model in neuron_models %}
 unsigned int {{neuron_model.name}}NEURON;
@@ -24,48 +25,70 @@ unsigned int {{synapse_model.name}}SYNDYN;
 // parameter values
 // neurons
 {% for neuron_model in neuron_models %}
+{% if neuron_model.pvalue.__len__() == 0 %}
+float *{{neuron_model.name}}_p= NULL;
+{% else %}
 float {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
   {% for k in neuron_model.pvalue %} {{k}},
   {% endfor %}
 };
-
+{% endif %}
 {% endfor %}
 
 // synapses
 {% for synapse_model in synapse_models %}
+{% if synapse_model.pvalue.__len__() == 0 %}
+float *{{synapse_model.name}}_p= NULL;
+{% else %}
 float {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
   {% for k in synapse_model.pvalue %} {{k}},
   {% endfor %}
 };
+{% endif %}
 
+
+{% if synapse_model.postsyn_pvalue.__len__() == 0 %}
+float *{{synapse_model.name}}_postsynp= NULL;
+{% else %}
 float {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}]= {
   {% for k in synapse_model.postsyn_pvalue %} {{k}},
   {% endfor %}
 };
+{% endif %}
 
 {% endfor %}
 
 // initial variables (neurons)
 {% for neuron_model in neuron_models %}
+{% if neuron_model.variables.__len__() == 0 %}
+float *{{neuron_model.name}}_ini= NULL;
+{% else %}
 float {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
   {% for k in neuron_model.variables %} 0.0,
   {% endfor %}
 };
-
+{% endif %}
 {% endfor %}
  
 // initial variables (synapses)
 {% for synapse_model in synapse_models %}
+{% if synapse_model.variables.__len__() == 0 %}
+float *{{synapse_model.name}}_ini= NULL:
+  {% else %}
 float {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
   {% for k in synapse_model.variables %} 0.0,
   {% endfor %}
 };
+{%endif %}
 
+{% if synapse_model.postsyn_variables.__len__() == 0 %}
+float *{{synapse_model.name}}_postsyn_ini= NULL;
+{% else %}
 float {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
   {% for k in synapse_model.postsyn_variables %} 0.0,
   {% endfor %}
 };
-
+{% endif %}
 {% endfor %}
  
 
