@@ -727,9 +727,9 @@ class GeNNDevice(CPPStandaloneDevice):
             if os.sys.platform == 'win32':
                 bitversion= ''
                 if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                    bitversion= 'x64_amd64'
+                    bitversion= 'x86_amd64'
                 elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                    bitversion= 'x64_amd64'
+                    bitversion= 'x86_amd64'
                 else:
                     bitversion= 'x86'
 
