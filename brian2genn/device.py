@@ -727,9 +727,9 @@ class GeNNDevice(CPPStandaloneDevice):
             if os.sys.platform == 'win32':
                 bitversion= ''
                 if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                    bitversion= 'x64'
+                    bitversion= 'x64_amd64'
                 elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                    bitversion= 'x64'
+                    bitversion= 'x64_amd64'
                 else:
                     bitversion= 'x86'
 
@@ -741,7 +741,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 call(cmd, cwd=directory)
             else:
                 call(["buildmodel.sh", self.model_name], cwd=directory)
-                call(["make clean && make"], cwd=directory)
+                call(["make", "clean"], cwd=directory)
+                call(["make"], cwd=directory)
 
         if run:
             gpu_arg = "1" if use_GPU else "0"
