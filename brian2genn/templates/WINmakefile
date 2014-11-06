@@ -1,0 +1,6 @@
+EXECUTABLE	= runner.exe
+SOURCES		= runner.cu {% for source in source_files %} {{source}} {% endfor %}
+
+EXTRA_INCLUDE	= /I %CD%
+
+!include $(GENN_PATH)\userproject\include\makefile_common_win.mk
