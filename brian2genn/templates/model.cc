@@ -94,6 +94,7 @@ float {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len
 
 void modelDefinition(NNmodel &model)
 {
+  initGeNN();
   // Define the relevant neuron models
   neuronModel n;
 
@@ -146,7 +147,7 @@ void modelDefinition(NNmodel &model)
   s.simCode= tS("{% for line in synapse_model.simCode %}{{line}}{% endfor %}");
   s.simLearnPost= tS("{% for line in synapse_model.simLearnPost %}{{line}}{% endfor %}");
   s.synapseDynamics= tS("{% for line in synapse_model.synapseDynamics %}{{line}}{% endfor %}");  weightUpdateModels.push_back(s);
-  {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()+MAXSYN-1;
+  {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()-1;
   // post-synaptic model
   ps.varNames.clear();
   ps.varTypes.clear();

@@ -619,7 +619,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                 synapse_model.variables.append(k)
                                 synapse_model.variabletypes.append(c_data_type(v.dtype))
                 code= codeobj.code
-                thecode = decorate(code, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
+                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
                 synapse_model.simLearnPost= thecode  
 
             

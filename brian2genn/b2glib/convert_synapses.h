@@ -43,18 +43,16 @@ void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> source, vector<int
 	bypreG[source[i]].push_back(gvector[i]);
     }
     // convert this intermediate representation into the sparse synapses struct
-    c.connN= source.size();
-    allocateSparseArray(&c, srcNN, false);
+    allocateSparseArray(&c, source.size(), srcNN, false);
     unsigned int cnt= 0;
     for (int i= 0; i < srcNN; i++) {
 	size= bypre[i].size();
-	c.gIndInG[i]= cnt; 
+	c.indInG[i]= cnt; 
 	for (int j= 0; j < size; i++) {
-	    c.gInd[cnt]= bypre[i][j];
-	    c.gp[cnt++]= bypreG[i][j];
+	    c.ind[cnt]= bypre[i][j];
 	}
     }
-    c.gIndInG[srcNN]= cnt;
+    c.indInG[srcNN]= cnt;
 }
 
 template<class scalar>
@@ -79,9 +77,8 @@ void convert_dynamic_arrays_2_sparse_synapses(Conductance &c, int srcNN, int trg
     vector<vector<int32_t> > bypre(srcNN);
     vector<vector<int32_t> > bypreG(srcNN);
     for (int i= 0; i < srcNN; i++) {
-	for (int j= c.gIndInG[i]; j < c.gIndInG[i+1]; j++) {
-	    bypre[i].push_back(c.gInd[j]);
-	    bypreG[i].push_back(c.gp[i]);
+	for (int j= c.indInG[i]; j < c.indInG[i+1]; j++) {
+	    bypre[i].push_back(c.ind[j]);
 	}
     }
     // convert this intermediate representation into the brian arrays

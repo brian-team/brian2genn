@@ -14,5 +14,8 @@ from brian2.tests.features.synapses import SynapsesPre, SynapsesPost
 #                                        GeNNConfiguration],
 #                        feature_tests=[SynapsesPre,
 #                                       SynapsesPost]).tables_and_exceptions
+# print run_feature_tests(configurations=[DefaultConfiguration,
+#                                         GeNNConfiguration],
+#                         feature_tests=[SynapsesPre]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
                                     GeNNConfiguration]).tables_and_exceptions
