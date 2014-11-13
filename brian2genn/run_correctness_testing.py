@@ -4,6 +4,7 @@ from brian2.tests.features import (Configuration, DefaultConfiguration,
 from brian2genn.correctness_testing import GeNNConfiguration
 
 from brian2.tests.features.synapses import SynapsesPre, SynapsesPost
+from brian2.tests.features.neurongroup import NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler
 #c = GeNNConfiguration()
 #c.before_run()
 #f = SynapsesPre()
@@ -14,8 +15,8 @@ from brian2.tests.features.synapses import SynapsesPre, SynapsesPost
 #                                        GeNNConfiguration],
 #                        feature_tests=[SynapsesPre,
 #                                       SynapsesPost]).tables_and_exceptions
-# print run_feature_tests(configurations=[DefaultConfiguration,
+# print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
-#                         feature_tests=[SynapsesPre]).tables_and_exceptions
+#                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
-                                    GeNNConfiguration]).tables_and_exceptions
+                                   GeNNConfiguration]).tables_and_exceptions

@@ -43,7 +43,6 @@ void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> source, vector<int
 	bypreG[source[i]].push_back(gvector[i]);
     }
     // convert this intermediate representation into the sparse synapses struct
-    allocateSparseArray(&c, source.size(), srcNN, false);
     unsigned int cnt= 0;
     for (int i= 0; i < srcNN; i++) {
 	size= bypre[i].size();
