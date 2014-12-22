@@ -204,7 +204,7 @@ void engine::output_spikes(FILE *f, //!< File handle for a file to write spike t
 			    )
 {
   {% for neuron_model in neuron_models %}
-  for (int i= 0; i < glbSpkCnt{{neuron_model.name}}; i++) {
+  for (int i= 0; i < glbSpkCnt{{neuron_model.name}}[0]; i++) {
     fprintf(f, "%f %d\n", t, glbSpk{{neuron_model.name}}[i]);
   }
   {% endfor %}
@@ -218,7 +218,7 @@ void engine::output_spikes(FILE *f, //!< File handle for a file to write spike t
 void engine::sum_spikes()
 {
   {% for neuron_model in neuron_models %}
-  sum{{neuron_model.name}}+= glbSpkCnt{{neuron_model.name}};
+  sum{{neuron_model.name}}+= glbSpkCnt{{neuron_model.name}}[0];
   {% endfor %}
 }
 

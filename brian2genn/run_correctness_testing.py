@@ -15,8 +15,8 @@ from brian2.tests.features.neurongroup import NeuronGroupIntegrationLinear, Neur
 #                                        GeNNConfiguration],
 #                        feature_tests=[SynapsesPre,
 #                                       SynapsesPost]).tables_and_exceptions
-# print run_feature_tests(configurations=[DefaultConfiguration, 
+#print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
-                                   GeNNConfiguration]).tables_and_exceptions
+                                        GeNNConfiguration]).tables_and_exceptions

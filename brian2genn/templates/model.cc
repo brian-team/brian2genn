@@ -26,9 +26,9 @@ unsigned int {{synapse_model.name}}SYNDYN;
 // neurons
 {% for neuron_model in neuron_models %}
 {% if neuron_model.pvalue.__len__() == 0 %}
-float *{{neuron_model.name}}_p= NULL;
+double *{{neuron_model.name}}_p= NULL;
 {% else %}
-float {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
+double {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
   {% for k in neuron_model.pvalue %} {{k}},
   {% endfor %}
 };
@@ -38,9 +38,9 @@ float {{neuron_model.name}}_p[{{neuron_model.pvalue.__len__()}}]= {
 // synapses
 {% for synapse_model in synapse_models %}
 {% if synapse_model.pvalue.__len__() == 0 %}
-float *{{synapse_model.name}}_p= NULL;
+double *{{synapse_model.name}}_p= NULL;
 {% else %}
-float {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
+double {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
   {% for k in synapse_model.pvalue %} {{k}},
   {% endfor %}
 };
@@ -48,9 +48,9 @@ float {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
 
 
 {% if synapse_model.postsyn_pvalue.__len__() == 0 %}
-float *{{synapse_model.name}}_postsynp= NULL;
+double *{{synapse_model.name}}_postsynp= NULL;
 {% else %}
-float {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}]= {
+double {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}]= {
   {% for k in synapse_model.postsyn_pvalue %} {{k}},
   {% endfor %}
 };
@@ -61,9 +61,9 @@ float {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}
 // initial variables (neurons)
 {% for neuron_model in neuron_models %}
 {% if neuron_model.variables.__len__() == 0 %}
-float *{{neuron_model.name}}_ini= NULL;
+double *{{neuron_model.name}}_ini= NULL;
 {% else %}
-float {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
+double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
   {% for k in neuron_model.variables %} 0.0,
   {% endfor %}
 };
@@ -73,18 +73,18 @@ float {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
 // initial variables (synapses)
 {% for synapse_model in synapse_models %}
 {% if synapse_model.variables.__len__() == 0 %}
-float *{{synapse_model.name}}_ini= NULL:
+double *{{synapse_model.name}}_ini= NULL:
   {% else %}
-float {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
+double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
   {% for k in synapse_model.variables %} 0.0,
   {% endfor %}
 };
 {%endif %}
 
 {% if synapse_model.postsyn_variables.__len__() == 0 %}
-float *{{synapse_model.name}}_postsyn_ini= NULL;
+double *{{synapse_model.name}}_postsyn_ini= NULL;
 {% else %}
-float {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
+double {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
   {% for k in synapse_model.postsyn_variables %} 0.0,
   {% endfor %}
 };
