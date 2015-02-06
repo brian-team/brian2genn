@@ -87,6 +87,7 @@ class synapseModel(object):
         self.N= 0
         self.variables= []
         self.variabletypes= []
+        self.external_variables= [];
         self.parameters= []
         self.pvalue= []
         self.simCode= []
@@ -584,12 +585,16 @@ class GeNNDevice(CPPStandaloneDevice):
                             synapse_model.pvalue.append(repr(v.value))
                     elif isinstance(v, ArrayVariable):
                         if k in codeobj.code.__str__():
-                            if k not in synapse_model.variables:
-                                print('appending ', k);
-                                print synapse_model.variables
-                                if codeobj.variable_indices[k] == '_idx':
-                                    synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
+                            if '_pre' not in k and '_post' not in k:
+                                if k not in synapse_model.variables:
+                                    print('appending ', k);
+                                    print synapse_model.variables
+                                    if codeobj.variable_indices[k] == '_idx':
+                                        synapse_model.variables.append(k)
+                                        synapse_model.variabletypes.append(c_data_type(v.dtype))
+                            else:
+                                if k not in synapse_model.external_variables:
+                                    synapse_model.external_variables.append(k)
                 code= codeobj.code
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
@@ -598,11 +603,14 @@ class GeNNDevice(CPPStandaloneDevice):
                     if line.startswith('addtoinSyn'):
                         new_code_lines.append('$(updatelinsyn);')
                 code = '\n'.join(new_code_lines)
-                thecode = decorate(code, synapse_model.variables, synapse_model.parameters).strip()
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
+                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
                 synapse_model.simCode= thecode
 
             if hasattr(obj, 'post'):
                 codeobj= obj.post.codeobj
+                code= codeobj.code
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt' :
                         pass
@@ -612,15 +620,21 @@ class GeNNDevice(CPPStandaloneDevice):
                             synapse_model.pvalue.append(repr(v.value))
                     elif isinstance(v, ArrayVariable):
                         if k in codeobj.code.__str__():
-                            if k not in synapse_model.variables:
-                                print('appending ', k);
-                                print synapse_model.variables
-#                                if codeobj.indices[k] == '_idx':
-                                synapse_model.variables.append(k)
-                                synapse_model.variabletypes.append(c_data_type(v.dtype))
-                code= codeobj.code
+                            if '_pre' not in k and '_post' not in k:
+                                if k not in synapse_model.variables:
+                                    print('synapse post appending ', k);
+                                    #                                if codeobj.indices[k] == '_idx':
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                    print synapse_model.variables
+                                
+                            else:
+                                if k not in synapse_model.external_variables:
+                                    synapse_model.external_variables.append(k)
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters).strip()
+                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
                 synapse_model.simLearnPost= thecode  
 
             
@@ -636,20 +650,26 @@ class GeNNDevice(CPPStandaloneDevice):
                             synapse_model.pvalue.append(repr(v.value))
                     elif isinstance(v, ArrayVariable):
                         if k in codeobj.code.__str__():
-                            if k not in synapse_model.variables:
-                                print('appending ', k);
-#                               if codeobj.indices[k] == '_idx':
-                                synapse_model.variables.append(k)
-                                synapse_model.variabletypes.append(c_data_type(v.dtype))
-                                print synapse_model.variables
-  
+                            if '_pre' not in k and '_post' not in k:
+                                if k not in synapse_model.variables:
+                                    print('appending ', k);
+                                    #                               if codeobj.indices[k] == '_idx':
+                                    synapse_model.variables.append(k)
+                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                    print synapse_model.variables
+                            else:
+                                if k not in synapse_model.external_variables:
+                                    synapse_model.external_variables.append(k) 
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, True).strip()               
+                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()               
+                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
                 synapse_model.synapseDynamics= thecode  
                 
-                
-            synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
-                
+            if (hasattr(obj,'_genn_post_write_var')):
+                synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
+            else:
+                synapse_model.postSyntoCurrent= '0';
             self.synapse_models.append(synapse_model)
                                
         # Copy the brianlib directory
@@ -760,7 +780,11 @@ class GeNNDevice(CPPStandaloneDevice):
             self.has_been_run= True
 
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, level=0):
+                    namespace=None, level=0, **kwds):
+        if kwds:
+            logger.warn(('Unsupported keyword argument(s) provided for run: '
++ '%s') % ', '.join(kwds.keys()))
+            
         if self.run_duration is not None:
             raise NotImplementedError('Only a single run statement is supported.')
         self.run_duration = float(duration)

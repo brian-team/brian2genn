@@ -65,9 +65,9 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
     
     post_write_var = list(post_write)[0]
     
-    pre_write = set(write).intersection(set(vars_pre))
-    if len(pre_write):
-        raise NotImplementedError("GeNN does not support writing to presynaptic variables.")
+    # pre_write = set(write).intersection(set(vars_pre))
+    # if len(pre_write):
+    #     raise NotImplementedError("GeNN does not support writing to presynaptic variables.")
     
     found_write_statement = False
     new_stmts = []
@@ -77,8 +77,8 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
             if stmt.inplace:
                 if stmt.op!='+=':
                     raise NotImplementedError("GeNN only supports the += in place operation on postsynaptic variables.")
-                if set(ids).intersection(set(vars_pre).union(set(vars_post))):
-                    raise NotImplementedError("GeNN only supports postsynaptic operations using only synaptic variables.")
+#                 if set(ids).intersection(set(vars_pre).union(set(vars_post))):
+#                     raise NotImplementedError("GeNN only supports postsynaptic operations using only synaptic variables.")
                 accumulation_expr = stmt.expr
             else:
                 # TODO: we could support expressions like v = v + expr, but this requires some additional work
@@ -100,10 +100,10 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
 def check_post_code(codegen, stmts, vars_pre, vars_syn, vars_post):
     read, write, indices = codegen.array_read_write(stmts)
 
-    post_write = set(write).intersection(set(vars_post))
-    if len(post_write):
-        raise NotImplementedError("GeNN does not support writing to postsynaptic variables in postsynaptic code.")
+#     post_write = set(write).intersection(set(vars_post))
+#     if len(post_write):
+#         raise NotImplementedError("GeNN does not support writing to postsynaptic variables in postsynaptic code.")
     
-    pre_write = set(write).intersection(set(vars_pre))
-    if len(pre_write):
-        raise NotImplementedError("GeNN does not support writing to presynaptic variables in postsynaptic code.")
+#     pre_write = set(write).intersection(set(vars_pre))
+#     if len(pre_write):
+#         raise NotImplementedError("GeNN does not support writing to presynaptic variables in postsynaptic code.")

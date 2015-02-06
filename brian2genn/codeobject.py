@@ -39,7 +39,7 @@ class GeNNCodeGenerator(CPPCodeGenerator):
     def translate_one_statement_sequence(self, statements):
         if len(statements) and self.template_name=='synapses':
             print '*****************', self.template_name, self.name, self.owner.name
-            print 'PRETRANSLATION'
+            print 'PRETRANSLATION oh yeah'
             for statement in statements:
                 print '   ', statement
             vars_pre = [k for k, v in self.variable_indices.items() if v=='_presynaptic_idx']
