@@ -18,6 +18,7 @@ from brian2.core.network import Network
 from brian2.devices.device import Device, set_device, all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.synapses.synapses import Synapses
+from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
@@ -26,6 +27,7 @@ from brian2.utils.logger import get_logger
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
+from brian2.core.magic import _get_contained_objects
 
 __all__ = ['GeNNDevice']
 
@@ -100,6 +102,13 @@ class synapseModel(object):
         self.postsSynDecay= []
         self.postSyntoCurrent= []
 
+class spikeMonitorModel(object):
+    '''
+    '''
+    def __init__(self):
+        self.name=''
+        self.neuronGroup=''
+
 class CPPWriter(object):
     def __init__(self, project_dir):
         self.project_dir = project_dir
@@ -129,6 +138,7 @@ class GeNNDevice(CPPStandaloneDevice):
         super(GeNNDevice, self).__init__()        
         self.neuron_models = []
         self.synapse_models = []
+        self.spike_monitor_models= []
         self.run_duration = None
          #: Dictionary mapping `ArrayVariable` objects to their globally
         #: unique name
@@ -329,7 +339,7 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
-        if template_name in [ 'summed_variable', 'ratemonitor', 'spikemonitor', 'statemonitor' ]:
+        if template_name in [ 'summed_variable', 'ratemonitor', 'statemonitor' ]:
             raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
@@ -510,7 +520,6 @@ class GeNNDevice(CPPStandaloneDevice):
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
-            # print(codeobj.name)
             # print(type(codeobj.code))
             if isinstance(codeobj.code, MultiTemplate):
                 code = freeze(codeobj.code.cpp_file, ns)
@@ -527,6 +536,7 @@ class GeNNDevice(CPPStandaloneDevice):
         objects = dict((obj.name, obj) for obj in net.objects)
         neuron_groups = [obj for obj in net.objects if isinstance(obj, NeuronGroup)]
         synapse_groups=[ obj for obj in net.objects if isinstance(obj, Synapses)]
+        spike_monitors= [ obj for obj in net.objects if isinstance(obj, SpikeMonitor)]
         self.model_name= net.name+'_model'
         self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
         for obj in neuron_groups:
@@ -672,6 +682,16 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.postSyntoCurrent= '0';
             self.synapse_models.append(synapse_model)
                                
+        for obj in spike_monitors:
+            sm= spikeMonitorModel();
+            sm.name= obj.name;
+            sm.neuronGroup= obj.source.name;
+            print sm.name
+            print sm.neuronGroup
+            self.spike_monitor_models.append(sm)
+            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
+            
+        print len(self.spike_monitor_models)
         # Copy the brianlib directory
         brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
                                     'brianlib')
@@ -722,6 +742,7 @@ class GeNNDevice(CPPStandaloneDevice):
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
                                                      synapse_models= self.synapse_models,
+spike_monitor_models= self.spike_monitor_models,
                                                      model_name= self.model_name,
                                                      )        
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)

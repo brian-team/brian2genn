@@ -8,11 +8,14 @@
 
 
 #include "runner.h"
+#include "{{model_name}}.cc"
+#include "{{model_name}}_CODE/runner.cc"
 
 {% for header in header_files %}
 #include "{{header}}"
 {% endfor %}
 
+#include "engine.cc"
 
 
 //--------------------------------------------------------------------------
@@ -178,13 +181,12 @@ using namespace std;
 #define DBG_SIZE 10000
 
 // and some global variables
-double t= 0.0f;
+double t= 0.0;
 unsigned int iT= 0;
 CStopWatch timer;
 
 //----------------------------------------------------------------------
 // other stuff:
 
-#include "engine.cc"
 
 {% endmacro %}

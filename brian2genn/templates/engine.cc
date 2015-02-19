@@ -10,9 +10,6 @@
 */
 //--------------------------------------------------------------------------
 
-
-#include "{{model_name}}.cc"
-
 //--------------------------------------------------------------------------
 /*! \brief This class contains the methods for running the model.
  */
@@ -59,7 +56,6 @@ class engine
 //--------------------------------------------------------------------------
 
 #include "engine.h"
-#include "{{model_name}}_CODE/runner.cc"
 
 engine::engine()
 {
@@ -107,12 +103,21 @@ void engine::run(double runtime, //!< Duration of time to run the model for
   int riT= (int) (runtime/DT+1e-2);
 
   for (int i= 0; i < riT; i++) {
-    if (which == GPU)
-       stepTimeGPU(t);
-    if (which == CPU)
-       stepTimeCPU(t);
-    t+= DT;
-    iT++;
+      if (which == GPU) {
+	  stepTimeGPU(t);
+	  {% for spkMon in spike_monitor_models %}
+	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
+	  _run_{{spkMon.name}}_codeobject();
+	  {% endfor %}
+      }
+      if (which == CPU) {
+	  stepTimeCPU(t);
+	  {% for spkMon in spike_monitor_models %}
+	  _run_{{spkMon.name}}_codeobject();
+	  {% endfor %}
+      }
+      t+= DT;
+      iT++;
   }
 }
 
