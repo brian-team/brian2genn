@@ -99,7 +99,12 @@ int main(int argc, char *argv[])
   cerr << t << " done ..." << endl;
   fprintf(timef,"%f \n", timer.getElapsedTime());
 
-// translate to GeNN synaptic arrays
+  // get the final results from the GPU 
+  if (which == GPU) {
+    eng.getStateFromGPU();
+    eng.getSpikesFromGPU();
+  }
+  // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
   {% for var in synapses.variables %}
   convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}},brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
