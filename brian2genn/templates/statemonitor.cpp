@@ -1,5 +1,12 @@
 {% extends 'common_group.cpp' %}
 
+{% block extra_headers %}
+{% set sourcename= owner.source.name %}
+{% for varname, var in _recorded_variables | dictsort %}
+extern {{c_data_type(var.dtype)}} *{{varname}}{{sourcename}};
+{% endfor %}
+{% endblock %}
+
 {% block maincode %}
     {# USES_VARIABLES { t, _clock_t, _indices } #}
 
@@ -22,11 +29,10 @@
         const int _idx = {{_indices}}[_i];
         const int _vectorisation_idx = _idx;
         {% block maincode_inner %}
-            {{ super() }}
-
+	    {% set sourcename= owner.source.name %}
             {% for varname, var in _recorded_variables | dictsort %}
             {% set _recorded =  get_array_name(var, access_data=False) %}
-            {{_recorded}}(_new_size-1, _i) = _to_record_{{varname}};
+	    {{_recorded}}(_new_size-1, _i) = {{varname}}{{sourcename}}[_idx];
             {% endfor %}
         {% endblock %}
     }

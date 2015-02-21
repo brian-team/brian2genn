@@ -1,7 +1,6 @@
 // define the time step
 {{ dtDef }}
 
-
 #include <stdint.h>
 #include "modelSpec.h"
 #include "modelSpec.cc"

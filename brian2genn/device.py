@@ -19,6 +19,7 @@ from brian2.devices.device import Device, set_device, all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.synapses.synapses import Synapses
 from brian2.monitors.spikemonitor import SpikeMonitor
+from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
@@ -89,7 +90,7 @@ class synapseModel(object):
         self.N= 0
         self.variables= []
         self.variabletypes= []
-        self.external_variables= [];
+        self.external_variables= []
         self.parameters= []
         self.pvalue= []
         self.simCode= []
@@ -103,6 +104,13 @@ class synapseModel(object):
         self.postSyntoCurrent= []
 
 class spikeMonitorModel(object):
+    '''
+    '''
+    def __init__(self):
+        self.name=''
+        self.neuronGroup=''
+
+class stateMonitorModel(object):
     '''
     '''
     def __init__(self):
@@ -139,6 +147,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.synapse_models = []
         self.spike_monitor_models= []
+        self.state_monitor_models= []
         self.run_duration = None
          #: Dictionary mapping `ArrayVariable` objects to their globally
         #: unique name
@@ -339,7 +348,7 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
-        if template_name in [ 'summed_variable', 'ratemonitor', 'statemonitor' ]:
+        if template_name in [ 'summed_variable', 'ratemonitor' ]:
             raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
@@ -478,8 +487,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         networks= [net],
                         )
         writer.write('objects.*', arr_tmp)
-        self.header_files.append('objects.h');
-        self.source_files.append('objects.cpp');
+        self.header_files.append('objects.h')
+        self.source_files.append('objects.cpp')
 
         main_lines = self.make_main_lines()
 
@@ -537,6 +546,7 @@ class GeNNDevice(CPPStandaloneDevice):
         neuron_groups = [obj for obj in net.objects if isinstance(obj, NeuronGroup)]
         synapse_groups=[ obj for obj in net.objects if isinstance(obj, Synapses)]
         spike_monitors= [ obj for obj in net.objects if isinstance(obj, SpikeMonitor)]
+        state_monitors= [ obj for obj in net.objects if isinstance(obj, StateMonitor)]
         self.model_name= net.name+'_model'
         self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
         for obj in neuron_groups:
@@ -597,7 +607,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('appending ', k);
+                                    print('appending ', k)
                                     print synapse_model.variables
                                     if codeobj.variable_indices[k] == '_idx':
                                         synapse_model.variables.append(k)
@@ -613,9 +623,9 @@ class GeNNDevice(CPPStandaloneDevice):
                     if line.startswith('addtoinSyn'):
                         new_code_lines.append('$(updatelinsyn);')
                 code = '\n'.join(new_code_lines)
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
+                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simCode= thecode
 
             if hasattr(obj, 'post'):
@@ -632,7 +642,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('synapse post appending ', k);
+                                    print('synapse post appending ', k)
                                     #                                if codeobj.indices[k] == '_idx':
                                     synapse_model.variables.append(k)
                                     synapse_model.variabletypes.append(c_data_type(v.dtype))
@@ -641,10 +651,10 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
+                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simLearnPost= thecode  
 
             
@@ -662,7 +672,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('appending ', k);
+                                    print('appending ', k)
                                     #                               if codeobj.indices[k] == '_idx':
                                     synapse_model.variables.append(k)
                                     synapse_model.variabletypes.append(c_data_type(v.dtype))
@@ -670,27 +680,36 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k) 
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}';
+                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()               
-                thecode = decorate(thecode, synapse_model.external_variables, synapse_model.parameters, True).strip()
+                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.synapseDynamics= thecode  
                 
             if (hasattr(obj,'_genn_post_write_var')):
                 synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
             else:
-                synapse_model.postSyntoCurrent= '0';
+                synapse_model.postSyntoCurrent= '0'
             self.synapse_models.append(synapse_model)
                                
         for obj in spike_monitors:
-            sm= spikeMonitorModel();
-            sm.name= obj.name;
-            sm.neuronGroup= obj.source.name;
+            sm= spikeMonitorModel()
+            sm.name= obj.name
+            sm.neuronGroup= obj.source.name
             print sm.name
             print sm.neuronGroup
             self.spike_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
+        for obj in state_monitors:
+            sm= stateMonitorModel()
+            sm.name= obj.name
+            sm.neuronGroup= obj.source.name
+            print sm.name
+            print sm.neuronGroup
+            self.state_monitor_models.append(sm)
+            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
+
         print len(self.spike_monitor_models)
         # Copy the brianlib directory
         brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
@@ -743,6 +762,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      neuron_models= self.neuron_models,
                                                      synapse_models= self.synapse_models,
 spike_monitor_models= self.spike_monitor_models,
+state_monitor_models= self.state_monitor_models,
                                                      model_name= self.model_name,
                                                      )        
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)

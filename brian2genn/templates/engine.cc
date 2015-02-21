@@ -109,11 +109,18 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
 	  _run_{{spkMon.name}}_codeobject();
 	  {% endfor %}
+	  {% for stateMon in state_monitor_models %}
+	  pull{{stateMon.neuronGroup}}StateFromDevice();
+	  _run_{{stateMon.name}}_codeobject();
+	  {% endfor %}
       }
       if (which == CPU) {
 	  stepTimeCPU(t);
 	  {% for spkMon in spike_monitor_models %}
 	  _run_{{spkMon.name}}_codeobject();
+	  {% endfor %}
+	  {% for stateMon in state_monitor_models %}
+	  _run_{{stateMon.name}}_codeobject();
 	  {% endfor %}
       }
       t+= DT;

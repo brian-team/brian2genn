@@ -6,7 +6,6 @@
 */
 //--------------------------------------------------------------------------
 
-
 #include "runner.h"
 #include "{{model_name}}.cc"
 #include "{{model_name}}_CODE/runner.cc"
@@ -44,12 +43,6 @@ int main(int argc, char *argv[])
   fprintf(stderr, "# DT %f \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
   
-  name= OutDir+ "/"+ toString(argv[1]) + toString(".out.dat"); 
-  FILE *osf= fopen(name.c_str(),"w");
-  name.clear();
-  name= OutDir+ "/"+ toString(argv[1]) + toString(".out.st"); 
-  FILE *osfs= fopen(name.c_str(),"w");
-
   //-----------------------------------------------------------------
   // build the neuronal circuitery
   engine eng;
@@ -96,41 +89,15 @@ int main(int argc, char *argv[])
   t= 0.0;
   void *devPtr;
   int done= 0;
-  //  eng.output_state(osf, which);  
-  eng.output_spikes(osfs, which);
-  eng.sum_spikes();
   cerr << "first run command" << endl;
-  eng.run(DT, which);
   while (!done) 
   {
-    if (which == GPU) {
-      //      eng.getStateFromGPU();
-      eng.getSpikesFromGPU();
-    }
     eng.run(DT, which); // run next batch
-    eng.output_spikes(osfs, which);
-    eng.output_state(osf, which);
-    eng.sum_spikes();
-    cerr << t << " done ..." << endl;
     done= (t >= totalTime);
   }
-  if (which == GPU) {
-    //    eng.getStateFromGPU();
-    eng.getSpikesFromGPU();
-  }
-  eng.output_spikes(osfs, which);
-  eng.output_state(osf, which);
-  eng.sum_spikes();
   timer.stopTimer();
-
-  cerr << "output files are created under the current directory." << endl;
-  {% for neuron_model in neuron_models %}
-  fprintf(timef, "%d ", eng.sum{{neuron_model.name}});
-  {% endfor %}
+  cerr << t << " done ..." << endl;
   fprintf(timef,"%f \n", timer.getElapsedTime());
-
-  fclose(osf);
-  fclose(osfs);
 
 // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
@@ -172,8 +139,9 @@ using namespace std;
 
 #include <cuda_runtime.h>
 
-
+#ifndef RAND
 #define RAND(Y,X) Y = Y * 1103515245 +12345;X= (unsigned int)(Y >> 16) & 32767
+#endif
 
 // we will hard-code some stuff ... because at the end of the day that is 
 // what we will do for the CUDA version
