@@ -10,6 +10,7 @@ class GeNNConfiguration(Configuration):
     name = 'GeNN'
     def before_run(self):
         brian2.prefs.reset_to_defaults()
+        brian2.prefs.codegen.loop_invariant_optimisations = False
         brian2.set_device('genn')
         
     def after_run(self):

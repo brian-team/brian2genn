@@ -34,6 +34,7 @@ __all__ = ['GeNNDevice']
 
 logger = get_logger(__name__)
 prefs['codegen.generators.cpp.restrict_keyword']= '__restrict'
+prefs['codegen.loop_invariant_optimisations'] = False
 
 def freeze(code, ns):
     # this is a bit of a hack, it should be passed to the template somehow
