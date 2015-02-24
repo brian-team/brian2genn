@@ -6,6 +6,7 @@ from subprocess import call
 import inspect
 import shutil
 from collections import defaultdict
+import time
 
 from brian2.units import second
 from brian2.units import have_same_dimensions
@@ -808,6 +809,7 @@ state_monitor_models= self.state_monitor_models,
                 call(["make"], cwd=directory)
 
         if run:
+            start_time = time.time()
             gpu_arg = "1" if use_GPU else "0"
             if  os.sys.platform == 'win32':
                 print directory
@@ -820,6 +822,7 @@ state_monitor_models= self.state_monitor_models,
                 print ["./runner", "test", str(self.run_duration), gpu_arg]
                 call(["./runner", "test", str(self.run_duration), gpu_arg], cwd=directory)
             self.has_been_run= True
+            self._last_run_time = time.time()-start_time
 
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, level=0, **kwds):
