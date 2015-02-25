@@ -830,6 +830,8 @@ state_monitor_models= self.state_monitor_models,
         if self.run_duration is not None:
             raise NotImplementedError('Only a single run statement is supported.')
         self.run_duration = float(duration)
+        if any([obj.clock is not defaultclock for obj in net.objects]):
+            raise NotImplementedError('Multiple clocks not supported')
         super(GeNNDevice, self).network_run(net= net, duration= duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
 
 
