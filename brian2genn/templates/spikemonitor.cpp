@@ -6,15 +6,12 @@
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}};
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpk').replace('__spikespace','')}};
 extern double t;
-
-void pull{{_spikespace.replace('_ptr_array_','').replace('__spikespace','')}}SpikesFromDevice(); // forward declaration of GeNN generated utility function
 {% endblock %}
 
 {% block maincode %}
 	//// MAIN CODE ////////////
     {# USES_VARIABLES { t, i, _clock_t, _spikespace, _count,
                         _source_start, _source_stop} #}
-        pull{{_spikespace.replace('_ptr_array_','').replace('__spikespace','')}}SpikesFromDevice();
 	int _num_spikes = {{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}}[0];
 	for(int _j=0; _j<_num_spikes; _j++)
 	{

@@ -1,4 +1,13 @@
 {% extends 'common_group.cpp' %}
+
+{% block extra_headers %}
+#include "magicnetwork_model_CODE/definitions.h"
+
+extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}};
+extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpk').replace('__spikespace','')}};
+extern double t;
+{% endblock %}
+
 {% block maincode %}
 	{# USES_VARIABLES {_spikespace, N, t, dt, neuron_index, spike_time } #}
 
@@ -14,7 +23,7 @@
 
 	for(int _idx=_start_idx; _idx<_stop_idx; _idx++)
 	{
-        {{_spikespace}}[_cpp_numspikes++] = {{neuron_index}}[_idx];
+        {{_spikespace.replace('_ptr_array_','spike_').replace('__spikespace','')}}[_cpp_numspikes++] = {{neuron_index}}[_idx];
 	}
-	{{_spikespace}}[N] = _cpp_numspikes;
+	{{_spikespace.replace('_ptr_array_','spikeCount_').replace('__spikespace','')}} = _cpp_numspikes;
 {% endblock %}

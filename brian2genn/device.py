@@ -25,6 +25,7 @@ from brian2.utils.filetools import copy_directory, ensure_directory, in_director
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
+from brian2.groups.spikegeneratorgroup import *
 from brian2.utils.logger import get_logger
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
@@ -79,6 +80,14 @@ class neuronModel(object):
         self.code_lines= []
         self.thresh_cond_lines= []
         self.reset_code_lines= []
+
+class spikegeneratorModel(object):
+    '''
+    '''
+    def __init__(self):
+        self.name=''
+        self.N= 0
+
 
 class synapseModel(object):
     '''
@@ -147,6 +156,7 @@ class GeNNDevice(CPPStandaloneDevice):
     def __init__(self):
         super(GeNNDevice, self).__init__()        
         self.neuron_models = []
+        self.spikegenerator_models= []
         self.synapse_models = []
         self.spike_monitor_models= []
         self.state_monitor_models= []
@@ -546,6 +556,8 @@ class GeNNDevice(CPPStandaloneDevice):
         # assemble the model descriptions:
         objects = dict((obj.name, obj) for obj in net.objects)
         neuron_groups = [obj for obj in net.objects if isinstance(obj, NeuronGroup)]
+        spikegenerator_groups = [obj for obj in net.objects if isinstance(obj, SpikeGeneratorGroup)]
+
         synapse_groups=[ obj for obj in net.objects if isinstance(obj, Synapses)]
         spike_monitors= [ obj for obj in net.objects if isinstance(obj, SpikeMonitor)]
         state_monitors= [ obj for obj in net.objects if isinstance(obj, StateMonitor)]
@@ -588,13 +600,23 @@ class GeNNDevice(CPPStandaloneDevice):
 
 #        for obj in objects:
 #            print(type(obj), obj)
+        for obj in spikegenerator_groups:
+            print(type(obj), obj)
+            spikegenerator_model= spikegeneratorModel()
+            spikegenerator_model.name= obj.name
+            spikegenerator_model.N= obj.N
+            self.spikegenerator_models.append(spikegenerator_model)
+
+#        for obj in objects:
+#            print(type(obj), obj)
+
         for obj in synapse_groups:
             synapse_model= synapseModel()
             synapse_model.name= obj.name
             synapse_model.srcname= obj.source.name
-            synapse_model.srcN= obj.source._N
+            synapse_model.srcN= obj.source.variables['N'].get_value()
             synapse_model.trgname= obj.target.name
-            synapse_model.trgN= obj.target._N
+            synapse_model.trgN= obj.target.variables['N'].get_value()
 
             if hasattr(obj, 'pre'):
                 codeobj= obj.pre.codeobj
@@ -744,6 +766,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models= self.neuron_models,
+                                                   spikegenerator_models= self.spikegenerator_models,
                                                    synapse_models= self.synapse_models,
                                                    dtDef= self.dtDef,
                                                    model_name= self.model_name,
@@ -762,6 +785,7 @@ class GeNNDevice(CPPStandaloneDevice):
         open(os.path.join(directory, 'runner.h'), 'w').write(runner_tmp.h_file)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
+                                                     spikegenerator_models= self.spikegenerator_models,
                                                      synapse_models= self.synapse_models,
 spike_monitor_models= self.spike_monitor_models,
 state_monitor_models= self.state_monitor_models,

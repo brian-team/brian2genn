@@ -16,15 +16,15 @@ void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32
 	    g[s*trgNN+t]= (scalar) 0.0;
 	}
     }
-    cerr << size << "!!!!!!" << endl;
+//    cerr << size << "!!!!!!" << endl;
     for (int i= 0; i < size; i++) {
 	assert(source[i] < srcNN);
 	assert(target[i] < trgNN);
-	cerr << source[i] << " " << target[i] << " " << gvector[i] << endl;
+//	cerr << source[i] << " " << target[i] << " " << gvector[i] << endl;
 	g[source[i]*trgNN+target[i]]= gvector[i];
     }
-    cerr << endl;
-    cerr << "-------------------------";
+//    cerr << endl;
+//    cerr << "-------------------------";
 }
 
 template<class scalar>
