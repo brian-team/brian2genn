@@ -25,7 +25,7 @@ from brian2.utils.filetools import copy_directory, ensure_directory, in_director
 from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
-from brian2.groups.spikegeneratorgroup import *
+from brian2.input.spikegeneratorgroup import *
 from brian2.utils.logger import get_logger
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
@@ -734,7 +734,6 @@ class GeNNDevice(CPPStandaloneDevice):
             self.state_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
 
-        print len(self.spike_monitor_models)
         # Copy the brianlib directory
         brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
                                     'brianlib')
@@ -749,7 +748,8 @@ class GeNNDevice(CPPStandaloneDevice):
         spikequeue_h = os.path.join(directory, 'brianlib', 'spikequeue.h')
         shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
                      spikequeue_h)
-        
+        stdint_compat_h =  os.path.join(directory, 'brianlib', 'stdint_compat.h')
+        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), stdint_compat_h)
 
         # Copy the b2glib directory
         b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
