@@ -3,8 +3,12 @@ from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
 from brian2genn.correctness_testing import GeNNConfiguration
 
-from brian2.tests.features.synapses import SynapsesPre, SynapsesPost
-from brian2.tests.features.neurongroup import NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF
+from brian2.tests.features.synapses import *
+from brian2.tests.features.neurongroup import *
+from brian2.tests.features.monitors import *
+from brian2.tests.features.speed import *
+from brian2.tests.features.input import *
+from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
 prefs.codegen.loop_invariant_optimisations = False
@@ -14,7 +18,8 @@ prefs.codegen.loop_invariant_optimisations = False
 #f = SynapsesPre()
 #f.run()
 #c.after_run()
-#print run_single_feature_test(GeNNConfiguration, NeuronGroupIntegrationLinear)
+#print run_single_feature_test(CPPStandaloneConfiguration, SpikeGeneratorGroupTest)
+#print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
 #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
 #.tables_and_exceptions
 #print run_feature_tests(configurations=[DefaultConfiguration,
@@ -24,5 +29,7 @@ prefs.codegen.loop_invariant_optimisations = False
 #print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
+#print run_feature_tests(configurations=[DefaultConfiguration,
+#                                           GeNNConfiguration], feature_tests=[NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,SynapsesSTDP,SpikeMonitorTest,StateMonitorTest, SpikeGeneratorGroupTest ]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
-                                           GeNNConfiguration], feature_tests=[NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, SynapsesPre, SynapsesPost]).tables_and_exceptions
+                                        GeNNConfiguration], feature_tests=[SynapsesSTDP]).tables_and_exceptions

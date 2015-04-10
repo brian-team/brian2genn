@@ -12,10 +12,10 @@ extern double t;
 	//// MAIN CODE ////////////
     {# USES_VARIABLES { t, i, _clock_t, _spikespace, _count,
                         _source_start, _source_stop} #}
-	int _num_spikes = {{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}}[0];
+	int _num_spikes = {{_spikespace.replace('_ptr_array_','spikeCount_').replace('__spikespace','')}};
 	for(int _j=0; _j<_num_spikes; _j++)
 	{
-            const int _idx = {{_spikespace.replace('_ptr_array_','glbSpk').replace('__spikespace','')}}[{{_spikespace.replace('_ptr_array_','glbSpkShift').replace('__spikespace','')}}+_j];
+            const int _idx = {{_spikespace.replace('_ptr_array_','spike_').replace('__spikespace','')}}[_j];
 	    if ((_idx >= _source_start) && (_idx <= _source_stop))
 	    {{_dynamic_i}}.push_back(_idx-_source_start);
 	    {{_dynamic_t}}.push_back(t);

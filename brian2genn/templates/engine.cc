@@ -104,13 +104,15 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 
   for (int i= 0; i < riT; i++) {
       if (which == GPU) {
+	  stepTimeGPU(t);
 	  {% for spkGen in spikegenerator_models %}
 	  _run_{{spkGen.name}}_codeobject();
 	  push{{spkGen.name}}SpikesToDevice();
 	  {% endfor %}
-	  stepTimeGPU(t);
 	  {% for spkMon in spike_monitor_models %}
+	  {% if (spkMon.notSpikeGeneratorGroup) %}
 	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
+	  {% endif %}
 	  _run_{{spkMon.name}}_codeobject();
 	  {% endfor %}
 	  {% for stateMon in state_monitor_models %}

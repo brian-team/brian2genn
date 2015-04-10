@@ -120,6 +120,7 @@ class spikeMonitorModel(object):
     def __init__(self):
         self.name=''
         self.neuronGroup=''
+        self.notSpikeGeneratorGroup= True
 
 class stateMonitorModel(object):
     '''
@@ -513,8 +514,10 @@ class GeNNDevice(CPPStandaloneDevice):
                 if isinstance(v, AttributeVariable):
                     # We assume all attributes are implemented as property-like methods
                     line = 'const {c_type} {varname} = {objname}.{attrname}();'
-                    lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
-                                             attrname=v.attribute))
+                    # HACK: Avoid over-shadowing the global variable 't' provided by GeNN - code should use GeNN's t anyway
+                    if (k != 't'):
+                        lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
+                                                 attrname=v.attribute))
                 elif isinstance(v, ArrayVariable):
                     try:
                         if isinstance(v, DynamicArrayVariable):
@@ -535,6 +538,8 @@ class GeNNDevice(CPPStandaloneDevice):
             for line in lines:
                 # Sometimes an array is referred to by to different keys in our
                 # dictionary -- make sure to never add a line twice
+                print line
+                print '---------------------------------'
                 if not line in code_object_defs[codeobj.name]:
                     code_object_defs[codeobj.name].append(line)
         # Generate the code objects
@@ -720,8 +725,12 @@ class GeNNDevice(CPPStandaloneDevice):
             sm= spikeMonitorModel()
             sm.name= obj.name
             sm.neuronGroup= obj.source.name
+            if (isinstance(obj.source, SpikeGeneratorGroup)):
+                sm.notSpikeGeneratorGroup= False;
             print sm.name
             print sm.neuronGroup
+            print sm.notSpikeGeneratorGroup
+            print 'xxxxxxxxxxxxxxxxxxxxxxx'
             self.spike_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
