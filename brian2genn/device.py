@@ -596,11 +596,16 @@ class GeNNDevice(CPPStandaloneDevice):
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
                    
-                print('The code is:')
-                print(codeobj.code)
-                code = decorate(codeobj.code, neuron_model.variables, neuron_model.parameters).strip()
+                code= codeobj.code
+                if (suffix == '_resetter') and not (obj._refractory is False):
+                    print 'adding it'
+                    code= code+' lastspike= t-0.5*DT;'
+                code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
                 lines.append(code)                    
-            
+                print('The code is:')
+                print(lines)
+                print 'x-x-x-x-'
+           
             self.neuron_models.append(neuron_model)
 
 #        for obj in objects:
