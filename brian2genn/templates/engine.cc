@@ -121,10 +121,10 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  {% endfor %}
       }
       if (which == CPU) {
+	  stepTimeCPU(t);
 	  {% for spkGen in spikegenerator_models %}
 	  _run_{{spkGen.name}}_codeobject();
 	  {% endfor %}
-	  stepTimeCPU(t);
 	  {% for spkMon in spike_monitor_models %}
 	  _run_{{spkMon.name}}_codeobject();
 	  {% endfor %}
