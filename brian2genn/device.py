@@ -127,7 +127,11 @@ class stateMonitorModel(object):
     '''
     def __init__(self):
         self.name=''
-        self.neuronGroup=''
+        self.monitored=''
+        self.isSynaptic= False
+        self.variables= []
+        self.srcN= 0
+        self.trgN= 0
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -732,19 +736,35 @@ class GeNNDevice(CPPStandaloneDevice):
             sm.neuronGroup= obj.source.name
             if (isinstance(obj.source, SpikeGeneratorGroup)):
                 sm.notSpikeGeneratorGroup= False;
-            print sm.name
-            print sm.neuronGroup
-            print sm.notSpikeGeneratorGroup
-            print 'xxxxxxxxxxxxxxxxxxxxxxx'
             self.spike_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
         for obj in state_monitors:
             sm= stateMonitorModel()
             sm.name= obj.name
-            sm.neuronGroup= obj.source.name
+            sm.monitored= obj.source.name
+            src= obj.source
+            if isinstance(obj.source, Synapses):
+                print 'synapses need extra work'
+                sm.isSynaptic= True
+                sm.srcN= src.source.variables['N'].get_value()
+                sm.trgN= src.target.variables['N'].get_value()
+            else:
+                sm.isSynaptic= False
+                sm.N= src.variables['N'].get_value()
+            for varname in obj.record_variables:
+                print varname
+                print src.variables[varname]
+                print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
+                if isinstance(src.variables[varname],Constant):
+                    notImplementedError('GeNN does not support monitoring constants.');
+                else:
+                    sm.variables.append(varname)
+           
             print sm.name
-            print sm.neuronGroup
+            print sm.monitored
+            print obj.source
+            print 'wwwwwwwwwwwwwwwwwwwwwwwwww'
             self.state_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
 

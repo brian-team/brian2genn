@@ -31,7 +31,7 @@ prefs.codegen.loop_invariant_optimisations = False
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
-                                           GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[#NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
+                                        GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[#NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 SynapsesSTDPNoAutapse,
 #SpikeMonitorTest,StateMonitorTest, SpikeGeneratorGroupTest 
 ]).tables_and_exceptions

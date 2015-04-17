@@ -113,11 +113,9 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  {% if (spkMon.notSpikeGeneratorGroup) %}
 	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
 	  {% endif %}
-	  _run_{{spkMon.name}}_codeobject();
 	  {% endfor %}
-	  {% for stateMon in state_monitor_models %}
-	  pull{{stateMon.neuronGroup}}StateFromDevice();
-	  _run_{{stateMon.name}}_codeobject();
+	  {% for sm in state_monitor_models %}
+	  pull{{sm.monitored}}StateFromDevice();
 	  {% endfor %}
       }
       if (which == CPU) {
@@ -125,13 +123,20 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  {% for spkGen in spikegenerator_models %}
 	  _run_{{spkGen.name}}_codeobject();
 	  {% endfor %}
-	  {% for spkMon in spike_monitor_models %}
-	  _run_{{spkMon.name}}_codeobject();
-	  {% endfor %}
-	  {% for stateMon in state_monitor_models %}
-	  _run_{{stateMon.name}}_codeobject();
-	  {% endfor %}
       }
+      {% for spkMon in spike_monitor_models %}
+      _run_{{spkMon.name}}_codeobject();
+      {% endfor %}
+      {% for sm in state_monitor_models %}
+      {% for var in sm.variables %}
+      {% if sm.isSynaptic %}
+      convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}},brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}});
+      {% else %}
+      copy_genn_to_brian({{var}}{{sm.monitored}}, brian::_array_{{sm.monitored}}_{{var}}, {{sm.N}});
+      {% endif %}
+      {% endfor %}
+      _run_{{sm.name}}_codeobject();
+      {% endfor %}
       t+= DT;
       iT++;
   }

@@ -72,7 +72,7 @@ double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
 // initial variables (synapses)
 {% for synapse_model in synapse_models %}
 {% if synapse_model.variables.__len__() == 0 %}
-double *{{synapse_model.name}}_ini= NULL:
+double *{{synapse_model.name}}_ini= NULL;
   {% else %}
 double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
   {% for k in synapse_model.variables %} 0.0,
