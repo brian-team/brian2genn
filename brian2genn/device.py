@@ -757,7 +757,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 print src.variables[varname]
                 print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
                 if isinstance(src.variables[varname],Constant):
-                    notImplementedError('GeNN does not support monitoring constants.');
+                    raise NotImplementedError('GeNN does not support monitoring constants.');
                 else:
                     sm.variables.append(varname)
            

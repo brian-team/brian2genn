@@ -17,5 +17,5 @@ class GeNNConfiguration(Configuration):
         if os.path.exists('GeNNworkspace'):
             shutil.rmtree('GeNNworkspace')
         brian2.device.build(directory='GeNNworkspace', compile=True, run=True,
-                            use_GPU=False)
+                            use_GPU=True)
 
