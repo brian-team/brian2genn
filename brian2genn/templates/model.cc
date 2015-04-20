@@ -18,7 +18,6 @@ unsigned int {{neuron_model.name}}NEURON;
 {% for synapse_model in synapse_models %}
 unsigned int {{synapse_model.name}}WEIGHTUPDATE;
 unsigned int {{synapse_model.name}}POSTSYN;
-unsigned int {{synapse_model.name}}SYNDYN;
 {% endfor %}
 
 // parameter values
@@ -59,14 +58,11 @@ double {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}
 
 // initial variables (neurons)
 {% for neuron_model in neuron_models %}
-{% if neuron_model.variables.__len__() == 0 %}
-double *{{neuron_model.name}}_ini= NULL;
-{% else %}
-double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()}}]= {
+double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()+1}}]= {
   {% for k in neuron_model.variables %} 0.0,
   {% endfor %}
+  0.0
 };
-{% endif %}
 {% endfor %}
  
 // initial variables (synapses)

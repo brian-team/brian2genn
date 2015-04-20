@@ -1,6 +1,7 @@
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
+extern double t;
 {% set sourcename= owner.source.name %}
 {% for varname, var in _recorded_variables | dictsort %}
 extern {{c_data_type(var.dtype)}} *{{varname}}{{sourcename}};
@@ -10,7 +11,7 @@ extern {{c_data_type(var.dtype)}} *{{varname}}{{sourcename}};
 {% block maincode %}
     {# USES_VARIABLES { t, _clock_t, _indices } #}
 
-    {{_dynamic_t}}.push_back(_clock_t);
+    {{_dynamic_t}}.push_back(t);
 
     const int _new_size = {{_dynamic_t}}.size();
     // Resize the dynamic arrays

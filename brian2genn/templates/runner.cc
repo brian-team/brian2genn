@@ -88,13 +88,7 @@ int main(int argc, char *argv[])
 
   t= 0.0;
   void *devPtr;
-  int done= 0;
-  cerr << "first run command" << endl;
-  while (!done) 
-  {
-    eng.run(DT, which); // run next batch
-    done= (t >= totalTime);
-  }
+  eng.run(totalTime, which); // run for the full duration
   timer.stopTimer();
   cerr << t << " done ..." << endl;
   fprintf(timef,"%f \n", timer.getElapsedTime());

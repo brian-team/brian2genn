@@ -1,5 +1,12 @@
+fle= fopen(['GeNNworkspace/results/' ...
+	       '_dynamic_array_statemonitor_1_t'],'r');
+t= fread(fle,'double');
+
 V= loadResult(['GeNNworkspace/results/' ...
 	       '_dynamic_array_statemonitor_1__recorded_v']);
+fle= fopen(['cpp_standalone/results/' ...
+	       '_dynamic_array_statemonitor_1_t'],'r');
+t2= fread(fle,'double');
 V2= loadResult(['cpp_standalone/results/' ...
 	       '_dynamic_array_statemonitor_1__recorded_v']);
 w= loadResult(['GeNNworkspace/results/' ...
@@ -17,28 +24,31 @@ Apost= loadResult(['GeNNworkspace/results/' ...
 Apost2= loadResult(['cpp_standalone/results/' ...
 	       '_dynamic_array_statemonitor_3__recorded_Apost']);
 
-V= V(1:end-1,:);
-w= w(1:end-1,:);
-Apre= Apre(1:end-1,:);
-Apost= Apost(1:end-1,:);
+size(t)
+size(t2)
+
+%V= V(1:end-1,:);
+%w= w(1:end-1,:);
+%Apre= Apre(1:end-1,:);
+%Apost= Apost(1:end-1,:);
 
 for i=1:size(V,2)
   figure;
-  plot(V(:,i));
+  plot(t,V(:,i));
   hold on;
-  plot(V2(:,i),'r');
+  plot(t2,V2(:,i),'r');
   
   figure
-  plot(w(:,i));
+  plot(t,w(:,i));
   hold on;
-  plot(w2(:,i),'r');
+  plot(t2,w2(:,i),'r');
 
   figure
-  plot(Apre(:,i));
+  plot(t,Apre(:,i));
   hold on;
-  plot(Apre2(:,i),'r');
-  plot(Apost(:,i),'-.');
-  plot(Apost2(:,i),'-.r');
+  plot(t2,Apre2(:,i),'r');
+  plot(t,Apost(:,i),'-.');
+  plot(t2,Apost2(:,i),'-.r');
 end
 
 size(V)
