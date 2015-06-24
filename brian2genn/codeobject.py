@@ -36,7 +36,7 @@ class GeNNCodeGenerator(CPPCodeGenerator):
             code += ' // ' + comment
         return code
     
-    def translate_one_statement_sequence(self, statements):
+    def translate_one_statement_sequence(self, statements, scalar=False):
         if len(statements) and self.template_name=='synapses':
             print '*****************', self.template_name, self.name, self.owner.name
             print 'PRETRANSLATION oh yeah'
@@ -58,7 +58,7 @@ class GeNNCodeGenerator(CPPCodeGenerator):
             print 'POSTTRANSLATION'
             for statement in statements:
                 print '   ', statement
-        return CPPCodeGenerator.translate_one_statement_sequence(self, statements)
+        return CPPCodeGenerator.translate_one_statement_sequence(self, statements, scalar=scalar)
 
 
 class GeNNCodeObject(CPPStandaloneCodeObject):

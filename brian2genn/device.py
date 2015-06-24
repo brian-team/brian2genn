@@ -2,6 +2,7 @@ import pprint
 import numpy
 import numpy as np
 import os
+import numbers
 from subprocess import call
 import inspect
 import shutil
@@ -18,6 +19,7 @@ from brian2.core.variables import *
 from brian2.core.network import Network
 from brian2.devices.device import Device, set_device, all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
+from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.synapses.synapses import Synapses
 from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.statemonitor import StateMonitor
@@ -41,16 +43,24 @@ prefs['codegen.loop_invariant_optimisations'] = False
 def freeze(code, ns):
     # this is a bit of a hack, it should be passed to the template somehow
     for k, v in ns.items():
-        if isinstance(v, (int, float)): # for the namespace provided for functions
-            code = word_substitute(code, {k: str(v)})
-        elif (isinstance(v, Variable) and not isinstance(v, AttributeVariable) and
+
+        if (isinstance(v, Variable) and not isinstance(v, AttributeVariable) and
               v.scalar and v.constant and v.read_only):
-            value = v.get_value()
-            if value < 0:
-                string_value = '(%r)' % value
-            else:
-                string_value = '%r' % value
+            try:
+                v = v.get_value()
+            except NotImplementedError:
+                continue
+        if isinstance(v, basestring):
+            code = word_substitute(code, {k: v})
+        elif isinstance(v, numbers.Number):
+            # Use a renderer to correctly transform constants such as True or inf
+            renderer = CPPNodeRenderer()
+            string_value = renderer.render_expr(repr(v))
+            if v < 0:
+                string_value = '(%s)' % string_value
             code = word_substitute(code, {k: string_value})
+        else:
+            pass  # don't deal with this object
     return code
 
 def decorate(code, variables, parameters, do_final= True):
