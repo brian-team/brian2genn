@@ -1,3 +1,4 @@
+import tempfile
 import pprint
 import numpy
 import numpy as np
@@ -28,7 +29,7 @@ from brian2.utils.stringtools import word_substitute
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
 from brian2.input.spikegeneratorgroup import *
-from brian2.utils.logger import get_logger
+from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
@@ -299,7 +300,8 @@ class GeNNDevice(CPPStandaloneDevice):
         return main_lines
 
     #---------------------------------------------------------------------------------
-    def build(self, directory='output', compile=True, run=True, use_GPU=True):
+    def build(self, directory='output', compile=True, run=True, use_GPU=True,
+              debug=False, with_output=True):
         '''
         TODO: comments here
         '''
@@ -709,27 +711,34 @@ state_monitor_models= self.state_monitor_models,
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
 
         if compile:
-            if os.sys.platform == 'win32':
-                bitversion= ''
-                if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                    bitversion= 'x86_amd64'
-                elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                    bitversion= 'x86_amd64'
-                else:
-                    bitversion= 'x86'
+            with std_silent(debug):
+                if os.sys.platform == 'win32':
+                    bitversion= ''
+                    if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
+                        bitversion= 'x86_amd64'
+                    elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
+                        bitversion= 'x86_amd64'
+                    else:
+                        bitversion= 'x86'
 
-                # Users are required to set their path to "Visual Studio/VC", e.g.
-                # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
-                cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                print(cmd)
-                cmd= cmd+" && buildmodel.bat "+self.model_name + " && nmake /f WINmakefile clean && nmake /f WINmakefile"
-                call(cmd, cwd=directory)
-            else:
-                call(["buildmodel.sh", self.model_name], cwd=directory)
-                call(["make", "clean"], cwd=directory)
-                call(["make"], cwd=directory)
+                    # Users are required to set their path to "Visual Studio/VC", e.g.
+                    # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
+                    cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
+                    print(cmd)
+                    cmd= cmd+" && buildmodel.bat "+self.model_name + " && nmake /f WINmakefile clean && nmake /f WINmakefile"
+                    call(cmd, cwd=directory)
+                else:
+                    call(["buildmodel.sh", self.model_name], cwd=directory)
+                    call(["make", "clean"], cwd=directory)
+                    call(["make"], cwd=directory)
 
         if run:
+            if not with_output:
+                stdout = open(os.devnull, 'w')
+                stderr = open(os.devnull, 'w')
+            else:
+                stdout = None
+                stderr = None
             start_time = time.time()
             gpu_arg = "1" if use_GPU else "0"
             if  os.sys.platform == 'win32':
@@ -737,11 +746,12 @@ state_monitor_models= self.state_monitor_models,
                 cmd= directory + "\\runner.exe test " + str(self.run_duration) + " " + gpu_arg
                 print cmd
                 #os.system(cmd)
-                call(cmd, cwd=directory)
+                call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
             else:
                 print directory
                 print ["./runner", "test", str(self.run_duration), gpu_arg]
-                call(["./runner", "test", str(self.run_duration), gpu_arg], cwd=directory)
+                call(["./runner", "test", str(self.run_duration), gpu_arg],
+                     cwd=directory, stdout=stdout, stderr=stderr)
             self.has_been_run= True
             self._last_run_time = time.time()-start_time
 
@@ -763,3 +773,20 @@ genn_device = GeNNDevice()
 
 all_devices['genn'] = genn_device
 
+class GeNNSimpleDevice(GeNNDevice):
+    def network_run(self, net, duration, report=None, report_period=10*second,
+                    namespace=None, profile=True, level=0, **kwds):
+        super(GeNNSimpleDevice, self).network_run(net, duration,
+                                                  report=report,
+                                                  report_period=report_period,
+                                                  namespace=namespace,
+                                                  profile=profile,
+                                                  level=level+1,
+                                                  **kwds)
+        tempdir = tempfile.mkdtemp()
+        self.build(directory=tempdir, compile=True, run=True,
+                   debug=False, with_output=False)
+
+genn_simple_device = GeNNSimpleDevice()
+
+all_devices['genn_simple'] = genn_simple_device
