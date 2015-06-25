@@ -309,6 +309,7 @@ class GeNNDevice(CPPStandaloneDevice):
         static_array_name = self.static_array(array_name, arr)
         self.main_queue.append(('set_by_array', (array_name,
                                                  static_array_name)))
+
     def get_value(self, var, access_data=True):
         # Usually, we cannot retrieve the values of state variables in
         # standalone scripts since their values might depend on the evaluation
@@ -328,8 +329,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # disk
             if self.has_been_run:
                 dtype = var.dtype
-                fname = os.path.join(self.project_dir, 'results',
-                                     array_name)
+                fname = os.path.join(self.project_dir,
+                                     self.get_array_filename(var))
                 with open(fname, 'rb') as f:
                     data = np.fromfile(f, dtype=dtype)
                 # This is a bit of an heuristic, but our 2d dynamic arrays are
@@ -511,7 +512,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         synapses=synapses,
                         clocks=self.clocks,
                         static_array_specs=static_array_specs,
-                        networks= [net],
+                        networks=[net],
+                        get_array_filename=self.get_array_filename
                         )
         writer.write('objects.*', arr_tmp)
         self.header_files.append('objects.h')

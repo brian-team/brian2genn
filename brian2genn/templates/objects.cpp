@@ -36,7 +36,7 @@ DynamicArray2D<{{c_data_type(var.dtype)}}> brian::{{varname}};
 /////////////// static arrays /////////////
 {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
 {# arrays that are initialized from static data are already declared #}
-{% if not name in array_specs.values() %}
+{% if not (name in array_specs.values() or name in dynamic_array_specs.values() or name in dynamic_array_2d_specs.values())%}
 {{dtype_spec}} * brian::{{name}};
 const int brian::_num_{{name}} = {{N}};
 {% endif %}
@@ -63,8 +63,16 @@ void _init_arrays()
 
     // Arrays initialized to 0
 	{% for var in zero_arrays | sort(attribute='name') %}
+	{% if var in dynamic_array_specs %}
+	{% set varname = '_dynamic'+array_specs[var] %}
+	{% else %}
 	{% set varname = array_specs[var] %}
+	{% endif %}
+	{% if varname in dynamic_array_specs.values() %}
+	{{varname}}.resize({{var.size}});
+	{% else %}
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+	{% endif %}
 	{{ openmp_pragma('parallel-static') }}
 	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = 0;
 	{% endfor %}
@@ -72,14 +80,22 @@ void _init_arrays()
 	// Arrays initialized to an "arange"
 	{% for var, start in arange_arrays %}
 	{% set varname = array_specs[var] %}
+	{% if varname in dynamic_array_specs.values() %}
+	{{varname}}.resize({{var.size}});
+	{% else %}
 	{{varname}} = new {{c_data_type(var.dtype)}}[{{var.size}}];
+	{% endif %}
 	{{ openmp_pragma('parallel-static') }}
 	for(int i=0; i<{{var.size}}; i++) {{varname}}[i] = {{start}} + i;
 	{% endfor %}
 
 	// static arrays
 	{% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
+	{% if name in dynamic_array_specs.values() %}
+	{{name}}.resize({{N}});
+	{% else %}
 	{{name}} = new {{dtype_spec}}[{{N}}];
+	{% endif %}
 	{% endfor %}
 }
 
@@ -92,13 +108,17 @@ void _load_arrays()
 	f{{name}}.open("static_arrays/{{name}}", ios::in | ios::binary);
 	if(f{{name}}.is_open())
 	{
+	    {% if name in dynamic_array_specs.values() %}
+	    f{{name}}.read(reinterpret_cast<char*>(&{{name}}[0]), {{N}}*sizeof({{dtype_spec}}));
+	    {% else %}
 		f{{name}}.read(reinterpret_cast<char*>({{name}}), {{N}}*sizeof({{dtype_spec}}));
+		{% endif %}
 	} else
 	{
 		std::cout << "Error opening static array {{name}}." << endl;
 	}
 	{% endfor %}
-}	
+}
 
 void _write_arrays()
 {
@@ -107,7 +127,7 @@ void _write_arrays()
 	{% for var, varname in array_specs | dictsort(by='value') %}
 	{% if not (var in dynamic_array_specs or var in dynamic_array_2d_specs) %}
 	ofstream outfile_{{varname}};
-	outfile_{{varname}}.open("results/{{varname}}", ios::binary | ios::out);
+	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
 		outfile_{{varname}}.write(reinterpret_cast<char*>({{varname}}), {{var.size}}*sizeof({{varname}}[0]));
@@ -118,10 +138,10 @@ void _write_arrays()
 	}
 	{% endif %}
 	{% endfor %}
-
+    // dynamic_array_specs: {{dynamic_array_specs}}
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 	ofstream outfile_{{varname}};
-	outfile_{{varname}}.open("results/{{varname}}", ios::binary | ios::out);
+	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
 		outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}[0]), {{varname}}.size()*sizeof({{varname}}[0]));
@@ -134,7 +154,7 @@ void _write_arrays()
 
 	{% for var, varname in dynamic_array_2d_specs | dictsort(by='value') %}
 	ofstream outfile_{{varname}};
-	outfile_{{varname}}.open("results/{{varname}}", ios::binary | ios::out);
+	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
         for (int n=0; n<{{varname}}.n; n++)
@@ -154,7 +174,7 @@ void _dealloc_arrays()
 	using namespace brian;
 
 	{% for var, varname in array_specs | dictsort(by='value') %}
-	{% if not var in dynamic_array_specs %}
+	{% if varname in dynamic_array_specs.values() %}
 	if({{varname}}!=0)
 	{
 		delete [] {{varname}};
@@ -165,11 +185,13 @@ void _dealloc_arrays()
 
 	// static arrays
 	{% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
+	{% if not name in dynamic_array_specs.values() %}
 	if({{name}}!=0)
 	{
 		delete [] {{name}};
 		{{name}} = 0;
 	}
+	{% endif %}
 	{% endfor %}
 }
 
@@ -217,7 +239,7 @@ extern DynamicArray2D<{{c_data_type(var.dtype)}}> {{varname}};
 /////////////// static arrays /////////////
 {% for (name, dtype_spec, N, filename) in static_array_specs | sort %}
 {# arrays that are initialized from static data are already declared #}
-{% if not name in array_specs.values() %}
+{% if not (name in array_specs.values() or name in dynamic_array_specs.values() or name in dynamic_array_2d_specs.values())%}
 extern {{dtype_spec}} *{{name}};
 extern const int _num_{{name}};
 {% endif %}
