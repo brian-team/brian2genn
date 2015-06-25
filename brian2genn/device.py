@@ -208,164 +208,6 @@ class GeNNDevice(CPPStandaloneDevice):
         self.header_files= []
 
         self.clocks = set([])
-        
-    def reinit(self):
-        self.__init__()
-
-    def static_array(self, name, arr):
-        assert len(arr), 'length for %s: %d' % (name, len(arr))
-        name = '_static_array_' + name
-        basename = name
-        i = 0
-        while name in self.static_arrays:
-            i += 1
-            name = basename+'_'+str(i)
-        self.static_arrays[name] = arr.copy()
-        return name
-
-    def get_array_name(self, var, access_data=True):
-        '''
-        Return a globally unique name for `var`.
-
-        Parameters
-        ----------
-        access_data : bool, optional
-            For `DynamicArrayVariable` objects, specifying `True` here means the
-            name for the underlying data is returned. If specifying `False`,
-            the name of object itself is returned (e.g. to allow resizing).
-        '''
-        if isinstance(var, DynamicArrayVariable):
-            if access_data:
-                return self.arrays[var]
-            elif var.dimensions == 1:
-                return self.dynamic_arrays[var]
-            else:
-                return self.dynamic_arrays_2d[var]
-        elif isinstance(var, ArrayVariable):
-            return self.arrays[var]
-        else:
-            raise TypeError(('Do not have a name for variable of type '
-                             '%s') % type(var))
-
-    def add_array(self, var):
-        # Note that a dynamic array variable is added to both the arrays and
-        # the _dynamic_array dictionary
-        if isinstance(var, DynamicArrayVariable):
-            # The code below is slightly more complicated than just looking
-            # for a unique name as above for static_array, the name has
-            # potentially to be unique for more than one dictionary, with
-            # different prefixes. This is because dynamic arrays are added to
-            # a ``dynamic_arrays`` dictionary (with a `_dynamic` prefix) and to
-            # the general ``arrays`` dictionary. We want to make sure that we
-            # use the same name in the two dictionaries, not for example
-            # ``_dynamic_array_source_name_2`` and ``_array_source_name_1``
-            # (this would work fine, but it would make the code harder to read).
-            orig_dynamic_name = dynamic_name = '_dynamic_array_%s_%s' % (var.owner.name, var.name)
-            orig_array_name = array_name = '_array_%s_%s' % (var.owner.name, var.name)
-            suffix = 0
-
-            if var.dimensions == 1:
-                dynamic_dict = self.dynamic_arrays
-            elif var.dimensions == 2:
-                dynamic_dict = self.dynamic_arrays_2d
-            else:
-                raise AssertionError(('Did not expect a dynamic array with %d '
-                                      'dimensions.') % var.dimensions)
-            while (dynamic_name in dynamic_dict.values() or
-                   array_name in self.arrays.values()):
-                suffix += 1
-                dynamic_name = orig_dynamic_name + '_%d' % suffix
-                array_name = orig_array_name + '_%d' % suffix
-            dynamic_dict[var] = dynamic_name
-            self.arrays[var] = array_name
-        else:
-            orig_array_name = array_name = '_array_%s_%s' % (var.owner.name, var.name)
-            suffix = 0
-            while (array_name in self.arrays.values()):
-                suffix += 1
-                array_name = orig_array_name + '_%d' % suffix
-            self.arrays[var] = array_name
-
-
-    def init_with_zeros(self, var):
-        self.zero_arrays.append(var)
-
-    def init_with_arange(self, var, start):
-        self.arange_arrays[var] = start
-
-    def init_with_array(self, var, arr):
-        array_name = self.get_array_name(var, access_data=False)
-        # treat the array as a static array
-        self.static_arrays[array_name] = arr.astype(var.dtype)
-
-    def fill_with_array(self, var, arr):
-        arr = np.asarray(arr)
-        if arr.shape == ():
-            arr = np.repeat(arr, var.size)
-        # Using the std::vector instead of a pointer to the underlying
-        # data for dynamic arrays is fast enough here and it saves us some
-        # additional work to set up the pointer
-        array_name = self.get_array_name(var, access_data=False)
-        static_array_name = self.static_array(array_name, arr)
-        self.main_queue.append(('set_by_array', (array_name,
-                                                 static_array_name)))
-
-    def get_value(self, var, access_data=True):
-        # Usually, we cannot retrieve the values of state variables in
-        # standalone scripts since their values might depend on the evaluation
-        # of expressions at runtime. For constant, read-only arrays that have
-        # been explicitly initialized (static arrays) or aranges (e.g. the
-        # neuronal indices) we can, however
-        array_name = self.get_array_name(var, access_data=False)
-        if (var.constant and var.read_only and
-                (array_name in self.static_arrays or
-                 var in self.arange_arrays)):
-            if array_name in self.static_arrays:
-                return self.static_arrays[array_name]
-            elif var in self.arange_arrays:
-                return np.arange(0, var.size) + self.arange_arrays[var]
-        else:
-            # After the network has been run, we can retrieve the values from
-            # disk
-            if self.has_been_run:
-                dtype = var.dtype
-                fname = os.path.join(self.project_dir,
-                                     self.get_array_filename(var))
-                with open(fname, 'rb') as f:
-                    data = np.fromfile(f, dtype=dtype)
-                # This is a bit of an heuristic, but our 2d dynamic arrays are
-                # only expanding in one dimension, we assume here that the
-                # other dimension has size 0 at the beginning
-                if isinstance(var.size, tuple) and len(var.size) == 2:
-                    if var.size[0] * var.size[1] == len(data):
-                        return data.reshape(var.size)
-                    elif var.size[0] == 0:
-                        return data.reshape((-1, var.size[1]))
-                    elif var.size[0] == 0:
-                        return data.reshape((var.size[1], -1))
-                    else:
-                        raise IndexError(('Do not now how to deal with 2d '
-                                          'array of size %s, the array on disk '
-                                          'has length %d') % (str(var.size),
-                                                              len(data)))
-
-                return data
-            raise NotImplementedError('Cannot retrieve the values of state '
-                                      'variables in standalone code before the '
-                                      'simulation has been run.')
-
-    def variableview_get_subexpression_with_index_array(self, variableview,
-                                                        item, level=0,
-                                                        run_namespace=None):
-        raise NotImplementedError(('Cannot evaluate subexpressions in '
-                                   'standalone scripts.'))
-
-
-    def variableview_get_with_expression(self, variableview, code, level=0,
-                                         run_namespace=None):
-        raise NotImplementedError('Cannot retrieve the values of state '
-                                  'variables with string expressions in '
-                                  'standalone scripts.')
 
     def code_object_class(self, codeobj_class=None):
         if codeobj_class is GeNNCodeObject:
@@ -390,7 +232,6 @@ class GeNNDevice(CPPStandaloneDevice):
         )
         self.code_objects[codeobj.name] = codeobj
         return codeobj
-        
 
     #---------------------------------------------------------------------------------
     def make_main_lines(self):
@@ -415,6 +256,12 @@ class GeNNDevice(CPPStandaloneDevice):
                 }}
                 '''.format(arrayname=arrayname, staticarrayname=staticarrayname)
                 main_lines.extend(code.split('\n'))
+            elif func=='set_by_single_value':
+                arrayname, item, value = args
+                code = '{arrayname}[{item}] = {value};'.format(arrayname=arrayname,
+                                                               item=item,
+                                                               value=value)
+                main_lines.extend([code])
             elif func=='set_array_by_array':
                 arrayname, staticarrayname_index, staticarrayname_value = args
                 code = '''
@@ -425,6 +272,10 @@ class GeNNDevice(CPPStandaloneDevice):
                 '''.format(arrayname=arrayname, staticarrayname_index=staticarrayname_index,
                            staticarrayname_value=staticarrayname_value)
                 main_lines.extend(code.split('\n'))
+            elif func=='resize_array':
+                array_name, new_size = args
+                main_lines.append("{array_name}.resize({new_size});".format(array_name=array_name,
+                                                                            new_size=new_size))
             elif func=='insert_code':
                 main_lines.append(args)
             elif func=='start_run_func':
