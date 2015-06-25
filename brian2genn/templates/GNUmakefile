@@ -7,5 +7,5 @@ LINK_FLAGS      :=
 CCFLAGS         := 
 NVCCFLAGS       := 
 
-include $(GeNNPATH)/userproject/include/makefile_common_gnu.mk
+include $(GENN_PATH)/userproject/include/makefile_common_gnu.mk
 
