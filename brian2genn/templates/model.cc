@@ -163,7 +163,7 @@ void modelDefinition(NNmodel &model)
   {% endfor %}
 
   model.setName("{{model_name}}");
-  model.setPrecision(DOUBLE);
+  model.setPrecision(GENN_DOUBLE);
   {% for neuron_model in neuron_models %} 
   model.addNeuronPopulation("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}NEURON, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
   {% endfor %}

@@ -148,8 +148,6 @@ using namespace std;
 #define DBG_SIZE 10000
 
 // and some global variables
-double t= 0.0;
-unsigned int iT= 0;
 CStopWatch timer;
 
 //----------------------------------------------------------------------

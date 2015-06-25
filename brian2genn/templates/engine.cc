@@ -104,7 +104,8 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 
   for (int i= 0; i < riT; i++) {
       if (which == GPU) {
-	  stepTimeGPU(t);
+	  stepTimeGPU();
+	  t= t-DT;
 	  {% for spkGen in spikegenerator_models %}
 	  _run_{{spkGen.name}}_codeobject();
 	  push{{spkGen.name}}SpikesToDevice();
@@ -119,7 +120,8 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  {% endfor %}
       }
       if (which == CPU) {
-	  stepTimeCPU(t);
+	  stepTimeCPU();
+	  t= t-DT;
 	  {% for spkGen in spikegenerator_models %}
 	  _run_{{spkGen.name}}_codeobject();
 	  {% endfor %}
@@ -137,8 +139,6 @@ void engine::run(double runtime, //!< Duration of time to run the model for
       {% endfor %}
       _run_{{sm.name}}_codeobject();
       {% endfor %}
-      t+= DT;
-      iT++;
   }
 }
 
