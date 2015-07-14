@@ -10,7 +10,7 @@ extern double t;
 
 {% block maincode %}
 	//// MAIN CODE ////////////
-    {# USES_VARIABLES { t, i, _clock_t, _spikespace, _count,
+    {# USES_VARIABLES { t, i, _clock_t, _spikespace, count,
                         _source_start, _source_stop} #}
 	int _num_spikes = {{_spikespace.replace('_ptr_array_','spikeCount_').replace('__spikespace','')}};
 	for(int _j=0; _j<_num_spikes; _j++)
@@ -19,7 +19,7 @@ extern double t;
 	    if ((_idx >= _source_start) && (_idx <= _source_stop))
 	    {{_dynamic_i}}.push_back(_idx-_source_start);
 	    {{_dynamic_t}}.push_back(t);
-	    {{_count}}[_idx-_source_start]++;
+	    {{count}}[_idx-_source_start]++;
         }
 {% endblock %}
 
