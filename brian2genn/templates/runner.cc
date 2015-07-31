@@ -21,7 +21,7 @@
 /*! \brief This function is the entry point for running the simulation of the MBody1 model network.
 */
 //--------------------------------------------------------------------------
-
+int which;
 
 int main(int argc, char *argv[])
 {
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
     return 1;
   }
   double totalTime= atof(argv[2]);
-  int which= atoi(argv[3]);
+  which= atoi(argv[3]);
   string OutDir = toString(argv[1]) +"_output";
   string cmd= toString("mkdir ") +OutDir;
   system(cmd.c_str());

@@ -596,6 +596,8 @@ class GeNNDevice(CPPStandaloneDevice):
             self.synapse_models.append(synapse_model)
                                
         for obj in spike_monitors:
+            if obj.event != 'spike':
+                raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
             sm= spikeMonitorModel()
             sm.name= obj.name
             sm.neuronGroup= obj.source.name
