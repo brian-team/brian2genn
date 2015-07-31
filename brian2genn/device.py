@@ -170,7 +170,8 @@ class GeNNDevice(CPPStandaloneDevice):
     '''
     '''
     def __init__(self):
-        super(GeNNDevice, self).__init__()        
+        super(GeNNDevice, self).__init__()   
+        self.network_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
         self.neuron_models = []
         self.spikegenerator_models= []
         self.synapse_models = []
