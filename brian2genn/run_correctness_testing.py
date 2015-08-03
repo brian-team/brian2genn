@@ -18,7 +18,7 @@ prefs.codegen.loop_invariant_optimisations = False
 #f = SynapsesPre()
 #f.run()
 #c.after_run()
-#print run_single_feature_test(CPPStandaloneConfiguration, SynapsesSTDP)
+#print run_single_feature_test(CPPStandaloneConfiguration, StateMonitorTest)
 #print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
 #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
 #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
@@ -31,11 +31,11 @@ prefs.codegen.loop_invariant_optimisations = False
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
 print run_feature_tests(configurations=[DefaultConfiguration,
                                          GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[ 
-#NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
+NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 # SynapsesSTDPNoAutapse, 
-#SynapsesSTDP, 
+SynapsesSTDP, 
 SpikeMonitorTest,
-#  StateMonitorTest, SpikeGeneratorGroupTest 
+  StateMonitorTest, SpikeGeneratorGroupTest 
  ]).tables_and_exceptions
 #print run_feature_tests(configurations=[DefaultConfiguration,
 #                                        GeNNConfiguration], feature_tests=[SynapsesSTDP]).tables_and_exceptions

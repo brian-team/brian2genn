@@ -249,6 +249,15 @@ class GeNNDevice(CPPStandaloneDevice):
             elif func=='run_network':
                  net, netcode = args
                  #                 main_lines.extend(netcode)
+            elif func=='set_by_constant':
+                arrayname, value = args
+                code = '''
+                for(int i=0; i<_num_{arrayname}; i++)
+                {{
+                    {arrayname}[i] = {value};
+                }}
+                '''.format(arrayname=arrayname, value=CPPNodeRenderer().render_expr(repr(value)))
+                main_lines.extend(code.split('\n'))
             elif func=='set_by_array':
                 arrayname, staticarrayname = args
                 code = '''
@@ -465,8 +474,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k not in neuron_model.parameters:
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
-                   
                 code= codeobj.code
+                print('starting from:',code)   
                 if (suffix == '_resetter') and not (obj._refractory is False):
                     print 'adding it'
                     code= code+' lastspike= t-0.5*DT;'
@@ -647,11 +656,10 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.header_files.append('brianlib/'+file)
 
         # Copy the CSpikeQueue implementation
-        spikequeue_h = os.path.join(directory, 'brianlib', 'spikequeue.h')
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
-                     spikequeue_h)
-        stdint_compat_h =  os.path.join(directory, 'brianlib', 'stdint_compat.h')
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), stdint_compat_h)
+        shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
+                     os.path.join(directory, 'brianlib', 'spikequeue.h'))
+        shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), 
+                     os.path.join(directory, 'brianlib', 'stdint_compat.h'))
 
         # Copy the b2glib directory
         b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
