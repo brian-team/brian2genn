@@ -66,15 +66,13 @@ double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()+1}}]= {
 {% endfor %}
  
 // initial variables (synapses)
+// one additional initial variable for hidden_weightmatrix
 {% for synapse_model in synapse_models %}
-{% if synapse_model.variables.__len__() == 0 %}
-double *{{synapse_model.name}}_ini= NULL;
-  {% else %}
-double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()}}]= {
+double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()+1}}]= {
   {% for k in synapse_model.variables %} 0.0,
   {% endfor %}
+  0.0
 };
-{%endif %}
 
 {% if synapse_model.postsyn_variables.__len__() == 0 %}
 double *{{synapse_model.name}}_postsyn_ini= NULL;

@@ -475,7 +475,10 @@ class GeNNDevice(CPPStandaloneDevice):
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
                 code= codeobj.code
-                print('starting from:',code)   
+#                print('starting from:',code)   
+#                for x in dir(codeobj):
+#                    print "obj.%s= %s\n" % (x, getattr(codeobj, x))
+
                 if (suffix == '_resetter') and not (obj._refractory is False):
                     print 'adding it'
                     code= code+' lastspike= t-0.5*DT;'
