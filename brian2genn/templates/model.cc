@@ -90,6 +90,7 @@ double {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__le
 void modelDefinition(NNmodel &model)
 {
   initGeNN();
+  GENN_PREFERENCES::autoRefractory= 0;
   // Define the relevant neuron models
   neuronModel n;
 
