@@ -33,9 +33,11 @@ print run_feature_tests(configurations=[DefaultConfiguration,
                                          GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[ 
 #NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 # SynapsesSTDPNoAutapse, 
-SynapsesSTDP, 
+#SynapsesSTDP, 
 SpikeMonitorTest,
 #  StateMonitorTest, SpikeGeneratorGroupTest 
  ]).tables_and_exceptions
 #print run_feature_tests(configurations=[DefaultConfiguration,
 #                                        GeNNConfiguration], feature_tests=[SynapsesSTDP]).tables_and_exceptions
+#print run_single_feature_test(CPPStandaloneConfiguration, SpikeMonitorTest)
+#print run_single_feature_test(GeNNConfiguration, SpikeMonitorTest)
