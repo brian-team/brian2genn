@@ -223,6 +223,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.static_arrays = {}
 
         self.code_objects = {}
+        self.simple_code_objects = {}
         self.main_queue = []
         self.report_func = ''
         self.synapses = []
@@ -246,15 +247,22 @@ class GeNNDevice(CPPStandaloneDevice):
             raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
+            codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, variables,
+                                                          template_name, variable_indices,
+                                                          codeobj_class=codeobj_class,
+                                                          template_kwds=template_kwds,
+                                                          override_conditional_write=override_conditional_write,
+                                                      )
+            self.simple_code_objects[codeobj.name] = codeobj
         else:
             codeobj_class= GeNNUserCodeObject
-        codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, variables,
-                                                      template_name, variable_indices,
-                                                      codeobj_class=codeobj_class,
-                                                      template_kwds=template_kwds,
-                                                      override_conditional_write=override_conditional_write,
-        )
-        self.code_objects[codeobj.name] = codeobj
+            codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, variables,
+                                                          template_name, variable_indices,
+                                                          codeobj_class=codeobj_class,
+                                                          template_kwds=template_kwds,
+                                                          override_conditional_write=override_conditional_write,
+                                                      )
+            self.code_objects[codeobj.name] = codeobj
         return codeobj
 
     #---------------------------------------------------------------------------------
@@ -445,15 +453,17 @@ class GeNNDevice(CPPStandaloneDevice):
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
             # print(type(codeobj.code))
-            if isinstance(codeobj.code, MultiTemplate):
-                code = freeze(codeobj.code.cpp_file, ns)
-                code = code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
-                code = '#include "objects.h"\n'+code
-            
-                writer.write('code_objects/'+codeobj.name+'.cpp', code)
-                self.source_files.append('code_objects/'+codeobj.name+'.cpp')
-                writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
-                self.header_files.append('code_objects/'+codeobj.name+'.h')
+            if not codeobj.template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
+                if isinstance(codeobj.code, MultiTemplate):
+                    # this filters away the code objects that are not GeNNUserCodeObjects (they are not multi-templates) - a bit too subtle?
+                    code = freeze(codeobj.code.cpp_file, ns)
+                    code = code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
+                    code = '#include "objects.h"\n'+code
+                    
+                    writer.write('code_objects/'+codeobj.name+'.cpp', code)
+                    self.source_files.append('code_objects/'+codeobj.name+'.cpp')
+                    writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
+                    self.header_files.append('code_objects/'+codeobj.name+'.h')
                 
 
         # assemble the model descriptions:
@@ -482,17 +492,11 @@ class GeNNDevice(CPPStandaloneDevice):
                     print k
                     neuron_model.variables.append(k)
                     neuron_model.variabletypes.append(c_data_type(v.dtype))
-                elif isinstance(v, Function):
-                    print 'its a function'
-                    print k
-                    hd, ps, sc, uf = self._add_user_function(varname, variable)
-                    user_functions.extend(uf)
-                    support_code.extend(sc)
-                    hash_defines.extend(hd)
                 else:
                     print("Unknown variable type:",k,v) 
             neuron_model.support_code_lines= stripped_deindented_lines('\n'.join(support_code))
             neuron_model.hashdefine_lines= stripped_deindented_lines('\n'.join(hash_defines))
+            support_lines= []
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_thresholder', neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
@@ -501,14 +505,14 @@ class GeNNDevice(CPPStandaloneDevice):
                     if suffix == '_thresholder':
                         lines.append('0')
                     continue
-                        
+
                 codeobj = objects[obj.name+suffix].codeobj
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
-                code= codeobj.code
+                code= codeobj.code.cpp_file
 #                print('starting from:',code)   
 #                for x in dir(codeobj):
 #                    print "obj.%s= %s\n" % (x, getattr(codeobj, x))
@@ -523,7 +527,12 @@ class GeNNDevice(CPPStandaloneDevice):
                 print('The code is:')
                 print(lines)
                 print 'x-x-x-x-'
-                
+                code= codeobj.code.h_file
+                code= code.replace('\n', '\\n\\\n')
+                code = code.replace('"', '\\"')
+                support_lines.append(code)
+                neuron_model.support_code_lines= support_lines
+
             self.neuron_models.append(neuron_model)
 
 #        for obj in objects:
