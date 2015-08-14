@@ -10,7 +10,7 @@ extern int which;
 extern unsigned int *glbSpkCnt{{eventspace_variable.owner.name}};
 extern unsigned int *glbSpk{{eventspace_variable.owner.name}};
 {% else %}
-extern {{var.dtype}} *{{var.name}}{{eventspace_variable.owner.name}};
+extern {{c_data_type(var.dtype)}} *{{var.name}}{{eventspace_variable.owner.name}};
 {% endif %}
 {% endif %}
 {% endfor %}
@@ -47,7 +47,7 @@ extern {{var.dtype}} *{{var.name}}{{eventspace_variable.owner.name}};
 		{% if varname == 'i' %}
 		{{get_array_name(var, access_data=False)}}.push_back(_idx);
 		{% else %}
-		{{get_array_name(var, access_data=False)}}.push_back({{varname}}{{var.owner.name}}[glbSpkShift{{var.owner.name}}+_idx]);
+		{{get_array_name(var, access_data=False)}}.push_back({{varname}}{{eventspace_variable.owner.name}}[glbSpkShift{{eventspace_variable.owner.name}}+_idx]);
 		{% endif %}
 		{% endif %}
 		{% endfor %}

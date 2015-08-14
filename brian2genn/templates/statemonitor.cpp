@@ -4,7 +4,7 @@
 extern double t;
 {% set sourcename= owner.source.name %}
 {% for varname, var in _recorded_variables | dictsort %}
-extern {{c_data_type(var.dtype)}} *{{varname}}{{sourcename}};
+//extern {{c_data_type(var.dtype)}} *{{varname}}{{sourcename}};
 {% endfor %}
 {% endblock %}
 

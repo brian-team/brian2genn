@@ -18,6 +18,7 @@ from brian2.core.clocks import defaultclock
 from brian2.core.preferences import brian_prefs
 from brian2.core.variables import *
 from brian2.core.network import Network
+from brian2.core.functions import Function
 from brian2.devices.device import Device, set_device, all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
@@ -25,7 +26,7 @@ from brian2.synapses.synapses import Synapses
 from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
-from brian2.utils.stringtools import word_substitute
+from brian2.utils.stringtools import word_substitute, get_identifiers, stripped_deindented_lines
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
 from brian2.input.spikegeneratorgroup import *
@@ -33,6 +34,7 @@ from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
+from .genn_generator import *
 from brian2.core.magic import _get_contained_objects
 
 __all__ = ['GeNNDevice']
@@ -78,6 +80,18 @@ def decorate(code, variables, parameters, do_final= True):
         code = word_substitute(code, {'_hidden_weightmatrix' : '$(_hidden_weightmatrix)'})
     return code
 
+def extract_source_variables(variables, varname, smvariables):
+    identifiers= get_identifiers(variables[varname].expr)
+    for vnm, var in variables.items():
+        if vnm in identifiers:
+            if isinstance(var,ArrayVariable):
+                smvariables.append(vnm)
+            elif isinstance(var,Subexpression):
+                smvariables= extract_source_variables(variables, vnm, smvariables)
+    return smvariables
+                
+
+
 class neuronModel(object):
     '''
     '''
@@ -91,6 +105,8 @@ class neuronModel(object):
         self.code_lines= []
         self.thresh_cond_lines= []
         self.reset_code_lines= []
+        self.support_code_lines= []
+        self.hashdefine_lines= []
 
 class spikegeneratorModel(object):
     '''
@@ -124,6 +140,7 @@ class synapseModel(object):
         self.postsyn_pvalue= []
         self.postsSynDecay= []
         self.postSyntoCurrent= []
+        self.supportCode=''
 
 class spikeMonitorModel(object):
     '''
@@ -143,6 +160,7 @@ class stateMonitorModel(object):
         self.variables= []
         self.srcN= 0
         self.trgN= 0
+        self.when=''
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -165,6 +183,10 @@ class CPPWriter(object):
             if open(fullfilename, 'r').read()==contents:
                 return
         open(fullfilename, 'w').write(contents)
+
+#-----------------------------------------------------------------------------------------------------------
+# Start of GeNNDevice
+#-----------------------------------------------------------------------------------------------------------
 
 class GeNNDevice(CPPStandaloneDevice):
     '''
@@ -347,17 +369,14 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append((name, c_data_type(arr.dtype), arr.size, name))
         
         networks = [net() for net in Network.__instances__() if net().name!='_fake_network']
-        synapses = []
-        for net in networks:
-            synapses.extend(s for s in net.objects if isinstance(s, Synapses))
-        
-#        if len(synapses):
-#            raise NotImplementedError("GeNN does not support Synapses (yet).")
         
         if len(networks)!=1:
             raise NotImplementedError("GeNN only supports MagicNetwork")
         net = networks[0]
 
+        synapses = []
+        synapses.extend(s for s in net.objects if isinstance(s, Synapses))
+        
         # Not sure what the best place is to call Network.after_run -- at the
         # moment the only important thing it does is to clear the objects stored
         # in magic_network. If this is not done, this might lead to problems
@@ -452,13 +471,28 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model= neuronModel()
             neuron_model.name= obj.name
             neuron_model.N= obj.N
+            user_functions = []
+            support_code = []
+            hash_defines = []
             for k, v in obj.variables.iteritems():
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
                 elif isinstance(v, ArrayVariable):
+                    print 'its an Arrayvariable'
+                    print k
                     neuron_model.variables.append(k)
                     neuron_model.variabletypes.append(c_data_type(v.dtype))
-   
+                elif isinstance(v, Function):
+                    print 'its a function'
+                    print k
+                    hd, ps, sc, uf = self._add_user_function(varname, variable)
+                    user_functions.extend(uf)
+                    support_code.extend(sc)
+                    hash_defines.extend(hd)
+                else:
+                    print("Unknown variable type:",k,v) 
+            neuron_model.support_code_lines= stripped_deindented_lines('\n'.join(support_code))
+            neuron_model.hashdefine_lines= stripped_deindented_lines('\n'.join(hash_defines))
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_thresholder', neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
@@ -478,6 +512,8 @@ class GeNNDevice(CPPStandaloneDevice):
 #                print('starting from:',code)   
 #                for x in dir(codeobj):
 #                    print "obj.%s= %s\n" % (x, getattr(codeobj, x))
+                print '^&^&^&^&^&^&^&^&^&^&'
+                print codeobj.__dict__
 
                 if (suffix == '_resetter') and not (obj._refractory is False):
                     print 'adding it'
@@ -487,7 +523,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 print('The code is:')
                 print(lines)
                 print 'x-x-x-x-'
-           
+                
             self.neuron_models.append(neuron_model)
 
 #        for obj in objects:
@@ -509,8 +545,8 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.srcN= obj.source.variables['N'].get_value()
             synapse_model.trgname= obj.target.name
             synapse_model.trgN= obj.target.variables['N'].get_value()
-
             if hasattr(obj, 'pre'):
+                print 'pre yes'
                 codeobj= obj.pre.codeobj
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt' :
@@ -545,6 +581,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.simCode= thecode
 
             if hasattr(obj, 'post'):
+                print 'post yes'
                 codeobj= obj.post.codeobj
                 code= codeobj.code
                 for k, v in codeobj.variables.iteritems():
@@ -608,21 +645,37 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.postSyntoCurrent= '0'
             self.synapse_models.append(synapse_model)
                                
+#-----------------------------------------------------------------------------------------------------------
+# Process spike monitors
+
         for obj in spike_monitors:
             if obj.event != 'spike':
                 raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
             sm= spikeMonitorModel()
             sm.name= obj.name
+            if (hasattr(obj,'when')):
+                if (not obj.when == 'end'):
+                    logger.warn("Spike monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,obj.when))
             sm.neuronGroup= obj.source.name
             if (isinstance(obj.source, SpikeGeneratorGroup)):
                 sm.notSpikeGeneratorGroup= False;
             self.spike_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
+#-----------------------------------------------------------------------------------------------------------
+# Process state monitors
+
         for obj in state_monitors:
             sm= stateMonitorModel()
             sm.name= obj.name
             sm.monitored= obj.source.name
+            sm.when= obj.when
+            if obj.when is None:
+                logger.warn("State monitor {!s} has 'when' property None which is not supported in GeNN, defaulting to 'end'\n".format(sm.name))
+                sm.when= 'end'
+            if not (sm.when == 'start' or sm.when == 'end'): 
+                logger.warn("State monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,sm.when))
+                sm.when= 'end'
             src= obj.source
             if isinstance(obj.source, Synapses):
                 print 'synapses need extra work'
@@ -636,19 +689,24 @@ class GeNNDevice(CPPStandaloneDevice):
                 print varname
                 print src.variables[varname]
                 print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
-                if isinstance(src.variables[varname],Constant):
-                    raise NotImplementedError('GeNN does not support monitoring constants.');
-                else:
+                if isinstance(src.variables[varname],Subexpression):
+                    extract_source_variables(src.variables, varname, sm.variables)
+                elif not isinstance(src.variables[varname],Constant):
                     sm.variables.append(varname)
+                else:
+                    print 'variable is a constant - not monitoring'
            
             print sm.name
             print sm.monitored
+            print sm.variables
             print obj.source
             print 'wwwwwwwwwwwwwwwwwwwwwwwwww'
             self.state_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
 
-        # Copy the brianlib directory
+#-----------------------------------------------------------------------------------------------------------
+# Copy the brianlib directory
+
         brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
                                     'brianlib')
         brianlib_files = copy_directory(brianlib_dir, os.path.join(directory, 'brianlib'))
@@ -658,13 +716,15 @@ class GeNNDevice(CPPStandaloneDevice):
             elif file.lower().endswith('.h'):
                 self.header_files.append('brianlib/'+file)
 
-        # Copy the CSpikeQueue implementation
+#-----------------------------------------------------------------------------------------------------------
+# Copy the CSpikeQueue implementation
         shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
                      os.path.join(directory, 'brianlib', 'spikequeue.h'))
         shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), 
                      os.path.join(directory, 'brianlib', 'stdint_compat.h'))
 
-        # Copy the b2glib directory
+#-----------------------------------------------------------------------------------------------------------
+# Copy the b2glib directory
         b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
                                     'b2glib')
         b2glib_files = copy_directory(b2glib_dir, os.path.join(directory, 'b2glib'))
@@ -674,6 +734,8 @@ class GeNNDevice(CPPStandaloneDevice):
             elif file.lower().endswith('.h'):
                 self.header_files.append('b2glib/'+file)
         
+#-----------------------------------------------------------------------------------------------------------
+# Write files from templates
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
 
@@ -700,8 +762,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      neuron_models= self.neuron_models,
                                                      spikegenerator_models= self.spikegenerator_models,
                                                      synapse_models= self.synapse_models,
-spike_monitor_models= self.spike_monitor_models,
-state_monitor_models= self.state_monitor_models,
+                                                     spike_monitor_models= self.spike_monitor_models,
+                                                     state_monitor_models= self.state_monitor_models,
                                                      model_name= self.model_name,
                                                      )        
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
@@ -724,6 +786,8 @@ state_monitor_models= self.state_monitor_models,
                                                         ) 
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
 
+#-----------------------------------------------------------------------------------------------------------
+# Compile it
         if compile:
             with std_silent(debug):
                 if os.sys.platform == 'win32':
@@ -769,6 +833,8 @@ state_monitor_models= self.state_monitor_models,
             self.has_been_run= True
             self._last_run_time = time.time()-start_time
 
+#-----------------------------------------------------------------------------------------------------------
+
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, level=0, **kwds):
         if kwds:
@@ -782,6 +848,9 @@ state_monitor_models= self.state_monitor_models,
             raise NotImplementedError('Multiple clocks not supported')
         super(GeNNDevice, self).network_run(net= net, duration= duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
 
+#-----------------------------------------------------------------------------------------------------------
+# End of GeNNDevice
+#-----------------------------------------------------------------------------------------------------------
 
 genn_device = GeNNDevice()
 

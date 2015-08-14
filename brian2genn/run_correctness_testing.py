@@ -19,7 +19,7 @@ prefs.codegen.loop_invariant_optimisations = False
 #f.run()
 #c.after_run()
 #print run_single_feature_test(CPPStandaloneConfiguration, StateMonitorTest)
-#print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
+print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
 #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
 #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
 #print run_feature_tests(configurations=[DefaultConfiguration,
@@ -29,14 +29,14 @@ prefs.codegen.loop_invariant_optimisations = False
 #print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
-print run_feature_tests(configurations=[DefaultConfiguration,
-                                         GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[ 
-NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
+#print run_feature_tests(configurations=[DefaultConfiguration,
+#                                         GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[ 
+#NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 # SynapsesSTDPNoAutapse, 
-SynapsesSTDP, 
-SpikeMonitorTest,
-  StateMonitorTest, SpikeGeneratorGroupTest 
- ]).tables_and_exceptions
+#SynapsesSTDP, 
+#SpikeMonitorTest,
+#  StateMonitorTest, SpikeGeneratorGroupTest 
+# ]).tables_and_exceptions
 #print run_feature_tests(configurations=[DefaultConfiguration,
 #                                        GeNNConfiguration], feature_tests=[SynapsesSTDP]).tables_and_exceptions
 #print run_single_feature_test(CPPStandaloneConfiguration, SpikeMonitorTest)

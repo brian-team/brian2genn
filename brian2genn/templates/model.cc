@@ -5,6 +5,7 @@
 #include "modelSpec.h"
 #include "modelSpec.cc"
 
+
 //--------------------------------------------------------------------------
 /*! \brief This function defines the {{model_name}} model 
 */
@@ -113,6 +114,8 @@ void modelDefinition(NNmodel &model)
   n.thresholdConditionCode= tS("{% for line in neuron_model.thresh_cond_lines %}{{line}}{% endfor %}");
   // step 5: add resetter code
   n.resetCode= tS("{% for line in neuron_model.reset_code_lines %}{{line}}{% endfor %}");
+  // step 6: add support code
+  n.supportCode= tS("{% for line in neuron_model.support_code_lines %}{{line}}{% endfor %}{% for line in neuron_model.hash_code_lines %}{{line}}{% endfor %}");
   nModels.push_back(n);
   {{neuron_model.name}}NEURON= nModels.size()-1;
   {% endfor %}

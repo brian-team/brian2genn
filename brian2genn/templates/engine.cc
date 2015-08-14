@@ -15,6 +15,8 @@
  */
 //--------------------------------------------------------------------------
 
+#include "magicnetwork_model_CODE/definitions.h"
+
 class engine
 {
  public:
@@ -103,8 +105,9 @@ void engine::run(double runtime, //!< Duration of time to run the model for
   int riT= (int) (runtime/DT+1e-2);
 
   for (int i= 0; i < riT; i++) {
-      // report state first
+      // report state 
       {% for sm in state_monitor_models %}
+      {% if sm.when == 'start' %}
       {% for var in sm.variables %}
       {% if sm.isSynaptic %}
       convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}},brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}});
@@ -113,6 +116,7 @@ void engine::run(double runtime, //!< Duration of time to run the model for
       {% endif %}
       {% endfor %}
       _run_{{sm.name}}_codeobject();
+      {% endif %}
       {% endfor %}
       if (which == GPU) {
 	  stepTimeGPU();
@@ -137,6 +141,20 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  _run_{{spkGen.name}}_codeobject();
 	  {% endfor %}
       }
+      // report state 
+      {% for sm in state_monitor_models %}
+      {% if sm.when != 'start' %}
+      {% for var in sm.variables %}
+      {% if sm.isSynaptic %}
+      convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}},brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}});
+      {% else %}
+      copy_genn_to_brian({{var}}{{sm.monitored}}, brian::_array_{{sm.monitored}}_{{var}}, {{sm.N}});
+      {% endif %}
+      {% endfor %}
+      _run_{{sm.name}}_codeobject();
+      {% endif %}
+      {% endfor %}
+      // report spikes
       {% for spkMon in spike_monitor_models %}
       _run_{{spkMon.name}}_codeobject();
       {% endfor %}
