@@ -90,8 +90,6 @@ def extract_source_variables(variables, varname, smvariables):
                 smvariables= extract_source_variables(variables, vnm, smvariables)
     return smvariables
                 
-
-
 class neuronModel(object):
     '''
     '''
@@ -100,6 +98,7 @@ class neuronModel(object):
         self.N= 0
         self.variables= []
         self.variabletypes= []
+        self.variablescope= dict()
         self.parameters= []
         self.pvalue= []
         self.code_lines= []
@@ -128,6 +127,7 @@ class synapseModel(object):
         self.N= 0
         self.variables= []
         self.variabletypes= []
+        self.variablescope= dict()
         self.external_variables= []
         self.parameters= []
         self.pvalue= []
@@ -339,6 +339,17 @@ class GeNNDevice(CPPStandaloneDevice):
                 main_lines.append(codeobj.code.main_finalise)
         return main_lines
 
+    def fix_random_generators(self,model,code):
+        for func in ['_rand', '_randn']:
+            if func+'(_vectorisation_idx)' in code:
+                code = code.replace(func+'(_vectorisation_idx)', func+'(_seed)')
+                if not '_seed' in model.variables:
+                    model.variables.append('_seed')
+                    model.variabletypes.append('uint64_t')
+                    model.variablescope['_seed']='genn';
+            
+        return model, code
+
     #---------------------------------------------------------------------------------
     def build(self, directory='output', compile=True, run=True, use_GPU=True,
               debug=False, with_output=True):
@@ -414,7 +425,6 @@ class GeNNDevice(CPPStandaloneDevice):
         # Generate data for non-constant values
         code_object_defs = defaultdict(list)
         for codeobj in self.code_objects.itervalues():
-            print(codeobj.name)
             lines = []
             for k, v in codeobj.variables.iteritems():
                 if isinstance(v, AttributeVariable):
@@ -444,15 +454,12 @@ class GeNNDevice(CPPStandaloneDevice):
             for line in lines:
                 # Sometimes an array is referred to by to different keys in our
                 # dictionary -- make sure to never add a line twice
-                print line
-                print '---------------------------------'
                 if not line in code_object_defs[codeobj.name]:
                     code_object_defs[codeobj.name].append(line)
         # Generate the code objects
         for codeobj in self.code_objects.itervalues():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
-            # print(type(codeobj.code))
             if not codeobj.template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
                 if isinstance(codeobj.code, MultiTemplate):
                     # this filters away the code objects that are not GeNNUserCodeObjects (they are not multi-templates) - a bit too subtle?
@@ -488,10 +495,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
                 elif isinstance(v, ArrayVariable):
-                    print 'its an Arrayvariable'
-                    print k
                     neuron_model.variables.append(k)
                     neuron_model.variabletypes.append(c_data_type(v.dtype))
+                    neuron_model.variablescope[k]='brian'
                 else:
                     print("Unknown variable type:",k,v) 
             neuron_model.support_code_lines= stripped_deindented_lines('\n'.join(support_code))
@@ -513,39 +519,26 @@ class GeNNDevice(CPPStandaloneDevice):
                             neuron_model.parameters.append(k)
                             neuron_model.pvalue.append(repr(v.value)) 
                 code= codeobj.code.cpp_file
-#                print('starting from:',code)   
-#                for x in dir(codeobj):
-#                    print "obj.%s= %s\n" % (x, getattr(codeobj, x))
-                print '^&^&^&^&^&^&^&^&^&^&'
-                print codeobj.__dict__
 
                 if (suffix == '_resetter') and not (obj._refractory is False):
-                    print 'adding it'
                     code= code+' lastspike= t-0.5*DT;'
+                neuron_model, code = self.fix_random_generators(neuron_model,code)
                 code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
                 lines.append(code)                    
-                print('The code is:')
-                print(lines)
-                print 'x-x-x-x-'
                 code= codeobj.code.h_file
                 code= code.replace('\n', '\\n\\\n')
                 code = code.replace('"', '\\"')
                 support_lines.append(code)
-                neuron_model.support_code_lines= support_lines
+            neuron_model.support_code_lines= support_lines
 
             self.neuron_models.append(neuron_model)
 
-#        for obj in objects:
-#            print(type(obj), obj)
         for obj in spikegenerator_groups:
             print(type(obj), obj)
             spikegenerator_model= spikegeneratorModel()
             spikegenerator_model.name= obj.name
             spikegenerator_model.N= obj.N
             self.spikegenerator_models.append(spikegenerator_model)
-
-#        for obj in objects:
-#            print(type(obj), obj)
 
         for obj in synapse_groups:
             synapse_model= synapseModel()
@@ -555,7 +548,6 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.trgname= obj.target.name
             synapse_model.trgN= obj.target.variables['N'].get_value()
             if hasattr(obj, 'pre'):
-                print 'pre yes'
                 codeobj= obj.pre.codeobj
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt' :
@@ -568,11 +560,10 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('appending ', k)
-                                    print synapse_model.variables
                                     if codeobj.variable_indices[k] == '_idx':
                                         synapse_model.variables.append(k)
                                         synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                        synapse_model.variablescope[k]='brian'
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
@@ -585,12 +576,12 @@ class GeNNDevice(CPPStandaloneDevice):
                         new_code_lines.append('$(updatelinsyn);')
                 code = '\n'.join(new_code_lines)
                 code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                synapse_model, code = self.fix_random_generators(synapse_model,code)
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simCode= thecode
 
             if hasattr(obj, 'post'):
-                print 'post yes'
                 codeobj= obj.post.codeobj
                 code= codeobj.code
                 for k, v in codeobj.variables.iteritems():
@@ -604,10 +595,9 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('synapse post appending ', k)
-                                    #                                if codeobj.indices[k] == '_idx':
                                     synapse_model.variables.append(k)
                                     synapse_model.variabletypes.append(c_data_type(v.dtype))
+                                    synapse_model.variablescope[k]='brian'
                                     print synapse_model.variables
                                 
                             else:
@@ -634,11 +624,9 @@ class GeNNDevice(CPPStandaloneDevice):
                         if k in codeobj.code.__str__():
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
-                                    print('appending ', k)
-                                    #                               if codeobj.indices[k] == '_idx':
                                     synapse_model.variables.append(k)
                                     synapse_model.variabletypes.append(c_data_type(v.dtype))
-                                    print synapse_model.variables
+                                    synapse_model.variablescope[k]='brian'
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k) 
@@ -687,7 +675,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.when= 'end'
             src= obj.source
             if isinstance(obj.source, Synapses):
-                print 'synapses need extra work'
                 sm.isSynaptic= True
                 sm.srcN= src.source.variables['N'].get_value()
                 sm.trgN= src.target.variables['N'].get_value()
@@ -695,9 +682,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.isSynaptic= False
                 sm.N= src.variables['N'].get_value()
             for varname in obj.record_variables:
-                print varname
-                print src.variables[varname]
-                print 'xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx'
                 if isinstance(src.variables[varname],Subexpression):
                     extract_source_variables(src.variables, varname, sm.variables)
                 elif not isinstance(src.variables[varname],Constant):
@@ -705,11 +689,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 else:
                     print 'variable is a constant - not monitoring'
            
-            print sm.name
-            print sm.monitored
-            print sm.variables
-            print obj.source
-            print 'wwwwwwwwwwwwwwwwwwwwwwwwww'
             self.state_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
 
@@ -811,7 +790,6 @@ class GeNNDevice(CPPStandaloneDevice):
                     # Users are required to set their path to "Visual Studio/VC", e.g.
                     # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
                     cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                    print(cmd)
                     cmd= cmd+" && buildmodel.bat "+self.model_name + " && nmake /f WINmakefile clean && nmake /f WINmakefile"
                     call(cmd, cwd=directory)
                 else:
@@ -829,13 +807,10 @@ class GeNNDevice(CPPStandaloneDevice):
             start_time = time.time()
             gpu_arg = "1" if use_GPU else "0"
             if  os.sys.platform == 'win32':
-                print directory
                 cmd= directory + "\\runner.exe test " + str(self.run_duration) + " " + gpu_arg
-                print cmd
                 #os.system(cmd)
                 call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
             else:
-                print directory
                 print ["./runner", "test", str(self.run_duration), gpu_arg]
                 call(["./runner", "test", str(self.run_duration), gpu_arg],
                      cwd=directory, stdout=stdout, stderr=stderr)

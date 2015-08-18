@@ -60,22 +60,36 @@ int main(int argc, char *argv[])
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
   {% for var in synapses.variables %}
+  {% if synapses.variablescope[var] == 'brian' %}
   convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {%endif %}
   {% endfor %}
   create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
 
   {% for var in synapses.postsyn_variables %}
+  {% if synapses.variablescope[var] == 'brian' %}
   convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
+  {% endif %}
   {% endfor %}
   {% endfor %}
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
   {% for var in neuron.variables %}
+  {% if neuron.variablescope[var] == 'brian' %}
   copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, {{var}}{{neuron.name}}, {{neuron.N}});
+  {% endif %}
   {% endfor %}
   {% endfor %}
   
+  // initialise random seeds (if any are used)
+  {% for neuron in neuron_models %} 
+  {% if '_seed' in neuron.variables %}
+  for (int i= 0; i < {{neuron.N}}; i++) {
+      _seed{{neuron.name}}[i]= (uint64_t) (rand()*MYRAND_MAX);
+  }
+  {% endif %}
+  {% endfor %}
 
   //-----------------------------------------------------------------
   
@@ -101,17 +115,23 @@ int main(int argc, char *argv[])
   // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
   {% for var in synapses.variables %}
+  {% if synapses.variablescope[var] == 'brian' %}
   convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}},brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
+  {% endif %}
   {% endfor %}
   {% for var in synapses.postsyn_variables %}
+  {% if synapses.variablescope[var] == 'brian' %}
   convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
+  {% endif %}
   {% endfor %}
   {% endfor %}
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
   {% for var in neuron.variables %}
+  {% if neuron.variablescope[var] == 'brian' %}
   copy_genn_to_brian({{var}}{{neuron.name}}, brian::_array_{{neuron.name}}_{{var}}, {{neuron.N}});
+  {% endif %}
   {% endfor %}
   {% endfor %}
   
