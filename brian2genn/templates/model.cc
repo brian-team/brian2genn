@@ -72,7 +72,9 @@ double {{neuron_model.name}}_ini[{{neuron_model.variables.__len__()+1}}]= {
 double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()+1}}]= {
   {% for k in synapse_model.variables %} 0.0,
   {% endfor %}
+  {% if synapse_model.connectivity == 'DENSE' %}
   0.0
+  {% endif %}
 };
 
 {% if synapse_model.postsyn_variables.__len__() == 0 %}
@@ -131,11 +133,15 @@ void modelDefinition(NNmodel &model)
   {% for var in synapse_model.variables %}
   s.varNames.push_back(tS("{{var}}"));
   {% endfor %}
+  {% if synapse_model.connectivity == 'DENSE' %} 
   s.varNames.push_back(tS("_hidden_weightmatrix"));
+  {% endif %}
   {% for var in synapse_model.variabletypes %}
   s.varTypes.push_back(tS("{{var}}"));
   {% endfor %}
+  {% if synapse_model.connectivity == 'DENSE' %} 
   s.varTypes.push_back(tS("char"));
+  {% endif %}
   // step2: add parameters
   {% for par in synapse_model.parameters %}
   s.pNames.push_back(tS("{{par}}"));
@@ -174,7 +180,7 @@ void modelDefinition(NNmodel &model)
   {% endfor %}
   {% for synapse_model in synapse_models %} 
 // TODO: Consider felxible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
-  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, DENSE, INDIVIDUALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.connectivity}}, INDIVIDUALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
   {% endfor %}
   model.finalize();
 }

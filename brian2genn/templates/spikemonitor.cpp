@@ -3,6 +3,7 @@
 {% block extra_headers %}
 extern double t;
 extern int which;
+#include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
 {% for varname, var in record_variables.items() %}
 {% if varname != 't' %}

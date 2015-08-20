@@ -59,19 +59,30 @@ int main(int argc, char *argv[])
 
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
+  {% if synapses.connectivity == 'DENSE' %}
   {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
   convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
-  {%endif %}
-  {% endfor %}
-  create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
-
-  {% for var in synapses.postsyn_variables %}
-  {% if synapses.variablescope[var] == 'brian' %}
-  convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}});
   {% endif %}
-  {% endfor %}
-  {% endfor %}
+  {% endfor %} {# all synapse variables #}
+  create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
+  {% else %} {# for sparse matrix representations #}
+  allocate{{synapses.name}}(brian::_dynamic_array_{{synapses.name}}__synaptic_pre.size());
+   {% set _first_var = true %}
+   {% for var in synapses.variables %}
+   {% if synapses.variablescope[var] == 'brian' %}
+      {% if _first_var %}
+      {% set _mode = 'b2g::FULL_MONTY' %}
+      {% set _first_var = false %}
+      {% else %}
+      {% set _mode = 'b2g::COPY_ONLY' %}
+      {% endif %}
+      convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, C{{synapses.name}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, {{_mode}});
+  {% endif %}
+  {% endfor %} {# all synapse variables #}
+  {% endif %} {# dense/sparse #}
+  {% endfor %} {# all synapse_models #}
+  initmagicnetwork_model();
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
@@ -114,17 +125,27 @@ int main(int argc, char *argv[])
   }
   // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
+  {% if synapses.connectivity == 'DENSE' %}
   {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
   convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}},brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
   {% endif %}
-  {% endfor %}
-  {% for var in synapses.postsyn_variables %}
+  {% endfor %} {# all synapse variables #}
+  {% else %} {# for sparse matrix representations #} 
+  {% set _first_var = true %}
+  {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
-  convert_dense_matrix_2_dynamic_arrays({{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}});
+      {% if _first_var %}
+      {% set _mode = 'b2g::FULL_MONTY' %}
+      {% set _first_var = false %}
+      {% else %}
+      {% set _mode = 'b2g::COPY_ONLY' %}
+      {% endif %}
+      convert_sparse_synapses_2_dynamic_arrays(C{{synapses.name}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{_mode}});
   {% endif %}
-  {% endfor %}
-  {% endfor %}
+  {% endfor %} {# all synapse variables #}
+  {% endif %} {# dense/sparse #}
+  {% endfor %} {# all synapse_models #}
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
@@ -137,6 +158,7 @@ int main(int argc, char *argv[])
   
   _write_arrays();
   _dealloc_arrays();
+  cerr << "everything finished." << endl;
   return 0;
 }
 

@@ -134,13 +134,9 @@ class synapseModel(object):
         self.simCode= []
         self.simLearnPost= []
         self.synapseDynamics= []
-        self.postsyn_variables= []
-        self.postsyn_variabletypes= []
-        self.postsyn_parameters= []
-        self.postsyn_pvalue= []
-        self.postsSynDecay= []
         self.postSyntoCurrent= []
         self.supportCode=''
+        self.connectivity='DENSE'
 
 class spikeMonitorModel(object):
     '''
@@ -161,6 +157,7 @@ class stateMonitorModel(object):
         self.srcN= 0
         self.trgN= 0
         self.when=''
+        self.connectivity=''
 
 class CPPWriter(object):
     def __init__(self, project_dir):
@@ -233,6 +230,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.header_files= []
 
         self.clocks = set([])
+        self.connectivityDict = dict()
 
     def code_object_class(self, codeobj_class=None):
         if codeobj_class is GeNNCodeObject:
@@ -462,7 +460,6 @@ class GeNNDevice(CPPStandaloneDevice):
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
             if not codeobj.template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
                 if isinstance(codeobj.code, MultiTemplate):
-                    # this filters away the code objects that are not GeNNUserCodeObjects (they are not multi-templates) - a bit too subtle?
                     code = freeze(codeobj.code.cpp_file, ns)
                     code = code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
                     code = '#include "objects.h"\n'+code
@@ -484,6 +481,10 @@ class GeNNDevice(CPPStandaloneDevice):
         self.model_name= net.name+'_model'
         self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
         for obj in neuron_groups:
+            # throw error if events other than spikes are used
+            if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
+                raise NotImplementedError('Brian2GeNN does not support events that are not spikes')
+
             # Extract the variables
             neuron_model= neuronModel()
             neuron_model.name= obj.name
@@ -547,6 +548,7 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.srcN= obj.source.variables['N'].get_value()
             synapse_model.trgname= obj.target.name
             synapse_model.trgN= obj.target.variables['N'].get_value()
+            self.connectivityDict[obj.name]= synapse_model.connectivity
             if hasattr(obj, 'pre'):
                 codeobj= obj.pre.codeobj
                 for k, v in codeobj.variables.iteritems():
@@ -571,11 +573,18 @@ class GeNNDevice(CPPStandaloneDevice):
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
                 for line in code_lines:
+                    if line.startswith('addtoinSyn'):
+                        if synapse_model.connectivity == 'SPARSE':
+                            line= line.replace('_hidden_weightmatrix*','');
+                            line= line.replace('_hidden_weightmatrix *','');
+                            print line
+                            print '!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!'
                     new_code_lines.append(line)
                     if line.startswith('addtoinSyn'):
                         new_code_lines.append('$(updatelinsyn);')
                 code = '\n'.join(new_code_lines)
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                if synapse_model.connectivity == 'DENSE':
+                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 synapse_model, code = self.fix_random_generators(synapse_model,code)
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
@@ -603,9 +612,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                if synapse_model.connectivity == 'DENSE':
+                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simLearnPost= thecode  
 
@@ -630,9 +639,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k) 
-                code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                if synapse_model.connectivity == 'DENSE':
+                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.postsyn_variables, synapse_model.postsyn_parameters, False).strip()               
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.synapseDynamics= thecode  
                 
@@ -667,9 +676,6 @@ class GeNNDevice(CPPStandaloneDevice):
             sm.name= obj.name
             sm.monitored= obj.source.name
             sm.when= obj.when
-            if obj.when is None:
-                logger.warn("State monitor {!s} has 'when' property None which is not supported in GeNN, defaulting to 'end'\n".format(sm.name))
-                sm.when= 'end'
             if not (sm.when == 'start' or sm.when == 'end'): 
                 logger.warn("State monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,sm.when))
                 sm.when= 'end'
@@ -678,6 +684,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.isSynaptic= True
                 sm.srcN= src.source.variables['N'].get_value()
                 sm.trgN= src.target.variables['N'].get_value()
+                sm.connectivity= self.connectivityDict[src.name]
             else:
                 sm.isSynaptic= False
                 sm.N= src.variables['N'].get_value()

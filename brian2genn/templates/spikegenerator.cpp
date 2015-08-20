@@ -2,6 +2,7 @@
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
+#include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
 
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}};
