@@ -12,7 +12,7 @@ from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
 prefs.codegen.loop_invariant_optimisations = False
-prefs.devices.genn.connectivity = 'DENSE'
+prefs.devices.genn.connectivity = 'AUTO'
 prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
 
 #c = GeNNConfiguration()

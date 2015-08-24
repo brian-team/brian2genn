@@ -45,15 +45,7 @@ double {{synapse_model.name}}_p[{{synapse_model.pvalue.__len__()}}]= {
 };
 {% endif %}
 
-
-{% if synapse_model.postsyn_pvalue.__len__() == 0 %}
 double *{{synapse_model.name}}_postsynp= NULL;
-{% else %}
-double {{synapse_model.name}}_postsynp[{{synapse_model.postsyn_pvalue.__len__()}}]= {
-  {% for k in synapse_model.postsyn_pvalue %} {{k}},
-  {% endfor %}
-};
-{% endif %}
 
 {% endfor %}
 
@@ -117,7 +109,7 @@ void modelDefinition(NNmodel &model)
   // step 5: add resetter code
   n.resetCode= tS("{% for line in neuron_model.reset_code_lines %}{{line}}{% endfor %}");
   // step 6: add support code
-  n.supportCode= tS("{% for line in neuron_model.support_code_lines %}{{line}}{% endfor %}{% for line in neuron_model.hash_code_lines %}{{line}}{% endfor %}");
+  n.supportCode= tS("{% for line in neuron_model.support_code_lines %}{{line}}{% endfor %}");
   nModels.push_back(n);
   {{neuron_model.name}}NEURON= nModels.size()-1;
   {% endfor %}
@@ -149,7 +141,11 @@ void modelDefinition(NNmodel &model)
   // step 3: add simcode
   s.simCode= tS("{% for line in synapse_model.simCode %}{{line}}{% endfor %}");
   s.simLearnPost= tS("{% for line in synapse_model.simLearnPost %}{{line}}{% endfor %}");
-  s.synapseDynamics= tS("{% for line in synapse_model.synapseDynamics %}{{line}}{% endfor %}");  weightUpdateModels.push_back(s);
+  s.synapseDynamics= tS("{% for line in synapse_model.synapseDynamics %}{{line}}{% endfor %}");  
+  s.simCode_supportCode= tS("{% for line in synapse_model.pre_support_code_lines %}{{line}}{% endfor %}");  
+   s.simLearnPost_supportCode= tS("{% for line in synapse_model.post_support_code_lines %}{{line}}{% endfor %}");  
+   s.synapseDynamics_supportCode= tS("{% for line in synapse_model.dyn_support_code_lines %}{{line}}{% endfor %}");  
+  weightUpdateModels.push_back(s);
   {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()-1;
   // post-synaptic model
   ps.varNames.clear();

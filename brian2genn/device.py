@@ -106,7 +106,6 @@ class neuronModel(object):
         self.thresh_cond_lines= []
         self.reset_code_lines= []
         self.support_code_lines= []
-        self.hashdefine_lines= []
 
 class spikegeneratorModel(object):
     '''
@@ -136,7 +135,9 @@ class synapseModel(object):
         self.simLearnPost= []
         self.synapseDynamics= []
         self.postSyntoCurrent= []
-        self.supportCode=''
+        self.pre_support_code_lines= []
+        self.post_support_code_lines= []
+        self.dyn_support_code_lines= []
         self.connectivity=''
 
 class spikeMonitorModel(object):
@@ -492,9 +493,6 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model= neuronModel()
             neuron_model.name= obj.name
             neuron_model.N= obj.N
-            user_functions = []
-            support_code = []
-            hash_defines = []
             for k, v in obj.variables.iteritems():
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
@@ -504,8 +502,6 @@ class GeNNDevice(CPPStandaloneDevice):
                     neuron_model.variablescope[k]='brian'
                 else:
                     print("Unknown variable type:",k,v) 
-            neuron_model.support_code_lines= stripped_deindented_lines('\n'.join(support_code))
-            neuron_model.hashdefine_lines= stripped_deindented_lines('\n'.join(hash_defines))
             support_lines= []
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_run_regularly', neuron_model.code_lines),
@@ -581,7 +577,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
-                code= codeobj.code
+                code= codeobj.code.cpp_file
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
                 for line in code_lines:
@@ -601,10 +597,14 @@ class GeNNDevice(CPPStandaloneDevice):
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simCode= thecode
+                code= codeobj.code.h_file
+                code= code.replace('\n', '\\n\\\n')
+                code = code.replace('"', '\\"')
+                synapse_model.pre_support_code_lines= code
 
             if hasattr(obj, 'post'):
                 codeobj= obj.post.codeobj
-                code= codeobj.code
+                code= codeobj.code.cpp_file
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt' :
                         pass
@@ -626,14 +626,18 @@ class GeNNDevice(CPPStandaloneDevice):
                                     synapse_model.external_variables.append(k)
                 if synapse_model.connectivity == 'DENSE':
                     code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                synapse_model, code = self.fix_random_generators(synapse_model,code)
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.simLearnPost= thecode  
+                code= codeobj.code.h_file
+                code= code.replace('\n', '\\n\\\n')
+                code = code.replace('"', '\\"')
+                synapse_model.post_support_code_lines= code
 
-            
             if obj.state_updater != None:
                 codeobj= obj.state_updater.codeobj
-                code= codeobj.code
+                code= codeobj.code.cpp_file
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt' :
                         pass
@@ -653,10 +657,15 @@ class GeNNDevice(CPPStandaloneDevice):
                                     synapse_model.external_variables.append(k) 
                 if synapse_model.connectivity == 'DENSE':
                     code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
+                synapse_model, code = self.fix_random_generators(synapse_model,code)
                 thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
                 thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
                 synapse_model.synapseDynamics= thecode  
-                
+                code= codeobj.code.h_file
+                code= code.replace('\n', '\\n\\\n')
+                code = code.replace('"', '\\"')
+                synapse_model.dyn_support_code_lines=code
+             
             if (hasattr(obj,'_genn_post_write_var')):
                 synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
             else:
