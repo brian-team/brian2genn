@@ -252,12 +252,10 @@ for func in ['sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh', 'exp', 'log',
                                                                code=None)
 
 # Functions that need a name translation
-for func, func_cpp in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan'),
-                       ('mod', 'fmod'),
-                       ]:
+for func, func_genn in [('arcsin', 'asin'), ('arccos', 'acos'), ('arctan', 'atan')]:
     DEFAULT_FUNCTIONS[func].implementations.add_implementation(GeNNCodeGenerator,
                                                                code=None,
-                                                               name=func_cpp)
+                                                               name=func_genn)
 
 
 abs_code = '''
@@ -271,7 +269,7 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 # Functions that need to be implemented specifically
 randn_code = '''
 
-    __host__ __device__ inline double _ranf(uint64_t seed)
+    __host__ __device__ inline double _ranf(uint64_t &seed)
     {
         uint64_t x;
         MYRAND(seed,x);
@@ -299,7 +297,7 @@ DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
                                                               name='_randn')
 
 rand_code = '''
-        __host__ __device__ double _rand(uint64_t seed)
+        __host__ __device__ double _rand(uint64_t &seed)
         {
                 uint64_t x;
                 MYRAND(seed,x);

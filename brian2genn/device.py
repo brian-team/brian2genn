@@ -15,7 +15,7 @@ from brian2.units import have_same_dimensions
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
-from brian2.core.preferences import brian_prefs
+from brian2.core.preferences import prefs, brian_prefs
 from brian2.core.variables import *
 from brian2.core.network import Network
 from brian2.core.functions import Function
@@ -42,6 +42,7 @@ __all__ = ['GeNNDevice']
 logger = get_logger(__name__)
 prefs['codegen.generators.cpp.restrict_keyword']= '__restrict'
 prefs['codegen.loop_invariant_optimisations'] = False
+prefs['core.network.default_schedule']= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
 
 def freeze(code, ns):
     # this is a bit of a hack, it should be passed to the template somehow
@@ -136,7 +137,7 @@ class synapseModel(object):
         self.synapseDynamics= []
         self.postSyntoCurrent= []
         self.supportCode=''
-        self.connectivity='DENSE'
+        self.connectivity=''
 
 class spikeMonitorModel(object):
     '''
@@ -338,13 +339,15 @@ class GeNNDevice(CPPStandaloneDevice):
         return main_lines
 
     def fix_random_generators(self,model,code):
-        for func in ['_rand', '_randn']:
+        for func in ['_rand', '_randn','_binomial','_binomial_1']:
             if func+'(_vectorisation_idx)' in code:
                 code = code.replace(func+'(_vectorisation_idx)', func+'(_seed)')
                 if not '_seed' in model.variables:
                     model.variables.append('_seed')
                     model.variabletypes.append('uint64_t')
-                    model.variablescope['_seed']='genn';
+                    model.variablescope['_seed']='genn'
+        if '_brian_mod' in code:
+            code= code.replace('_brian_mod','fmod')
             
         return model, code
 
@@ -505,6 +508,7 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.hashdefine_lines= stripped_deindented_lines('\n'.join(hash_defines))
             support_lines= []
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
+                                  ('_run_regularly', neuron_model.code_lines),
                                   ('_thresholder', neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
                                   ]:
@@ -512,7 +516,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     if suffix == '_thresholder':
                         lines.append('0')
                     continue
-
+                    
                 codeobj = objects[obj.name+suffix].codeobj
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
@@ -548,6 +552,14 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.srcN= obj.source.variables['N'].get_value()
             synapse_model.trgname= obj.target.name
             synapse_model.trgN= obj.target.variables['N'].get_value()
+            synapse_model.connectivity= prefs.devices.genn.connectivity
+            if synapse_model.connectivity == 'AUTO':
+                Npre= synapse_model.srcN
+                Npost= synapse_model.trgN
+                Nsyn= obj.variables['N'].get_value()
+                if eval(prefs.devices.genn.connectivity_decision):
+                    synapse_model.connectivity= 'DENSE'
+            print obj.name, synapse_model.connectivity
             self.connectivityDict[obj.name]= synapse_model.connectivity
             if hasattr(obj, 'pre'):
                 codeobj= obj.pre.codeobj
@@ -820,7 +832,7 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 print ["./runner", "test", str(self.run_duration), gpu_arg]
                 call(["./runner", "test", str(self.run_duration), gpu_arg],
-                     cwd=directory, stdout=stdout, stderr=stderr)
+                              cwd=directory, stdout=stdout, stderr=stderr)
             self.has_been_run= True
             self._last_run_time = time.time()-start_time
 

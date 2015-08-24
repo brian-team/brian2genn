@@ -12,13 +12,15 @@ from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
 prefs.codegen.loop_invariant_optimisations = False
+prefs.devices.genn.connectivity = 'DENSE'
+prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
 
 #c = GeNNConfiguration()
 #c.before_run()
 #f = SynapsesPre()
 #f.run()
 #c.after_run()
-#print run_single_feature_test(CPPStandaloneConfiguration, StateMonitorTest)
+#print run_single_feature_test(CPPStandaloneConfiguration, SynapsesSTDP)
 #print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
 #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
 #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
@@ -29,8 +31,8 @@ prefs.codegen.loop_invariant_optimisations = False
 #print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
-print run_feature_tests(configurations=[DefaultConfiguration,
-                                         GeNNConfiguration,CPPStandaloneConfiguration], feature_tests=[ 
+run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
+#run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[ 
 NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 # SynapsesSTDPNoAutapse, 
 SynapsesSTDP, 
