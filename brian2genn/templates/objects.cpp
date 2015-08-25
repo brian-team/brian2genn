@@ -45,10 +45,8 @@ const int brian::_num_{{name}} = {{N}};
 //////////////// synapses /////////////////
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
-Synapses<double> brian::{{S.name}}({{S.source|length}}, {{S.target|length}});
 {% for path in S._pathways | sort(attribute='name') %}
 SynapticPathway<double> brian::{{path.name}}(
-		{{path.source|length}}, {{path.target|length}},
 		{{dynamic_array_specs[path.variables['delay']]}},
 		{{dynamic_array_specs[path.synapse_sources]}},
 		{{path.source.dt_}},
@@ -138,12 +136,12 @@ void _write_arrays()
 	}
 	{% endif %}
 	{% endfor %}
-    // dynamic_array_specs: {{dynamic_array_specs}}
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
+        if (! {{varname}}.empty() )
 		outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}[0]), {{varname}}.size()*sizeof({{varname}}[0]));
 		outfile_{{varname}}.close();
 	} else
@@ -159,7 +157,8 @@ void _write_arrays()
 	{
         for (int n=0; n<{{varname}}.n; n++)
         {
-            outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}(n, 0)), {{varname}}.m*sizeof({{varname}}(0, 0)));
+            if (! {{varname}}(n).empty())
+		outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}(n, 0)), {{varname}}.m*sizeof({{varname}}(0, 0)));
         }
         outfile_{{varname}}.close();
 	} else
@@ -248,7 +247,6 @@ extern const int _num_{{name}};
 //////////////// synapses /////////////////
 {% for S in synapses | sort(attribute='name') %}
 // {{S.name}}
-extern Synapses<double> {{S.name}};
 {% for path in S._pathways | sort(attribute='name') %}
 extern SynapticPathway<double> {{path.name}};
 {% endfor %}

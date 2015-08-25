@@ -69,14 +69,7 @@ double {{synapse_model.name}}_ini[{{synapse_model.variables.__len__()+1}}]= {
   {% endif %}
 };
 
-{% if synapse_model.postsyn_variables.__len__() == 0 %}
 double *{{synapse_model.name}}_postsyn_ini= NULL;
-{% else %}
-double {{synapse_model.name}}_postsyn_ini[{{synapse_model.postsyn_variables.__len__()}}]= {
-  {% for k in synapse_model.postsyn_variables %} 0.0,
-  {% endfor %}
-};
-{% endif %}
 {% endfor %}
  
 
@@ -152,15 +145,6 @@ void modelDefinition(NNmodel &model)
   ps.varTypes.clear();
   ps.pNames.clear(); 
   ps.dpNames.clear();
-  {% for var in synapse_model.postsyn_variables %}
-  ps.varNames.push_back(tS("{{var}}"));
-  {% endfor %}
-  {% for var in synapse_model.postsyn_variabletypes %}  
-  ps.varTypes.push_back(tS("{{var}}"));
-  {% endfor %}
-  {% for par in synapse_model.postsyn_parameters %}
-  ps.pNames.push_back(tS("{{par}}"));
-  {% endfor %}
   ps.postSyntoCurrent= tS("{% for line in synapse_model.postSyntoCurrent %}{{line}}{% endfor %}");
   postSynModels.push_back(ps); 
   {{synapse_model.name}}POSTSYN= postSynModels.size()-1;  

@@ -134,6 +134,11 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
 	  {% endif %}
 	  {% endfor %}
+	  {% for rateMon in rate_monitor_models %}
+	  {% if (rateMon.notSpikeGeneratorGroup) %}
+	  pull{{rateMon.neuronGroup}}SpikesFromDevice();
+	  {% endif %}
+	  {% endfor %}
 	  {% for sm in state_monitor_models %}
 	  pull{{sm.monitored}}StateFromDevice();
 	  {% endfor %}
@@ -166,6 +171,9 @@ void engine::run(double runtime, //!< Duration of time to run the model for
       {% for spkMon in spike_monitor_models %}
       _run_{{spkMon.name}}_codeobject();
       {% endfor %}
+      {% for rateMon in rate_monitor_models %}
+      _run_{{rateMon.name}}_codeobject();
+      {% endfor %}
   }
 }
 
@@ -196,12 +204,6 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
   {% for synapse_model in synapse_models %}
   for (int i= 0; i < model.neuronN[model.synapseSource[{{loop.index-1}}]]*model.neuronN[model.synapseTarget[{{loop.index-1}}]]; i++) {
       {% for var in synapse_model.variables %}
-      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
-      {% endfor %}
-      {% for var in synapse_model.postsyn_variables %}
-      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
-      {% endfor %}
-      {% for var in synapse_model.synapseDynamics_variables %}
       fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
       {% endfor %}
   }

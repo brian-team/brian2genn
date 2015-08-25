@@ -24,11 +24,13 @@ from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.synapses.synapses import Synapses
 from brian2.monitors.spikemonitor import SpikeMonitor
+from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
 from brian2.utils.stringtools import word_substitute, get_identifiers, stripped_deindented_lines
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
 from brian2.groups.neurongroup import *
+from brian2.input.poissongroup import PoissonGroup
 from brian2.input.spikegeneratorgroup import *
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
@@ -148,6 +150,14 @@ class spikeMonitorModel(object):
         self.neuronGroup=''
         self.notSpikeGeneratorGroup= True
 
+class rateMonitorModel(object):
+    '''
+    '''
+    def __init__(self):
+        self.name=''
+        self.neuronGroup=''
+        self.notSpikeGeneratorGroup= True
+
 class stateMonitorModel(object):
     '''
     '''
@@ -197,6 +207,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.spikegenerator_models= []
         self.synapse_models = []
         self.spike_monitor_models= []
+        self.rate_monitor_models= []
         self.state_monitor_models= []
         self.run_duration = None
          #: Dictionary mapping `ArrayVariable` objects to their globally
@@ -243,8 +254,8 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
-        if template_name in [ 'summed_variable', 'ratemonitor' ]:
-            raise NotImplementedError('The function of %s is not yet supported in GeNN.'%template_name)
+        if template_name in [ 'summed_variable' ]:
+            raise NotImplementedError('The function of %s is not yet supported in GeNN.' % template_name)
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, variables,
@@ -477,10 +488,12 @@ class GeNNDevice(CPPStandaloneDevice):
         # assemble the model descriptions:
         objects = dict((obj.name, obj) for obj in net.objects)
         neuron_groups = [obj for obj in net.objects if isinstance(obj, NeuronGroup)]
+        poisson_groups = [obj for obj in net.objects if isinstance(obj, PoissonGroup)]
         spikegenerator_groups = [obj for obj in net.objects if isinstance(obj, SpikeGeneratorGroup)]
 
         synapse_groups=[ obj for obj in net.objects if isinstance(obj, Synapses)]
         spike_monitors= [ obj for obj in net.objects if isinstance(obj, SpikeMonitor)]
+        rate_monitors= [ obj for obj in net.objects if isinstance(obj, PopulationRateMonitor)]
         state_monitors= [ obj for obj in net.objects if isinstance(obj, StateMonitor)]
         self.model_name= net.name+'_model'
         self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
@@ -532,6 +545,48 @@ class GeNNDevice(CPPStandaloneDevice):
                 support_lines.append(code)
             neuron_model.support_code_lines= support_lines
 
+            self.neuron_models.append(neuron_model)
+
+        for obj in poisson_groups:
+            # throw error if events other than spikes are used
+            if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
+                raise NotImplementedError('Brian2GeNN does not support events that are not spikes')
+
+            # Extract the variables
+            neuron_model= neuronModel()
+            neuron_model.name= obj.name
+            neuron_model.N= obj.N
+            for k, v in obj.variables.iteritems():
+                if k == '_spikespace' or k == 't' or k == 'dt':
+                    pass
+                elif isinstance(v, ArrayVariable):
+                    neuron_model.variables.append(k)
+                    neuron_model.variabletypes.append(c_data_type(v.dtype))
+                    neuron_model.variablescope[k]='brian'
+                else:
+                    print("Unknown variable type:",k,v) 
+            support_lines= []
+            suffix= '_thresholder';
+            lines= neuron_model.thresh_cond_lines;
+            codeobj = objects[obj.name+suffix].codeobj
+            for k, v in codeobj.variables.iteritems():
+                if k != 'dt' and isinstance(v, Constant):
+                    if k not in neuron_model.parameters:
+                        neuron_model.parameters.append(k)
+                        neuron_model.pvalue.append(repr(v.value)) 
+                code= codeobj.code.cpp_file
+
+            neuron_model, code = self.fix_random_generators(neuron_model,code)
+            code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
+            lines.append(code)                    
+            print lines
+            print neuron_model.thresh_cond_lines
+            print 'ttttttttttttttttttttttttt'
+            code= codeobj.code.h_file
+            code= code.replace('\n', '\\n\\\n')
+            code = code.replace('"', '\\"')
+            support_lines.append(code)
+            neuron_model.support_code_lines= support_lines
             self.neuron_models.append(neuron_model)
 
         for obj in spikegenerator_groups:
@@ -690,6 +745,23 @@ class GeNNDevice(CPPStandaloneDevice):
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
 #-----------------------------------------------------------------------------------------------------------
+# Process spike monitors
+
+        for obj in rate_monitors:
+#            if obj.event != 'spike':
+#                raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
+            sm= rateMonitorModel()
+            sm.name= obj.name
+            if (hasattr(obj,'when')):
+                if (not obj.when == 'end'):
+                    logger.warn("Rate monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,obj.when))
+            sm.neuronGroup= obj.source.name
+            if (isinstance(obj.source, SpikeGeneratorGroup)):
+                sm.notSpikeGeneratorGroup= False;
+            self.rate_monitor_models.append(sm)
+            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
+            
+#-----------------------------------------------------------------------------------------------------------
 # Process state monitors
 
         for obj in state_monitors:
@@ -779,6 +851,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      spikegenerator_models= self.spikegenerator_models,
                                                      synapse_models= self.synapse_models,
                                                      spike_monitor_models= self.spike_monitor_models,
+                                                     rate_monitor_models= self.rate_monitor_models,
                                                      state_monitor_models= self.state_monitor_models,
                                                      model_name= self.model_name,
                                                      )        

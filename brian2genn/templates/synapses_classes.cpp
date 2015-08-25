@@ -13,7 +13,6 @@
 
 #include "brianlib/spikequeue.h"
 
-template<class scalar> class Synapses;
 template<class scalar> class SynapticPathway;
 
 template <class scalar>
@@ -26,9 +25,9 @@ public:
 	std::vector<int> all_peek;
 	scalar dt;
 	std::vector< CSpikeQueue<scalar> * > queue;
-	SynapticPathway(int _Nsource, int _Ntarget, std::vector<scalar>& _delay, std::vector<int> &_sources,
+	SynapticPathway(std::vector<scalar>& _delay, std::vector<int> &_sources,
 					scalar _dt, int _spikes_start, int _spikes_stop)
-		: Nsource(_Nsource), Ntarget(_Ntarget), delay(_delay), sources(_sources), dt(_dt)
+		: delay(_delay), sources(_sources), dt(_dt)
 	{
 	   _nb_threads = {{ openmp_pragma('get_num_threads') }};
 
@@ -52,7 +51,7 @@ public:
     	queue[{{ openmp_pragma('get_thread_num') }}]->advance();
     }
 
-	vector<DTYPE_int>* peek()
+	vector<int32_t>* peek()
     {
     	{{ openmp_pragma('static-ordered') }}
 		for(int _thread=0; _thread < {{ openmp_pragma('get_num_threads') }}; _thread++)
@@ -68,45 +67,29 @@ public:
     	return &all_peek;
     }
 
-    void prepare(scalar *real_delays, int *sources, unsigned int n_synapses, double _dt)
+    void prepare(int n_source, int n_target, scalar *real_delays, unsigned int n_delays,
+                 int *sources, unsigned int n_synapses, double _dt)
     {
+        Nsource = n_source;
+        Ntarget = n_target;
     	{{ openmp_pragma('parallel') }}
     	{
             unsigned int length;
             if ({{ openmp_pragma('get_thread_num') }} == _nb_threads - 1) 
-        		length = n_synapses - (unsigned int) {{ openmp_pragma('get_thread_num') }}*n_synapses/_nb_threads;
+                length = n_synapses - (unsigned int) {{ openmp_pragma('get_thread_num') }}*(n_synapses/_nb_threads);
             else
                 length = (unsigned int) n_synapses/_nb_threads;
     		
             unsigned int padding  = {{ openmp_pragma('get_thread_num') }}*(n_synapses/_nb_threads);
 
             queue[{{ openmp_pragma('get_thread_num') }}]->openmp_padding = padding;
-    		queue[{{ openmp_pragma('get_thread_num') }}]->prepare(&real_delays[padding], &sources[padding], length, _dt);
+            if (n_delays > 1)
+    		    queue[{{ openmp_pragma('get_thread_num') }}]->prepare(&real_delays[padding], length, &sources[padding], length, _dt);
+    		else
+    		    queue[{{ openmp_pragma('get_thread_num') }}]->prepare(&real_delays[0], 1, &sources[padding], length, _dt);
     	}
     }
 
-};
-
-template <class scalar>
-class Synapses
-{
-public:
-    int _N_value;
-    inline double _N() { return _N_value;};
-	int Nsource;
-	int Ntarget;
-	std::vector< std::vector<int> > _pre_synaptic;
-	std::vector< std::vector<int> > _post_synaptic;
-
-	Synapses(int _Nsource, int _Ntarget)
-		: Nsource(_Nsource), Ntarget(_Ntarget)
-	{
-		for(int i=0; i<Nsource; i++)
-			_pre_synaptic.push_back(std::vector<int>());
-		for(int i=0; i<Ntarget; i++)
-			_post_synaptic.push_back(std::vector<int>());
-		_N_value = 0;
-	};
 };
 
 #endif
