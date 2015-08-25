@@ -522,7 +522,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 code= codeobj.code.cpp_file
 
                 if (suffix == '_resetter') and not (obj._refractory is False):
-                    code= code+' lastspike= t-0.5*DT;'
+                    code= code+'\n lastspike= t-0.5*DT; \n not_refractory= 0;'
                 neuron_model, code = self.fix_random_generators(neuron_model,code)
                 code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
                 lines.append(code)                    
