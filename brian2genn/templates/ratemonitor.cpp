@@ -3,6 +3,7 @@
 
 {% block extra_headers %}
 extern double t;
+#include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
 {% endblock%}
 

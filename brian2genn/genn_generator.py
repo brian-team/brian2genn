@@ -1,7 +1,10 @@
+'''
+The code generator for the "genn" language. This is mostly C++ with some specific
+decorators (mainly "__host__ __device__") to allow operation in a CUDA context.
+'''
+
 import itertools
-
 import numpy
-
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
@@ -9,10 +12,9 @@ from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.preferences import prefs, BrianPreference
 from brian2.core.variables import ArrayVariable
-
 from brian2.codegen.generators.base import CodeGenerator
 from brian2.codegen.generators.cpp_generator import c_data_type, CPPCodeGenerator
-from brian2genn.insyn import check_pre_code, check_post_code
+from brian2genn.insyn import check_pre_code
 
 logger = get_logger(__name__)
 
@@ -102,26 +104,13 @@ class GeNNCodeGenerator(CodeGenerator):
 
     def translate_one_statement_sequence(self, statements, scalar=False):
         if len(statements) and self.template_name=='synapses':
-            print '*****************', self.template_name, self.name, self.owner.name
-            print 'PRETRANSLATION oh yeah'
-            for statement in statements:
-                print '   ', statement
             vars_pre = [k for k, v in self.variable_indices.items() if v=='_presynaptic_idx']
             vars_syn = [k for k, v in self.variable_indices.items() if v=='_idx']
             vars_post = [k for k, v in self.variable_indices.items() if v=='_postsynaptic_idx']
-            print 'VARS_PRE', vars_pre
-            print 'VARS_SYN', vars_syn
-            print 'VARS_POST', vars_post
             if '_pre_codeobject' in self.name:
                 post_write_var, statements = check_pre_code(self, statements,
                                                 vars_pre, vars_syn, vars_post)
-                print 'POST_WRITE_VAR', post_write_var
                 self.owner._genn_post_write_var = post_write_var
-            elif '_post_codeobject' in self.name:
-                check_post_code(self, statements, vars_pre, vars_syn, vars_post)
-            print 'POSTTRANSLATION'
-            for statement in statements:
-                print '   ', statement
         lines = []
         lines += self.translate_to_statements(statements)
         code = '\n'.join(lines)

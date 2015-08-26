@@ -1,7 +1,8 @@
-from brian2.core.preferences import *
 '''
 Preferences that relate to the brian2genn interface.
 '''
+
+from brian2.core.preferences import *
 
 def valid_connectivity(value):
     for v in ['DENSE', 'SPARSE', 'AUTO']:
@@ -29,7 +30,7 @@ prefs.register_preferences(
         validator= valid_connectivity,
         docs='''
         This preference determines which connectivity scheme is to be employed within GeNN. The valid alternatives are 'DENSE', 'SPARSE', and 'AUTO'. For 'DENSE' the GeNN dense matrix methods are used for all connectivity matrices. When 'SPARSE' is chosen, the GeNN sparse matrix representations are used. For 'AUTO', GeNN decides on a per-synapse population basis whether to use dense or sparse representations based on the evaluation of a decision function that returns whether to use dense or sparse methods based on the number of pre-synaptic neurons, post-synaptic neurons and the number of existing connections. The default decision function chooses sparse methods whenever, the number of existing connections  is less than 25% of all possible connections. A custom decision expression can be provided with the preference 'connectivity_decision'.''',
-        default= 'DENSE'
+        default= 'SPARSE'
     ),
     connectivity_decision= BrianPreference(
         validator= valid_connectivity_decision,

@@ -15,8 +15,10 @@ should be replaced by:
     dv/dt = -v/tau (neuron code)
     v += inSyn; inSyn = 0; (custom operation carried out after integration step)
     
-In GeNN terms these are labelled differently (Thomas, maybe explain this point
-here).
+The reason behind this organisation in GeNN is that the communication of spike events and the 
+corresponding updates of post-synaptic variables are separated out for better performance. In 
+priniciple all kinds of operations on the pre- and post-synaptic variables can be allowed
+but with a heavy hit in the computational speed.
 
 The conditions for this rewrite to be possible are as follows for presynaptic
 event code:
@@ -64,11 +66,7 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
         raise NotImplementedError("GeNN only supports writing to a single postsynaptic variable.")
     
     post_write_var = list(post_write)[0]
-    
-    # pre_write = set(write).intersection(set(vars_pre))
-    # if len(pre_write):
-    #     raise NotImplementedError("GeNN does not support writing to presynaptic variables.")
-    
+        
     found_write_statement = False
     new_stmts = []
     for stmt in stmts:
@@ -77,8 +75,6 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
             if stmt.inplace:
                 if stmt.op!='+=':
                     raise NotImplementedError("GeNN only supports the += in place operation on postsynaptic variables.")
-#                 if set(ids).intersection(set(vars_pre).union(set(vars_post))):
-#                     raise NotImplementedError("GeNN only supports postsynaptic operations using only synaptic variables.")
                 accumulation_expr = stmt.expr
             else:
                 # TODO: we could support expressions like v = v + expr, but this requires some additional work
@@ -96,14 +92,3 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
     
     return post_write_var, new_stmts
 
-
-def check_post_code(codegen, stmts, vars_pre, vars_syn, vars_post):
-    read, write, indices = codegen.array_read_write(stmts)
-
-#     post_write = set(write).intersection(set(vars_post))
-#     if len(post_write):
-#         raise NotImplementedError("GeNN does not support writing to postsynaptic variables in postsynaptic code.")
-    
-#     pre_write = set(write).intersection(set(vars_pre))
-#     if len(pre_write):
-#         raise NotImplementedError("GeNN does not support writing to presynaptic variables in postsynaptic code.")
