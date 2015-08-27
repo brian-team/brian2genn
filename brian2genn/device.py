@@ -46,7 +46,7 @@ from brian2.core.magic import _get_contained_objects
 
 __all__ = ['GeNNDevice']
 
-logger = get_logger(__name__)
+logger = get_logger('brian2.devices.genn')
 prefs['codegen.generators.cpp.restrict_keyword']= '__restrict'
 prefs['codegen.loop_invariant_optimisations'] = False
 prefs['core.network.default_schedule']= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
@@ -728,7 +728,7 @@ class GeNNDevice(CPPStandaloneDevice):
             sm.name= obj.name
             if (hasattr(obj,'when')):
                 if (not obj.when == 'end'):
-                    logger.warn("Spike monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,obj.when))
+                    logger.warn("Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
             sm.neuronGroup= obj.source.name
             if (isinstance(obj.source, SpikeGeneratorGroup)):
                 sm.notSpikeGeneratorGroup= False;
@@ -761,7 +761,7 @@ class GeNNDevice(CPPStandaloneDevice):
             sm.monitored= obj.source.name
             sm.when= obj.when
             if not (sm.when == 'start' or sm.when == 'end'): 
-                logger.warn("State monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,sm.when))
+                logger.warn("State monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,sm.when))
                 sm.when= 'end'
             src= obj.source
             if isinstance(obj.source, Synapses):

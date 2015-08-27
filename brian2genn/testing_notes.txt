@@ -1,0 +1,193 @@
+tested:
+test_thresholder.py:
+- test_simple_threshold(): pass
+
+- test_scalar_threshold(): fail
+(threshold condition is empty in codeobj. This is something that must
+occur at the code generation stage. Asked Marcel and Dan to
+advise. 2015-08-03)
+
+-----
+
+test_cpp_standalone.py:
+test_cpp_standalone():
+this seems to run but produce 18232 spikes > the 17000 - 18000
+range. If allowing for 17000 to 18500 spikes the test is passed
+
+test_multiple_connects():
+appears to pass.
+
+test_storing_loading():
+appears to pass
+
+test_openmp_consistency():
+omitted for obvious reasons
+
+test_timedarray(): fails; it's using "TimedArray" to set neuron
+variables. I suspect this is not within range of the current genn
+interface. Probably could be made to be ...times and values could be
+copied on init and set within the code ... not done at the moment for
+sure.
+!!!ACTION: Raise NotImplementedError!!!
+
+-----
+
+test_functions.py:
+
+test_constants_sympy(): not applicable
+
+test_constants_values(): not applicable
+
+test_math_functions_short(): pass
+
+test_math_functions(): pass
+
+test_user_defined_function(): passes on face value but fails when the
+user defined function is used somewhere that places it onto the GPU.
+This could be fixed by adding the device equivalent function to
+modeldefinition (however not in a local unnamed namespace). Unlcear
+how to do this - can we at least add a warning somewhere?
+ !!!ACTION: Raise NotImplementedError!!!
+
+test_user_defined_function_units(): n/a (numpy only)
+
+test_simple_user_defined_function(): fails (but is supposed to?!?)
+
+test_manual_user_defined_function(): n/a (numpy only)
+
+test_manual_user_defined_function_weave(): n/a (weave only)
+
+test_user_defined_function_discarding_units(): n/a (codegen
+independent)
+
+test_user_defined_function_discarding_units_2(): n/a (codegen
+independent)
+
+test_function_implementation_container():n/a (codegen independent)
+
+test_function_implementation_container(): n/a (codegen independent)
+
+test_function_dependencies_numpy(): n/a (numpy)
+
+test_function_dependencies_weave(): n/a (weave)
+
+test_function_dependencies_cython(): n/a (cython)
+
+test_binomial(): fail (using support code and not easy to support in
+Brian2Genn: this involves drawing random numbers to generate inputs
+distributed according to Binomial distribution - in GeNN if done in
+GPU space, it would need separate seeds for random number generation
+etc.)
+!!!ACTION: Raise NotImplementedError!!!
+
+-----
+
+test_monitor.py:
+
+test_spike_monitor(): pass
+
+test_spike_monitor_get_states(): pass
+NEED to retest: Is the variable "w" picked up even if not used for anything?
+
+test_spike_monitor_variables: fail
+(GeNN reports variables after reset by default. The test asks for both
+before reset (standard) and after (explicit request). the "before reset"
+part fails.) 
+!!!ACTION: Warning or notImplementedError?
+
+test_event_monitor(): runs - but fail to match
+(GeNN does not at the moment support user-defined events of this kind.
+In principle this kind of functionality could be introduced with not
+too much difficulty but would require a decent amount of work). The
+interface doesn't crash but does not contain the code that is related
+to events and hence produces wrong results.
+!!!ACTION: Raise notImplementedError if events are used.
+
+test_event_monitor_no_record(): runs - but fail to match (as above)
+!!!ACTION: Raise notImplementedError if events are used.
+
+
+test_state_monitor():
+Some tests are now passing; however, the test for v_mon.v.T on line
+254/255:
+    assert_allclose(v_mon.v.T,
+                    np.exp(np.tile(-v_mon.t, (2, 1)).T / (10*ms)))
+is failing with a shift of 1 rtime step. All I understand is that with
+the interpretation t=0 <=> values after one time step, the GeNN values
+are correct - inconsitency in Brian or my mis-understanding?
+
+
+-----
+
+Looking at examples:
+COBAHH.py:
+fails because it is using sub-groups. If sub-groups are replaced with
+separate neuron populations, everything works as advertised.
+
+CUBA.py: Seems to work
+
+IF_curve_Hodgkin_Huxley.py: Seems to work
+
+IF_curve_LIF.py: Seems to work
+
+adaptive_threshold.py: works in principle but in contrast to other
+devices brian2genn reports the value of variables (here v) after the
+spike reset.
+
+non_reliability.py: seems to work fine
+
+reliability.py: This isn't supposed to work due to the linked
+variable approach. I am raising a NotImplementedError if an object has
+an attribute _linked_variables and this set is len(_linked_variables)
+> 0.
+
+phase_locking.py: seesm to work fine
+
+standalone/STDP_standalone.py: seems to work fine
+
+standalone/cuba_openmp.py: seems to work fine
+
+synapses/STDP.py: seems to work fine
+
+synapses/gapjunctions.py: fails because it is using a summed
+variable. This kis detected during network run by looking at template
+names.
+
+synapses/jeffress.py: fails because it's using TimedArray. I have not
+yet found a way to raise a more systematic "NotImplementedError"
+for this.
+
+
+synapses/licklider.py: Seems to work
+
+synapses/nonlinear.py: fails early with "raise NotImplementedError('Cannot retrieve the values of state '
+NotImplementedError: Cannot retrieve the values of state variables in
+standalone code before the simulation has been run." triggered from
+M = StateMonitor(S, 'g', record=True)
+
+...not sure what is going on there.
+
+synapses/spatial_connections.py: fails similarly as nonlinear.py ...
+
+synapses/state_vaiables.py: same problem once again. 
+
+synapses/synapses.py: seems to work (i.e. is producing something),
+however, not identical with cpp_standalone. This is probably due to
+delays being used. 
+
+
+
+
+
+
+
+
+
+
+
+
+
+omitted tests (codegen-independent):
+test_base.py
+test_clocks.py
+test_codegen.py

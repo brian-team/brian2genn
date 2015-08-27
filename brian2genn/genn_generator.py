@@ -16,7 +16,7 @@ from brian2.codegen.generators.base import CodeGenerator
 from brian2.codegen.generators.cpp_generator import c_data_type, CPPCodeGenerator
 from brian2genn.insyn import check_pre_code
 
-logger = get_logger(__name__)
+logger = get_logger('brian2.devices.genn')
 
 __all__ = ['GeNNCodeGenerator'
            ]

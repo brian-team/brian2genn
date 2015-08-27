@@ -1,0 +1,46 @@
+Cannot remove/derive because they differ slightly:
+objects.cpp
+statemonitor.cpp
+
+Cannot remove/derive (differ substantially):
+spikegenerator.cpp
+spikemonitor.cpp
+ratemonitor
+
+Removed (now derived):
+common_group.cpp
+common_synapses.cpp
+group_variable_set.cpp
+group_variable_set_conditional.cpp
+synapses_classes.cpp
+synapses_create.cpp
+synapses_create_array.cpp
+
+Removed (not used in brian2genn):
+main.cpp 
+run.cpp
+stateupdate.cpp
+makefile
+network.cpp
+reset.cpp
+run.cpp
+spatialneuron_prepare.cpp
+spatialstateupdate.cpp
+stateupdate.cpp
+summed_variable.cpp
+synapses.cpp
+synapses_initialise_queue.cpp
+synapses_push_spikes.cpp
+threshold.cpp
+win_makefile
+
+GeNN-specific templates:
+GNUmakefile
+WINmakefile
+engine.cc
+model.cc
+reset.cc
+runner.cc
+stateupdate.cc
+synapses.cc
+threshold.cc
