@@ -1,12 +1,13 @@
 {# IS_OPENMP_COMPATIBLE #}
 {% macro cpp_file() %}
 
-#include<stdint.h>
-#include<vector>
 #include "objects.h"
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
+#include "brianlib/stdint_compat.h"
+//#include "network.h"
+#include<vector>
 #include<iostream>
 #include<fstream>
 
@@ -54,6 +55,10 @@ SynapticPathway<double> brian::{{path.name}}(
 {% endfor %}
 {% endfor %}
 
+// Profiling information for each code object
+{% for codeobj in code_objects | sort(attribute='name') %}
+double brian::{{codeobj.name}}_profiling_info = 0.0;
+{% endfor %}
 
 void _init_arrays()
 {
@@ -136,13 +141,14 @@ void _write_arrays()
 	}
 	{% endif %}
 	{% endfor %}
+
 	{% for var, varname in dynamic_array_specs | dictsort(by='value') %}
 	ofstream outfile_{{varname}};
 	outfile_{{varname}}.open("{{get_array_filename(var) | replace('\\', '\\\\')}}", ios::binary | ios::out);
 	if(outfile_{{varname}}.is_open())
 	{
         if (! {{varname}}.empty() )
-		outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}[0]), {{varname}}.size()*sizeof({{varname}}[0]));
+			outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}[0]), {{varname}}.size()*sizeof({{varname}}[0]));
 		outfile_{{varname}}.close();
 	} else
 	{
@@ -158,7 +164,7 @@ void _write_arrays()
         for (int n=0; n<{{varname}}.n; n++)
         {
             if (! {{varname}}(n).empty())
-		outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}(n, 0)), {{varname}}.m*sizeof({{varname}}(0, 0)));
+                outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}(n, 0)), {{varname}}.m*sizeof({{varname}}(0, 0)));
         }
         outfile_{{varname}}.close();
 	} else
@@ -166,6 +172,20 @@ void _write_arrays()
 		std::cout << "Error writing output file for {{varname}}." << endl;
 	}
 	{% endfor %}
+
+	// Write profiling info to disk
+	ofstream outfile_profiling_info;
+	outfile_profiling_info.open("results/profiling_info.txt", ios::out);
+	if(outfile_profiling_info.is_open())
+	{
+	{% for codeobj in code_objects | sort(attribute='name') %}
+	outfile_profiling_info << "{{codeobj.name}}\t" << {{codeobj.name}}_profiling_info << std::endl;
+	{% endfor %}
+	outfile_profiling_info.close();
+	} else
+	{
+	    std::cout << "Error writing profiling info to file." << std::endl;
+	}
 }
 
 void _dealloc_arrays()
@@ -203,11 +223,12 @@ void _dealloc_arrays()
 #ifndef _BRIAN_OBJECTS_H
 #define _BRIAN_OBJECTS_H
 
-#include<vector>
-#include<stdint.h>
 #include "synapses_classes.h"
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
+#include "brianlib/stdint_compat.h"
+//#include "network.h"
+#include<vector>
 {{ openmp_pragma('include') }}
 
 namespace brian {
@@ -250,6 +271,11 @@ extern const int _num_{{name}};
 {% for path in S._pathways | sort(attribute='name') %}
 extern SynapticPathway<double> {{path.name}};
 {% endfor %}
+{% endfor %}
+
+// Profiling information for each code object
+{% for codeobj in code_objects | sort(attribute='name') %}
+extern double {{codeobj.name}}_profiling_info;
 {% endfor %}
 
 }

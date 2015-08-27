@@ -14,9 +14,10 @@ class GeNNCodeObject(CPPStandaloneCodeObject):
     generator_class = GeNNCodeGenerator
 
 class GeNNUserCodeObject(CPPStandaloneCodeObject):
-    templater = Templater('brian2genn', env_globals={'c_data_type': c_data_type,
-                                                     'openmp_pragma': openmp_pragma,
-                                                     'constant_or_scalar': constant_or_scalar})
+    templater = CPPStandaloneCodeObject.templater.derive('brian2genn')
+#, env_globals={'c_data_type': c_data_type,
+#                                                     'openmp_pragma': openmp_pragma,
+#                                                     'constant_or_scalar': constant_or_scalar})
     generator_class = CPPCodeGenerator
 
 codegen_targets.add(GeNNCodeObject)

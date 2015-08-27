@@ -411,7 +411,8 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses.extend(s for s in net.objects if isinstance(s, Synapses))
         
 #------------------------------------------------------------------------------
-# create the objects.cpp code
+# create the objects.cpp and objects.h code
+        the_objects= self.code_objects.values()
         arr_tmp = GeNNUserCodeObject.templater.objects(
                         None, None,
                         array_specs=self.arrays,
@@ -423,8 +424,9 @@ class GeNNDevice(CPPStandaloneDevice):
                         clocks=self.clocks,
                         static_array_specs=static_array_specs,
                         networks=[net],
-                        get_array_filename=self.get_array_filename
-                        )
+                        get_array_filename=self.get_array_filename,
+                        code_objects= the_objects
+        )
         writer.write('objects.*', arr_tmp)
         self.header_files.append('objects.h')
         self.source_files.append('objects.cpp')

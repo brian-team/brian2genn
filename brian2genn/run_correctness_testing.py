@@ -21,7 +21,7 @@ prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds
 #f.run()
 #c.after_run()
 #print run_single_feature_test(CPPStandaloneConfiguration, SynapsesSTDP)
-#print run_single_feature_test(GeNNConfiguration, SynapsesSTDP)
+#print run_single_feature_test(GeNNConfiguration, SpikeGeneratorGroupTest)
 #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
 #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
 #print run_feature_tests(configurations=[DefaultConfiguration,
