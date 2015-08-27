@@ -105,7 +105,8 @@ void engine::run(double runtime, //!< Duration of time to run the model for
   int riT= (int) (runtime/DT+1e-2);
 
   for (int i= 0; i < riT; i++) {
-      // report state 
+      // report state
+      t+= DT;
       {% for sm in state_monitor_models %}
       {% if sm.when == 'start' %}
       {% for var in sm.variables %}

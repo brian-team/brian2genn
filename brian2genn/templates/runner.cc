@@ -111,7 +111,7 @@ int main(int argc, char *argv[])
   // output general parameters to output file and start the simulation
   fprintf(stderr, "# We are running with fixed time step %f \n", DT);
 
-  t= 0.0;
+  t= -DT;
   void *devPtr;
   eng.run(totalTime, which); // run for the full duration
   timer.stopTimer();

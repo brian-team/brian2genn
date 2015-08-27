@@ -249,6 +249,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         self.clocks = set([])
         self.connectivityDict = dict()
+        self.groupDict= dict()
 
     def code_object_class(self, codeobj_class=None):
         if codeobj_class is GeNNCodeObject:
@@ -545,8 +546,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 code = code.replace('"', '\\"')
                 support_lines.append(code)
             neuron_model.support_code_lines= support_lines
-
             self.neuron_models.append(neuron_model)
+            self.groupDict[neuron_model.name]= neuron_model
 
         for obj in poisson_groups:
             # throw error if events other than spikes are used
@@ -584,6 +585,7 @@ class GeNNDevice(CPPStandaloneDevice):
             support_lines.append(code)
             neuron_model.support_code_lines= support_lines
             self.neuron_models.append(neuron_model)
+            self.groupDict[neuron_model.name]= neuron_model
 
         for obj in spikegenerator_groups:
             spikegenerator_model= spikegeneratorModel()
@@ -725,7 +727,8 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 synapse_model.postSyntoCurrent= '0'
             self.synapse_models.append(synapse_model)
-                               
+            self.groupDict[synapse_model.name]= synapse_model
+                         
 #------------------------------------------------------------------------------
 # Process spike monitors
 
@@ -792,10 +795,12 @@ class GeNNDevice(CPPStandaloneDevice):
             for varname in obj.record_variables:
                 if isinstance(src.variables[varname],Subexpression):
                     extract_source_variables(src.variables, varname, sm.variables)
-                elif not isinstance(src.variables[varname],Constant):
-                    sm.variables.append(varname)
+                elif isinstance(src.variables[varname],Constant):
+                    logger.warn("variable '%s' is a constant - not monitoring" % varname)
+                elif varname not in self.groupDict[sm.monitored].variables:
+                    logger.warn("variable '%s' is unused - not monitoring" % varname)
                 else:
-                    print 'variable is a constant - not monitoring'
+                    sm.variables.append(varname)
            
             self.state_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
