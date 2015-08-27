@@ -595,7 +595,6 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model= synapseModel()
             synapse_model.name= obj.name
             if isinstance(obj.source,Subgroup):
-                print obj.source.__dict__
                 synapse_model.srcname= obj.source.source.name
                 synapse_model.srcN= obj.source.source.variables['N'].get_value()
             else:
