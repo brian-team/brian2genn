@@ -120,9 +120,7 @@ are correct - inconsitency in Brian or my mis-understanding?
 -----
 
 Looking at examples:
-COBAHH.py:
-fails because it is using sub-groups. If sub-groups are replaced with
-separate neuron populations, everything works as advertised.
+COBAHH.py: Seems to work - hopefully subgroups work as expected.
 
 CUBA.py: Seems to work
 
