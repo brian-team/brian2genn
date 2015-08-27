@@ -8,10 +8,10 @@ extern double t;
 {% endblock%}
 
 {% block maincode %}
-	{# USES_VARIABLES { rate, t, _clock_dt,
+	{# USES_VARIABLES { rate, t, _clock_dt, _spikespace,
 	                    _num_source_neurons, _source_start, _source_stop } #}
 
-        {% set sourcename= owner.source.name %}
+        {% set sourcename= _spikespace.replace('_ptr_array_','').replace('__spikespace','') %}
         int _num_spikes = spikeCount_{{sourcename}};
 	// For subgroups, we do not want to record all spikes
         // We cannot assume that spikes are ordered!

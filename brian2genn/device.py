@@ -594,10 +594,19 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in synapse_groups:
             synapse_model= synapseModel()
             synapse_model.name= obj.name
-            synapse_model.srcname= obj.source.name
-            synapse_model.srcN= obj.source.variables['N'].get_value()
-            synapse_model.trgname= obj.target.name
-            synapse_model.trgN= obj.target.variables['N'].get_value()
+            if isinstance(obj.source,Subgroup):
+                print obj.source.__dict__
+                synapse_model.srcname= obj.source.source.name
+                synapse_model.srcN= obj.source.source.variables['N'].get_value()
+            else:
+                synapse_model.srcname= obj.source.name
+                synapse_model.srcN= obj.source.variables['N'].get_value()
+            if isinstance(obj.target,Subgroup):
+                synapse_model.trgname= obj.target.source.name
+                synapse_model.trgN= obj.target.source.variables['N'].get_value()
+            else:
+                synapse_model.trgname= obj.target.name
+                synapse_model.trgN= obj.target.variables['N'].get_value()
             synapse_model.connectivity= prefs.devices.genn.connectivity
             if synapse_model.connectivity == 'AUTO':
                 Npre= synapse_model.srcN
@@ -729,14 +738,17 @@ class GeNNDevice(CPPStandaloneDevice):
             if (hasattr(obj,'when')):
                 if (not obj.when == 'end'):
                     logger.warn("Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
-            sm.neuronGroup= obj.source.name
-            if (isinstance(obj.source, SpikeGeneratorGroup)):
+            src= obj.source
+            if isinstance(src,Subgroup):
+                src= src.source
+            sm.neuronGroup= src.name
+            if (isinstance(src, SpikeGeneratorGroup)):
                 sm.notSpikeGeneratorGroup= False;
             self.spike_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
             
 #------------------------------------------------------------------------------
-# Process spike monitors
+# Process rate monitors
 
         for obj in rate_monitors:
 #            if obj.event != 'spike':
@@ -745,9 +757,13 @@ class GeNNDevice(CPPStandaloneDevice):
             sm.name= obj.name
             if (hasattr(obj,'when')):
                 if (not obj.when == 'end'):
-                    logger.warn("Rate monitor {!s} has 'when' property {!s} which is not supported in GeNN, defaulting to 'end'\n".format(sm.name,obj.when))
-            sm.neuronGroup= obj.source.name
-            if (isinstance(obj.source, SpikeGeneratorGroup)):
+                    logger.warn("Rate monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
+            src= obj.source
+            if isinstance(src,Subgroup):
+                src= src.source
+                print src
+            sm.neuronGroup= src.name
+            if (isinstance(src, SpikeGeneratorGroup)):
                 sm.notSpikeGeneratorGroup= False;
             self.rate_monitor_models.append(sm)
             self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
@@ -758,13 +774,15 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in state_monitors:
             sm= stateMonitorModel()
             sm.name= obj.name
-            sm.monitored= obj.source.name
+            src= obj.source
+            if isinstance(src,Subgroup):
+                src= src.source
+            sm.monitored= src.name
             sm.when= obj.when
             if not (sm.when == 'start' or sm.when == 'end'): 
                 logger.warn("State monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,sm.when))
                 sm.when= 'end'
-            src= obj.source
-            if isinstance(obj.source, Synapses):
+            if isinstance(src,Synapses):
                 sm.isSynaptic= True
                 sm.srcN= src.source.variables['N'].get_value()
                 sm.trgN= src.target.variables['N'].get_value()
@@ -928,13 +946,13 @@ class GeNNDevice(CPPStandaloneDevice):
         if any([obj.clock is not defaultclock for obj in net.objects]):
             raise NotImplementedError('Multiple clocks are not supported for the genn device')
 # Raise NotImplementedError if sub-groups were used (need to fish those out - I am guessing checking all "source" and "target" attributes should identify them?
-        for obj in net.objects:
-            if hasattr(obj,'source'):
-                if isinstance(obj.source,Subgroup):
-                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
-            if hasattr(obj,'target'):
-                if isinstance(obj.target,Subgroup):
-                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
+#        for obj in net.objects:
+#            if hasattr(obj,'source'):
+#                if isinstance(obj.source,Subgroup):
+#                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
+#            if hasattr(obj,'target'):
+#                if isinstance(obj.target,Subgroup):
+#                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
 
         for obj in net.objects:
             if hasattr(obj,'_linked_variables'):
