@@ -20,11 +20,11 @@ extern double t;
         for(int _j=0; _j<_num_spikes; _j++)
         {
             const int _idx = spike_{{sourcename}}[_j];
- 	    if ((_idx >= _source_start) && (_idx <= _source_stop)) {
+ 	    if ((_idx >= _source_start) && (_idx < _source_stop)) {
 		_nSpikes++;
 	    }
-	    {{_dynamic_rate}}.push_back(1.0*_nSpikes/_clock_dt/_num_source_neurons);
-	    {{_dynamic_t}}.push_back(t);
 	}
+	{{_dynamic_rate}}.push_back(1.0*_nSpikes/_clock_dt/_num_source_neurons);
+	{{_dynamic_t}}.push_back(t);
 {% endblock %}
 

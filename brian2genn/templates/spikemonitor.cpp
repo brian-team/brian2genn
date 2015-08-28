@@ -43,7 +43,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 	for(int _j=0; _j<_num_events; _j++)
 	{
 	    const int _idx = {{_eventspace}}[_j];
-	    if ((_idx >= _source_start) && (_idx <= _source_stop)) {
+	    if ((_idx >= _source_start) && (_idx < _source_stop)) {
 		{% for varname, var in record_variables.items() %}
 		{% if varname == 't' %}
 		{{get_array_name(var, access_data=False)}}.push_back(t);
