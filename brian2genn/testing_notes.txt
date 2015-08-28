@@ -189,3 +189,47 @@ omitted tests (codegen-independent):
 test_base.py
 test_clocks.py
 test_codegen.py
+
+
+----
+using run_brian_tests.py, the following tests had a proper failure:
+brian2.tests.test_monitor.test_state_monitor (child_exception)
+brian2.tests.test_monitor.test_state_monitor_get_states
+(child_exception)
+test_stochastic_variable_multiplicative (child_exception)
+test_referred_scalar_variable (child_exception)
+brian2.tests.test_refractory.test_refractoriness_basic
+(child_exception)
+brian2.tests.test_refractory.test_refractoriness_variables
+(child_exception)
+brian2.tests.test_refractory.test_refractoriness_threshold_basic (child_exception)
+ brian2.tests.test_refractory.test_refractoriness_threshold
+ (child_exception)
+test_subexpressions_basic (child_exception)
+brian2.tests.test_monitor.test_spike_monitor_variables (Arrays are not
+equal) - likely due to when='end'
+brian2.tests.test_monitor.test_rate_monitor (Not equal to tolerance
+rtol=1e-07, atol=0) ... hum something wrong with rate monitor?
+test_rate_monitor_subgroups (mismatch 100%)
+brian2.tests.test_poissongroup.test_propagation (mismatch 50.0%)
+brian2.tests.test_poissoninput.test_poissoninput (mismatch 100%)
+brian2.tests.test_refractory.test_conditional_write_behaviour
+(assertion error)
+test_spikegenerator_connected (assertion error)
+brian2/brian2/tests/test_spikegenerator.py test_spikegenerator_basic (assertion error)
+test_spikegenerator_basic_sorted (assertion error)
+test_spikegenerator_period (assertion error)
+brian2.tests.test_subgroup.test_synaptic_propagation (mismatch 15%)
+brian2.tests.test_subgroup.test_synaptic_propagation_2 (assertion
+error)
+brian2.tests.test_subgroup.test_spike_monitor (mismatch 100.0%)
+test_no_reference_2 (mismatch 100.0%)
+test_no_reference_3 (mismatch 100.0%)
+test_no_reference_4 (mismatch 15.0%)
+test_transmission_simple (mismatch 20.0%)
+test_transmission_scalar_delay (mismatch 80%) -- but should fail!
+test_external_variables (assertion error)
+brian2.tests.test_synapses.test_vectorisation_STDP_like (mismatch
+100.0%)
+
+
