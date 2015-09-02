@@ -51,14 +51,14 @@ for mod_name in MOCK_MODULES:
 
 #if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
     # -- Automatically generate the reference documentation ------------------------
-#    import brian2.sphinxext.generate_reference as generate_reference
+    import brian2genn.sphinxext.generate_reference as generate_reference
     # first generate the reference documentation
-#    target_dir = './reference'
-#    if os.path.exists(target_dir):
-#        shutil.rmtree(target_dir)
-#    os.makedirs(target_dir)
-#    abs_root = os.path.abspath('../brian2genn')
-#    generate_reference.main(abs_root, ['tests', 'sphinxext'], target_dir)
+    target_dir = './reference'
+    if os.path.exists(target_dir):
+        shutil.rmtree(target_dir)
+    os.makedirs(target_dir)
+    abs_root = os.path.abspath('../brian2genn')
+    generate_reference.main(abs_root, ['tests', 'sphinxext'], target_dir)
     
     # -- Automatically generate the examples documentation -------------------------
 #    import brian2.sphinxext.generate_examples as generate_examples
@@ -77,7 +77,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
               'sphinx.ext.coverage', 'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-#              'brian2.sphinxext.briandoc',
+              'brian2genn.sphinxext.briandoc',
               'sphinx.ext.autosummary',
 #              'sphinxcontrib.issuetracker'
 ]

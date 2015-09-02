@@ -7,7 +7,8 @@ Contents:
    :maxdepth: 2
    :titlesonly:
 
-   introduction/index
+      introduction/index
+      introduction/exclusions
 
 .. toctree::
    :maxdepth: 1

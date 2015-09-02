@@ -1,5 +1,6 @@
 Exclusions in Brian2GeNN
 =====================
+
 Summed variables
 --------------------
 Summed variables are currently not supported in GeNN due to the cross-
