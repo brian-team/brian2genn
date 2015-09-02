@@ -30,7 +30,7 @@ add::
 
   set_device('genn')
 
-Then, after ```python run(duration)``` in your script, add::
+Then, after ``run(duration)`` in your script, add::
 
   device.build(directory='output', compile=True, run=True, useGPU='True')
 
