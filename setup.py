@@ -14,9 +14,6 @@ from setuptools import setup, find_packages, Extension
 from setuptools.command.build_ext import build_ext
 from distutils.errors import CompileError, DistutilsPlatformError
 
-
-
-
 long_description = '''
 Brian2 is a simulator for spiking neural networks available on almost all platforms.
 The motivation for this project is that a simulator should not only save the time of
@@ -39,12 +36,12 @@ setup(name='Brian2GeNN',
       packages=find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
-                                                      'templates/*.h',
-                                   'templates/*.cc'
-                                                      'templates/WINmakefile',
-                                                      'templates/GNUmakefile',
-                                                      'b2glib/*.cpp',
-                                                      'b2glib/*.h'],
+                                   'templates/*.h',
+                                   'templates/*.cc',
+                                   'templates/WINmakefile',
+                                   'templates/GNUmakefile',
+                                   'b2glib/*.cpp',
+                                   'b2glib/*.h'],
       },
       install_requires=['numpy>=1.8.0',
                         'sympy>=0.7.6',
