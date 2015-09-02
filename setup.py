@@ -47,7 +47,7 @@ setup(name='Brian2GeNN',
                         'sympy>=0.7.6',
                         'pyparsing',
                         'jinja2>=2.7',
-                        'setuptools>=6.0'  # FIXME: setuptools>=6.0 is only needed for Windows
+                        'setuptools>=6.0',  # FIXME: setuptools>=6.0 is only needed for Windows
                         'brian2'
                        ],
       setup_requires=['numpy>=1.8.0',
