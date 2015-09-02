@@ -51,7 +51,7 @@ for mod_name in MOCK_MODULES:
 
 if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
     # -- Automatically generate the reference documentation -----------------------
-    import brian2genn.brian2genn.sphinxext.generate_reference as generate_reference
+    import brian2genn.sphinxext.generate_reference as generate_reference
     # first generate the reference documentation
     target_dir = './reference'
     if os.path.exists(target_dir):
