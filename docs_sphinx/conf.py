@@ -77,7 +77,7 @@ extensions = ['sphinx.ext.autodoc', 'sphinx.ext.doctest',
               'sphinx.ext.intersphinx', 'sphinx.ext.todo',
               'sphinx.ext.coverage', 'sphinx.ext.mathjax',
               'sphinx.ext.viewcode',
-              'brian2.sphinxext.briandoc',
+#              'brian2.sphinxext.briandoc',
               'sphinx.ext.autosummary',
               'sphinxcontrib.issuetracker']
 
@@ -243,8 +243,8 @@ latex_elements = {
 # Grouping the document tree into LaTeX files. List of tuples
 # (source start file, target name, title, author, documentclass [howto/manual]).
 latex_documents = [
-  ('index', 'Brian2.tex', u'Brian 2 Documentation',
-   u'Brian authors', 'manual'),
+  ('index', 'Brian2GeNN.tex', u'Brian2GeNN Documentation',
+   u'Brian2GeNN authors', 'manual'),
 ]
 
 # The name of an image file (relative to this directory) to place at the top of
@@ -287,8 +287,8 @@ man_pages = [
 # (source start file, target name, title, author,
 #  dir menu entry, description, category)
 texinfo_documents = [
-  ('index', 'Brian2', u'Brian 2 Documentation',
-   u'Brian authors', 'Brian2', 'One line description of project.',
+  ('index', 'Brian2GeNN', u'Brian2GeNN Documentation',
+   u'BrianGeNN authors', 'Brian2GeNN', 'One line description of project.',
    'Miscellaneous'),
 ]
 
