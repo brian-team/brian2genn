@@ -17,7 +17,7 @@ import sys, os, shutil
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
 # documentation root, use os.path.abspath to make it absolute, like shown here.
-#sys.path.insert(0, os.path.abspath('.'))
+sys.path.insert(0, os.path.abspath('..'))
 
 
 # Mock the scipy module
@@ -49,7 +49,7 @@ for mod_name in MOCK_MODULES:
 #os.environ['BRIAN2_DOCS_EXAMPLE_DIR'] = root_dir = os.path.abspath('../examples')
 #os.environ['BRIAN2_DOCS_TUTORIALS_DIR'] = root_dir = os.path.abspath('../tutorials')
 
-#if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
+if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
     # -- Automatically generate the reference documentation ------------------------
     import brian2genn.sphinxext.generate_reference as generate_reference
     # first generate the reference documentation
