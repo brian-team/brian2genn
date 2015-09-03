@@ -1,5 +1,5 @@
 Brian2GeNN documentation
-=====================
+=========================
 
 Contents:
 

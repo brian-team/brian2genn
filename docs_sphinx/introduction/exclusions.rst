@@ -20,7 +20,67 @@ to look into avoiding linked variables by combining groups that are
 linked.
 For example::
 
-  example
+  from brian2 import *
+  import brian2genn
+  set_device('genn_simple')
+
+  # Common deterministic input
+  N = 25
+  tau_input = 5*ms
+  input = NeuronGroup(N, 'dx/dt = -x / tau_input + sin(0.1*t/ tau_input) : 1')
+
+  # The noisy neurons receiving the same input
+  tau = 10*ms
+  sigma = .015
+  eqs_neurons = '''
+  dx/dt = (0.9 + .5 * I - x) / tau + sigma * (2 / tau)**.5 * xi : 1
+  I : 1 (linked)
+  '''
+  neurons = NeuronGroup(N, model=eqs_neurons, threshold='x > 1',
+                        reset='x = 0', refractory=5*ms)
+  neurons.x = 'rand()'
+  neurons.I = linked_var(input, 'x') # input.x is continuously fed into neurons.I
+  spikes = SpikeMonitor(neurons)
+
+  run(500*ms)example
+
+could be replaced by::
+
+  from brian2 import *
+  import brian2genn
+  set_device('genn_simple')
+
+  # Common deterministic input
+  N = 25
+  tau_input = 5*ms
+  input = NeuronGroup(1, 'dx/dt = -x / tau_input + sin(0.1*t/ tau_input) : 1')
+
+  # The noisy neurons receiving the same input
+  tau = 10*ms
+  sigma = .015
+  eqs_neurons = '''
+  dI/dt= -I / tau_input + sin(0.1*t/ tau_input) : 1')
+  dx/dt = (0.9 + .5 * I - x) / tau + sigma * (2 / tau)**.5 * xi : 1
+  '''
+  neurons = NeuronGroup(N, model=eqs_neurons, threshold='x > 1',
+                        reset='x = 0', refractory=5*ms)
+  neurons.x = 'rand()'
+  spikes = SpikeMonitor(neurons)
+
+  run(500*ms)example
+
+In this second solution the variable I is calculated multiple times
+within the 'noisy neurons', which in a sense is an unnecessary
+computational overhead. However, in the massively parallel GPU
+accelerators this is not necessarily a problem. Note that this method
+only works where the common input is deterministic. If the input had
+been::
+
+  input = NeuronGroup(1, 'dx/dt = -x / tau_input + (2 /tau_input)**.5 * xi : 1')
+
+i.e. contains a random element, then moving the common input into the
+'noisy neuron' population would make it individual, indipendent noisy
+inputs with likely quite different results.
 
 
 Timed arrays

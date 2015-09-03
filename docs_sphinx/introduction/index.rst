@@ -39,7 +39,13 @@ directory, whether or not to compile and run the project after
 creating it and whether to actually run on a GPU or to use the CPU
 mode of GeNN.
 
+Alternatively, one can use the 'simple device' to avoid having to give
+the somewhat involved build command. In this case one would set the
+command::
+  set_device('genn_simple')
+
+And this would automatically trigger a build with ``run=True`` after
+each ``run(duration)`` command.
+
 Not all features of brian work with Brian2GeNN. The current list of
 excluded features is detailed in :doc:`exclusions`.
-
-
