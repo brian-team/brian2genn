@@ -1,6 +1,9 @@
 Exclusions in Brian2GeNN
 ========================
 
+.. highlight:: python
+   :linenothreshold: 5
+
 Summed variables
 --------------------
 Summed variables are currently not supported in GeNN due to the cross-
@@ -18,8 +21,9 @@ GeNN. They are therefore at the moment not supported. In principle
 support for this feature could be added but in the meantime we suggest
 to look into avoiding linked variables by combining groups that are
 linked.
-For example::
-
+For example:
+.. code-block:: python
+   :emphasize-lines: 8,15,20
   from brian2 import *
   import brian2genn
   set_device('genn_simple')
@@ -44,18 +48,17 @@ For example::
 
   run(500*ms)example
 
-could be replaced by::
-
+could be replaced by:
+.. code-block:: python
+   :emphasize-lines: 11
   from brian2 import *
   import brian2genn
   set_device('genn_simple')
 
-  # Common deterministic input
   N = 25
   tau_input = 5*ms
-  input = NeuronGroup(1, 'dx/dt = -x / tau_input + sin(0.1*t/ tau_input) : 1')
 
-  # The noisy neurons receiving the same input
+  # Noisy neurons receiving the same deterministic input
   tau = 10*ms
   sigma = .015
   eqs_neurons = '''
