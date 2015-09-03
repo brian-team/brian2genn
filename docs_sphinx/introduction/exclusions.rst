@@ -22,6 +22,7 @@ support for this feature could be added but in the meantime we suggest
 to look into avoiding linked variables by combining groups that are
 linked.
 For example
+
 .. code-block:: python
   :emphasize-lines: 8,15,20
 
@@ -50,8 +51,10 @@ For example
   run(500*ms)example
 
 could be replaced by:
+
 .. code-block:: python
    :emphasize-lines: 11
+
   from brian2 import *
   import brian2genn
   set_device('genn_simple')
