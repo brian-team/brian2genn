@@ -1,5 +1,5 @@
 Exclusions in Brian2GeNN
-=====================
+========================
 
 Summed variables
 --------------------

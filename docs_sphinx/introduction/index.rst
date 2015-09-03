@@ -12,7 +12,7 @@ Brian2GeNN one can hence generate and run CUDA code on NVIDIA GPUs
 based solely in Brian 2 input.
 
 Using the Brian2GeNN interface
-=====================
+==============================
 
 In order to use the Brian2GeNN interface, all three Brian 2, GeNN and
 Brian2GeNN need to be fully installed. For GeNN there is also a
