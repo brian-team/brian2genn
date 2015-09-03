@@ -53,7 +53,7 @@ For example
 could be replaced by
 
 .. code-block:: python
-  :emphasize-lines: 11
+  :emphasize-lines: 12
 
   from brian2 import *
   import brian2genn

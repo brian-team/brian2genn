@@ -9,6 +9,8 @@ Contents:
 
    introduction/index
    introduction/exclusions
+   introduction/preferences
+   technical/how_it_works
 
 Indices and tables
 ==================
