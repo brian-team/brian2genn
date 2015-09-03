@@ -45,7 +45,7 @@ def format_heading(level, text):
     return '%s\n%s\n\n' % (text, underlining)
 
 
-def format_directive(module, destdir, package=None, basename='brian2'):
+def format_directive(module, destdir, package=None, basename='brian2genn'):
     """Create the automodule directive and add the options."""
     directive = '.. automodule:: %s\n' % makename(package, module)
     for option in OPTIONS:
@@ -53,7 +53,11 @@ def format_directive(module, destdir, package=None, basename='brian2'):
     directive += '\n'
     # document all the classes in the modules
     full_name = basename + '.' + module
-    __import__(full_name)
+    print 'processing ' + full_name
+    try:
+        __import__(full_name)
+    except:
+        return directive
     mod = sys.modules[full_name]
     dir_members = dir(mod)
     classes = []
@@ -71,7 +75,7 @@ def format_directive(module, destdir, package=None, basename='brian2'):
                 functions.append((member, member_obj))
             else:
                 variables.append((member, member_obj))
-    
+                    
     if classes:
         directive += '**Classes**\n\n'
         for member, member_obj in classes:

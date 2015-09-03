@@ -1,3 +1,6 @@
+'''
+Definitions of teh configuration for testing
+'''
 import brian2
 import os
 import shutil

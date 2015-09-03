@@ -13,6 +13,7 @@
 # serve to show the default.
 
 import sys, os, shutil
+import brian2genn.sphinxext.generate_reference as generate_reference
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -51,7 +52,7 @@ for mod_name in MOCK_MODULES:
 
 if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
     # -- Automatically generate the reference documentation -----------------------
-    import brian2genn.sphinxext.generate_reference as generate_reference
+#    import brian2genn.sphinxext.generate_reference as generate_reference
     # first generate the reference documentation
     target_dir = './reference'
     if os.path.exists(target_dir):
