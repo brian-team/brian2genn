@@ -50,10 +50,10 @@ For example
 
   run(500*ms)example
 
-could be replaced by:
+could be replaced by
 
 .. code-block:: python
-   :emphasize-lines: 11
+  :emphasize-lines: 11
 
   from brian2 import *
   import brian2genn
