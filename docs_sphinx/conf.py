@@ -13,7 +13,7 @@
 # serve to show the default.
 
 import sys, os, shutil
-import brian2genn.sphinxext.generate_reference as generate_reference
+#import brian2genn.sphinxext.generate_reference as generate_reference
 
 # If extensions (or modules to document with autodoc) are in another directory,
 # add these directories to sys.path here. If the directory is relative to the
@@ -50,16 +50,16 @@ for mod_name in MOCK_MODULES:
 #os.environ['BRIAN2_DOCS_EXAMPLE_DIR'] = root_dir = os.path.abspath('../examples')
 #os.environ['BRIAN2_DOCS_TUTORIALS_DIR'] = root_dir = os.path.abspath('../tutorials')
 
-if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
+#if 'BRIAN2GENN_DOCS_QUICK_REBUILD' not in os.environ:
     # -- Automatically generate the reference documentation -----------------------
 #    import brian2genn.sphinxext.generate_reference as generate_reference
     # first generate the reference documentation
-    target_dir = './reference'
-    if os.path.exists(target_dir):
-        shutil.rmtree(target_dir)
-    os.makedirs(target_dir)
-    abs_root = os.path.abspath('../brian2genn')
-    generate_reference.main(abs_root, ['tests', 'sphinxext'], target_dir)
+#    target_dir = './reference'
+#    if os.path.exists(target_dir):
+#        shutil.rmtree(target_dir)
+#    os.makedirs(target_dir)
+#    abs_root = os.path.abspath('../brian2genn')
+#    generate_reference.main(abs_root, ['tests', 'sphinxext'], target_dir)
     
     # -- Automatically generate the examples documentation -------------------------
 #    import brian2.sphinxext.generate_examples as generate_examples
