@@ -15,25 +15,18 @@ from setuptools.command.build_ext import build_ext
 from distutils.errors import CompileError, DistutilsPlatformError
 
 long_description = '''
-Brian2 is a simulator for spiking neural networks available on almost all platforms.
-The motivation for this project is that a simulator should not only save the time of
-processors, but also the time of scientists.
-
-It is the successor of Brian1 and shares its approach of being highly flexible
-and easily extensible. It is based on a code generation framework that allows
-to execute simulations using other programming languages and/or on different
-devices.
+Brian2 is a simulator for spiking neural networks available on a variety of platforms. It is the successor of Brian1 and shares its approach of being highly flexible and easily extensible. It is based on a code generation framework that allows to execute simulations using other programming languages and/or on different
+devices. Brian2Genn provides an interface to use GeNN (GPU enhanced Neuronal Networksm, https://github.com/genn-team/genn) as a backend device in Brian2. This allows users to run their Brian 2 scripts on NVIDIA GPU accelerators without any further necessary programming.
 
 We currently consider this software to be in the beta status, please report
-issues to the github issue tracker (https://github.com/brian-team/brian2/issues) or to the
-brian-development mailing list (http://groups.google.com/group/brian-development/)
+issues to the github issue tracker (https://github.com/brian-team/brian2genn/issues).
 
-Documentation for Brian2 can be found at http://brian2.readthedocs.org
+Documentation for Brian2GeNN can be found at http://brian2genn.readthedocs.org
 '''
 
 setup(name='Brian2GeNN',
       version='0.9b',
-      packages=find_packages(),
+      packages= ['brian2genn', 'brian2genn.sphinxext'], #find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
                                    'templates/*.h',
@@ -43,21 +36,23 @@ setup(name='Brian2GeNN',
                                    'b2glib/*.cpp',
                                    'b2glib/*.h'],
       },
-      install_requires=['numpy>=1.8.0',
-                        'sympy>=0.7.6',
-                        'pyparsing',
+      install_requires=[
+#'numpy>=1.8.0',
+#                        'sympy>=0.7.6',
+#                        'pyparsing',
                         'jinja2>=2.7',
                         'setuptools>=6.0',  # FIXME: setuptools>=6.0 is only needed for Windows
 #                        'brian2'
                        ],
-      setup_requires=['numpy>=1.8.0',
+      setup_requires=[
+#'numpy>=1.8.0',
                       'setuptools>=6.0'
                       ],
       provides=['brian2genn'],
       extras_require={'docs': ['sphinx>=1.0.1', 'sphinxcontrib-issuetracker']},
       use_2to3=True,
       url='http://www.briansimulator.org/',
-      description='An interface to use teh GeNN backend as a device in Brian 2',
+      description='An interface to use the GeNN framework as a device in Brian 2',
       long_description=long_description,
       author='Thomas Nowotny, Marcel Stimberg, Dan Goodman',
       author_email='t.nowotny at sussex.ac.uk',
