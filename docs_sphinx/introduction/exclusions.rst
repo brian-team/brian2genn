@@ -21,9 +21,10 @@ GeNN. They are therefore at the moment not supported. In principle
 support for this feature could be added but in the meantime we suggest
 to look into avoiding linked variables by combining groups that are
 linked.
-For example:
+For example
 .. code-block:: python
-   :emphasize-lines: 8,15,20
+  :emphasize-lines: 8,15,20
+
   from brian2 import *
   import brian2genn
   set_device('genn_simple')
