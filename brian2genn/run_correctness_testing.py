@@ -14,6 +14,8 @@ from brian2 import prefs
 prefs.codegen.loop_invariant_optimisations = False
 prefs.devices.genn.connectivity = 'AUTO'
 prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
+prefs.devices.genn.unix_compiler_flags="-O1"
+prefs.devices.genn.cpu_only=True
 
 #c = GeNNConfiguration()
 #c.before_run()
@@ -31,7 +33,7 @@ prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds
 #print run_feature_tests(configurations=[DefaultConfiguration, 
 #                                         GeNNConfiguration],
 #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
-run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
+print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
 #run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[ 
 NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
 # SynapsesSTDPNoAutapse, 

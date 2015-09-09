@@ -35,9 +35,11 @@ class engine
   void free_device_mem(); 
   void run(double, unsigned int); 
   void output_state(FILE *, unsigned int); 
+#ifndef CPU_ONLY
   void getStateFromGPU(); 
   void getSpikesFromGPU(); 
   void getSpikeNumbersFromGPU(); 
+#endif
   void output_spikes(FILE *, unsigned int); 
   void sum_spikes(); 
 };
@@ -76,11 +78,13 @@ engine::engine()
 
 void engine::init(unsigned int which)
 {
+#ifndef CPU_ONLY
   if (which == CPU) {
   }
   if (which == GPU) {
     copyStateToDevice();
   }
+#endif
 }
 
 //--------------------------------------------------------------------------
@@ -123,6 +127,7 @@ void engine::run(double runtime, //!< Duration of time to run the model for
       _run_{{sm.name}}_codeobject();
       {% endif %}
       {% endfor %}
+#ifndef CPU_ONLY
       if (which == GPU) {
 	  stepTimeGPU();
 	  t= t-DT;
@@ -144,6 +149,7 @@ void engine::run(double runtime, //!< Duration of time to run the model for
 	  pull{{sm.monitored}}StateFromDevice();
 	  {% endfor %}
       }
+#endif
       if (which == CPU) {
 	  stepTimeCPU();
 	  t= t-DT;
@@ -190,9 +196,10 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
 			   unsigned int which //!< Flag determining whether using GPU or CPU only
 			   )
 {
+#ifndef CPU_ONLY
   if (which == GPU) 
     copyStateFromDevice();
-
+#endif
   fprintf(f, "%f ", t);
   {% for neuron_model in neuron_models %}
   for (int i= 0; i < model.neuronN[{{loop.index-1}}]; i++) {
@@ -213,6 +220,7 @@ void engine::output_state(FILE *f, //!< File handle for a file to write the mode
   fprintf(f,"\n");
 }
 
+#ifndef CPU_ONLY
 //--------------------------------------------------------------------------
 /*! \brief Method for copying all variables of the last time step from the GPU
  
@@ -249,6 +257,8 @@ void engine::getSpikeNumbersFromGPU()
 {
   copySpikeNFromDevice();
 }
+
+#endif
 
 //--------------------------------------------------------------------------
 /*! \brief Method for writing the spikes occurred in the last time step to a file

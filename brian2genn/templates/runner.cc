@@ -105,7 +105,9 @@ int main(int argc, char *argv[])
   //-----------------------------------------------------------------
   
   eng.init(which);         // this includes copying g's for the GPU version
+#ifndef CPU_ONLY
   copyStateToDevice();
+#endif
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation
@@ -119,10 +121,12 @@ int main(int argc, char *argv[])
   fprintf(timef,"%f \n", timer.getElapsedTime());
 
   // get the final results from the GPU 
+#ifndef CPU_ONLY
   if (which == GPU) {
     eng.getStateFromGPU();
     eng.getSpikesFromGPU();
   }
+#endif
   // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
   {% if synapses.connectivity == 'DENSE' %}
@@ -178,7 +182,13 @@ using namespace std;
 #include "hr_time.cpp"
 #include "utils.h" // for CHECK_CUDA_ERRORS
 
+#ifndef CPU_ONLY
 #include <cuda_runtime.h>
+#else
+#define __host__
+#define __device__
+#endif
+
 
 #ifndef RAND
 #define RAND(Y,X) Y = Y * 1103515245 +12345;X= (unsigned int)(Y >> 16) & 32767

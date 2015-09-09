@@ -877,6 +877,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                         model_name= self.model_name,
                                                         ROOTDIR= os.path.abspath(directory),
                                                         source_files= self.source_files,
+                                                        prefs=prefs
                                                         ) 
             open(os.path.join(directory, 'WINmakefile'), 'w').write(Makefile_tmp)
         else:
@@ -885,6 +886,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                         model_name= self.model_name,
                                                         ROOTDIR= os.path.abspath(directory),
                                                         source_files= self.source_files,
+                                                        prefs= prefs
                                                         ) 
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
 
@@ -893,6 +895,10 @@ class GeNNDevice(CPPStandaloneDevice):
         if compile:
             with std_silent(debug):
                 if os.sys.platform == 'win32':
+                    # copy .cu file of cpu_only is desired
+                    if prefs.devices.genn.cpu_only:
+                        cmd= "copy runner.cu runnner_cpu_only.cc"  
+                        call(cmd, cwd=directory) 
                     bitversion= ''
                     if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
                         bitversion= 'x86_amd64'
@@ -904,12 +910,23 @@ class GeNNDevice(CPPStandaloneDevice):
                     # Users are required to set their path to "Visual Studio/VC", e.g.
                     # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
                     cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                    cmd= cmd+" && buildmodel.bat "+self.model_name + " && nmake /f WINmakefile clean && nmake /f WINmakefile"
+                    cmd= cmd+" && buildmodel.bat "+self.model_name + " 0 ";
+                    if prefs.devices.genn.cpu_only:
+                        cmd+= "cpu_only "
+                    cmd+= "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
+                    if prefs.devices.genn.cpu_only:
+                        cmd+= " CPU_ONLY=1"
                     call(cmd, cwd=directory)
                 else:
-                    call(["buildmodel.sh", self.model_name], cwd=directory)
-                    call(["make", "clean"], cwd=directory)
-                    call(["make"], cwd=directory)
+                    if prefs.devices.genn.cpu_only:
+                        shutil.copy(directory+"/runner.cu", directory+"/runner_cpu_only.cc")  
+                        call(["buildmodel.sh", self.model_name, "0", "cpu_only"], cwd=directory)
+                        call(["make", "clean"], cwd=directory)
+                        call(["make", "cpu_only"], cwd=directory)
+                    else:
+                        call(["buildmodel.sh", self.model_name], cwd=directory)
+                        call(["make", "clean"], cwd=directory)
+                        call(["make"], cwd=directory)
 
         if run:
             if not with_output:
@@ -919,6 +936,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 stdout = None
                 stderr = None
             start_time = time.time()
+            if prefs.devices.genn.cpu_only and use_GPU:
+                logger.warn("Cannot use a GPU in cpu_only mode. Using CPU.")
+                use_GPU= False
             gpu_arg = "1" if use_GPU else "0"
             if gpu_arg == "1":
                 where= 'on GPU'

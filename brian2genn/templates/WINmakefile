@@ -1,6 +1,12 @@
 EXECUTABLE	= runner.exe
+!IF "$(CPU_ONLY)" != "1"
 SOURCES		= runner.cu {% for source in source_files %} {{source}} {% endfor %}
+!ELSE
+SOURCES		= runner_cpu_only.cc {% for source in source_files %} {{source}} {% endfor %}
+!ENDIF
 
 EXTRA_INCLUDE	= /I %CD%
+OPTIMIZATIONFLAGS = {{prefs.devices.genn.windows_compiler_flags}}
+
 
 !include $(GENN_PATH)\userproject\include\makefile_common_win.mk
