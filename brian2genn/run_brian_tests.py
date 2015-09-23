@@ -11,4 +11,5 @@ from brian2.tests.features.input import *
 from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
-brian2.test([], test_codegen_independent=False, test_standalone='genn')
+if __name__=='__main__':
+    brian2.test([], test_codegen_independent=False, test_standalone='genn')
