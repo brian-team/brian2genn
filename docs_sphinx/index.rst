@@ -11,6 +11,12 @@ Contents:
    introduction/exclusions
    introduction/preferences
    technical/how_it_works
+   
+.. toctree::
+   :maxdepth: 1
+   :titlesonly:
+   
+   Reference documentation <reference/brian2genn>
 
 Indices and tables
 ==================
