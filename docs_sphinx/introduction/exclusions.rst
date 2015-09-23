@@ -86,7 +86,7 @@ been::
   input = NeuronGroup(1, 'dx/dt = -x / tau_input + (2 /tau_input)**.5 * xi : 1')
 
 i.e. contains a random element, then moving the common input into the
-'noisy neuron' population would make it individual, indipendent noisy
+'noisy neuron' population would make it individual, independent noisy
 inputs with likely quite different results.
 
 
