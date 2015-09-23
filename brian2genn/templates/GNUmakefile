@@ -3,8 +3,11 @@ EXECUTABLE      := runner
 {% if prefs['devices.genn.cpu_only'] %}
 SOURCES := runner_cpu_only.cc {% for source in source_files %} {{source}} {% endfor %}
 
+CPU_ONLY	:= 1
 {% else %}
 SOURCES         := runner.cu {% for source in source_files %} {{source}} {% endfor %}
+
+CPU_ONLY	:= 0
 
 {% endif %}
 

@@ -40,12 +40,12 @@ prefs.register_preferences(
     ),
     unix_compiler_flags= BrianPreference(
         docs= '''
-        This preference allows users to set their own compiler flags for teh eventual compilation of GeNN generated code. The flags will be applied both for the nvcc compilation and C++ compiler compilation (e.g. gcc, clang). This preference is for unix-based operating systems. ''',
+        This preference allows users to set their own compiler flags for the eventual compilation of GeNN generated code. The flags will be applied both for the nvcc compilation and C++ compiler compilation (e.g. gcc, clang). This preference is for unix-based operating systems. ''',
         default= '-O3 -ffast-math'
     ),
     windows_compiler_flags= BrianPreference(
         docs= '''
-                This preference allows users to set their own compiler flags for teh eventual compilation of GeNN generated code. The flags will be applied both for the nvcc compilation and C++ compiler compilation (e.g. MCVC cl). This preference is for the windows operating system. ''',
+                This preference allows users to set their own compiler flags for the eventual compilation of GeNN generated code. The flags will be applied both for the nvcc compilation and C++ compiler compilation (e.g. MCVC cl). This preference is for the windows operating system. ''',
         default= '/O2'
     ),
     cpu_only= BrianPreference(
