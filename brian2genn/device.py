@@ -1,5 +1,5 @@
 '''
-Module implementing the brian2genn interface by defining the "genn" device
+Module implementing the bulk of the brian2genn interface by defining the "genn" device.
 '''
 
 import tempfile
@@ -52,6 +52,9 @@ prefs['codegen.loop_invariant_optimisations'] = False
 prefs['core.network.default_schedule']= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
 
 def freeze(code, ns):
+    '''
+    Support function for substituting constant values.
+    ''' 
     # this is a bit of a hack, it should be passed to the template somehow
     for k, v in ns.items():
 
@@ -74,7 +77,11 @@ def freeze(code, ns):
             pass  # don't deal with this object
     return code
 
+
 def decorate(code, variables, parameters, do_final= True):
+    '''
+    Support function for inserting GeNN-specific "decorations" for variables and parameters, such as $(.).
+    '''
     # this is a bit of a hack, it should be part of the language probably
     for v in variables:
         code = word_substitute(code, {v : '$('+v+')'})
@@ -89,6 +96,8 @@ def decorate(code, variables, parameters, do_final= True):
     return code
 
 def extract_source_variables(variables, varname, smvariables):
+    '''Support function to extract the "atomic" variables used in a variable that is of instance `Subexpression`.
+    '''
     identifiers= get_identifiers(variables[varname].expr)
     for vnm, var in variables.items():
         if vnm in identifiers:
@@ -100,6 +109,7 @@ def extract_source_variables(variables, varname, smvariables):
                 
 class neuronModel(object):
     '''
+    Class that contains all relevant information of a neuron model. 
     '''
     def __init__(self):
         self.name=''
@@ -116,6 +126,7 @@ class neuronModel(object):
 
 class spikegeneratorModel(object):
     '''
+    Class that contains all relevant information of a spike generator group.
     '''
     def __init__(self):
         self.name=''
@@ -124,6 +135,7 @@ class spikegeneratorModel(object):
 
 class synapseModel(object):
     '''
+    Class that contains all relevant information about a synapse model.
     '''
     def __init__(self):
         self.name=''
@@ -149,6 +161,7 @@ class synapseModel(object):
 
 class spikeMonitorModel(object):
     '''
+    Class the contains all relevant information about a spike monitor.
     '''
     def __init__(self):
         self.name=''
@@ -157,6 +170,7 @@ class spikeMonitorModel(object):
 
 class rateMonitorModel(object):
     '''
+    CLass that contains all relevant information about a rate monitor.
     '''
     def __init__(self):
         self.name=''
@@ -165,6 +179,7 @@ class rateMonitorModel(object):
 
 class stateMonitorModel(object):
     '''
+    Class that contains all relvant information about a state monitor.
     '''
     def __init__(self):
         self.name=''
@@ -177,6 +192,9 @@ class stateMonitorModel(object):
         self.connectivity=''
 
 class CPPWriter(object):
+    '''
+    Class that provides the method for writing C++ files from a string of code.
+    '''
     def __init__(self, project_dir):
         self.project_dir = project_dir
         self.source_files = []
@@ -204,6 +222,7 @@ class CPPWriter(object):
 
 class GeNNDevice(CPPStandaloneDevice):
     '''
+    The main "genn" device. This does most of the translation work from Brian 2 generated code to functional GeNN code, assisted by the "GeNN language".
     '''
     def __init__(self):
         super(GeNNDevice, self).__init__()   
@@ -260,6 +279,9 @@ class GeNNDevice(CPPStandaloneDevice):
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
                     override_conditional_write=None):
+        '''
+        Processes abstract code into code objects and stores them in different arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
+        '''
         if template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
             codeobj_class= GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name, abstract_code, variables,
@@ -282,6 +304,9 @@ class GeNNDevice(CPPStandaloneDevice):
 
     #---------------------------------------------------------------------------------
     def make_main_lines(self):
+        '''
+        Generates the code lines that handle initialisation of Brian 2 cpp_standalone type arrays. These are then translated into the appropriate GeNN data structures in separately generated code.
+        '''
         main_lines = []
         procedures = [('', main_lines)]
         runfuncs = {}
@@ -355,6 +380,9 @@ class GeNNDevice(CPPStandaloneDevice):
         return main_lines
 
     def fix_random_generators(self,model,code):
+        '''
+        Translates cpp_standalone style random number generator calls into GeNN compatible calls by replacing the cpp_standalone `_vectorisation_idx` argument with the GeNN `_seed` argument.
+        '''
         for func in ['_rand', '_randn','_binomial','_binomial_1']:
             if func+'(_vectorisation_idx)' in code:
                 code = code.replace(func+'(_vectorisation_idx)', func+'(_seed)')
@@ -1004,6 +1032,9 @@ genn_device = GeNNDevice()
 all_devices['genn'] = genn_device
 
 class GeNNSimpleDevice(GeNNDevice):
+    '''
+    The `GeNNSimpleDevice` is construct that allows the code generation based "genn" device to be run without explicit call to the device.build() method.
+    '''
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=True, level=0, **kwds):
         super(GeNNSimpleDevice, self).network_run(net, duration,

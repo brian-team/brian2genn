@@ -1,5 +1,5 @@
 '''
-Definitions of teh configuration for testing
+Definitions of theconfiguration for correctness testing.
 '''
 import brian2
 import os
@@ -8,6 +8,9 @@ import sys
 import brian2genn
 from brian2.tests.features import (Configuration, DefaultConfiguration,
                                    run_feature_tests, run_single_feature_test)
+
+__all__ = ['GeNNConfiguration',
+           'GeNNConfigurationOptimized']
 
 class GeNNConfiguration(Configuration):
     name = 'GeNN'
