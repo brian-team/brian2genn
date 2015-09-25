@@ -58,7 +58,7 @@ def freeze(code, ns):
     # this is a bit of a hack, it should be passed to the template somehow
     for k, v in ns.items():
 
-        if (isinstance(v, Variable) and not isinstance(v, AttributeVariable) and
+        if (isinstance(v, Variable) and 
               v.scalar and v.constant and v.read_only):
             try:
                 v = v.get_value()
@@ -318,24 +318,28 @@ class GeNNDevice(CPPStandaloneDevice):
                     main_lines.append('_run_%s();' % codeobj.name)
             elif func=='run_network':
                  net, netcode = args
-                 #                 main_lines.extend(netcode)
+                 # do nothing
             elif func=='set_by_constant':
-                arrayname, value = args
+                arrayname, value, is_dynamic = args
+                size_str = arrayname+'.size()' if is_dynamic else '_num_'+arrayname
                 code = '''
-                for(int i=0; i<_num_{arrayname}; i++)
+                for(int i=0; i<{size_str}; i++)
                 {{
                     {arrayname}[i] = {value};
                 }}
-                '''.format(arrayname=arrayname, value=CPPNodeRenderer().render_expr(repr(value)))
+                '''.format(arrayname=arrayname, size_str=size_str,
+                           value=CPPNodeRenderer().render_expr(repr(value)))
                 main_lines.extend(code.split('\n'))
             elif func=='set_by_array':
-                arrayname, staticarrayname = args
+                arrayname, staticarrayname, is_dynamic = args
+                size_str = arrayname+'.size()' if is_dynamic else '_num_'+arrayname
                 code = '''
-                for(int i=0; i<_num_{staticarrayname}; i++)
+                for(int i=0; i<{size_str}; i++)
                 {{
                     {arrayname}[i] = {staticarrayname}[i];
                 }}
-                '''.format(arrayname=arrayname, staticarrayname=staticarrayname)
+                '''.format(arrayname=arrayname, size_str=size_str,
+                           staticarrayname=staticarrayname)
                 main_lines.extend(code.split('\n'))
             elif func=='set_by_single_value':
                 arrayname, item, value = args
@@ -467,14 +471,14 @@ class GeNNDevice(CPPStandaloneDevice):
         for codeobj in self.code_objects.itervalues():
             lines = []
             for k, v in codeobj.variables.iteritems():
-                if isinstance(v, AttributeVariable):
-                    # We assume all attributes are implemented as property-like methods
-                    line = 'const {c_type} {varname} = {objname}.{attrname}();'
-                    # HACK: Avoid over-shadowing the global variable 't' provided by GeNN - code should use GeNN's t anyway
-                    if (k != 't'):
-                        lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
-                                                 attrname=v.attribute))
-                elif isinstance(v, ArrayVariable):
+                # if isinstance(v, AttributeVariable):
+                #     # We assume all attributes are implemented as property-like methods
+                #     line = 'const {c_type} {varname} = {objname}.{attrname}();'
+                #     # HACK: Avoid over-shadowing the global variable 't' provided by GeNN - code should use GeNN's t anyway
+                #     if (k != 't'):
+                #         lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
+                #                                  attrname=v.attribute))
+                if isinstance(v, ArrayVariable):
                     try:
                         if isinstance(v, DynamicArrayVariable):
                             if v.dimensions == 1:
@@ -995,16 +999,9 @@ class GeNNDevice(CPPStandaloneDevice):
         if self.run_duration is not None:
             raise NotImplementedError('Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
-        if any([obj.clock is not defaultclock for obj in net.objects]):
-            raise NotImplementedError('Multiple clocks are not supported for the genn device')
-# Raise NotImplementedError if sub-groups were used (need to fish those out - I am guessing checking all "source" and "target" attributes should identify them?
-#        for obj in net.objects:
-#            if hasattr(obj,'source'):
-#                if isinstance(obj.source,Subgroup):
-#                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
-#            if hasattr(obj,'target'):
-#                if isinstance(obj.target,Subgroup):
-#                    raise NotImplementedError('Sub-groups are not supported for the genn device. Use multiple neuron groups or adjust your connectivity and connect the full neuron group.')
+        for obj in net.objects:
+            if obj.clock.name is not 'defaultclock':
+                raise NotImplementedError('Multiple clocks are not supported for the genn device')
 
         for obj in net.objects:
             if hasattr(obj,'_linked_variables'):
@@ -1015,11 +1012,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 if obj.template in [ 'summed_variable' ]:
                     raise NotImplementedError('The function of %s is not yet supported in GeNN.' % obj.template)
                                 
-#        for obj in net.objects:
-#            print obj.name
-#            print obj.__dict__
-#            print '========================================='
-
         print 'running brian code generation ...'
         super(GeNNDevice, self).network_run(net= net, duration= duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
 

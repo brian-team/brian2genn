@@ -34,14 +34,10 @@ class engine
   void init(unsigned int); 
   void free_device_mem(); 
   void run(double, unsigned int); 
-  void output_state(FILE *, unsigned int); 
 #ifndef CPU_ONLY
   void getStateFromGPU(); 
   void getSpikesFromGPU(); 
-  void getSpikeNumbersFromGPU(); 
 #endif
-  void output_spikes(FILE *, unsigned int); 
-  void sum_spikes(); 
 };
 
 #endif
@@ -184,41 +180,6 @@ void engine::run(double runtime, //!< Duration of time to run the model for
   }
 }
 
-//--------------------------------------------------------------------------
-// output functions
-
-//--------------------------------------------------------------------------
-/*! \brief Method for copying from device and writing out to file of the entire state of the model
- */
-//--------------------------------------------------------------------------
-
-void engine::output_state(FILE *f, //!< File handle for a file to write the model state to 
-			   unsigned int which //!< Flag determining whether using GPU or CPU only
-			   )
-{
-#ifndef CPU_ONLY
-  if (which == GPU) 
-    copyStateFromDevice();
-#endif
-  fprintf(f, "%f ", t);
-  {% for neuron_model in neuron_models %}
-  for (int i= 0; i < model.neuronN[{{loop.index-1}}]; i++) {
-      {% for var in neuron_model.variables %}
-      fprintf(f, "%f ", (float) {{var}}{{neuron_model.name}}[i]);
-      {% endfor %}
-  }
-  {% endfor %}
-
-  {% for synapse_model in synapse_models %}
-  for (int i= 0; i < model.neuronN[model.synapseSource[{{loop.index-1}}]]*model.neuronN[model.synapseTarget[{{loop.index-1}}]]; i++) {
-      {% for var in synapse_model.variables %}
-      fprintf(f, "%f ", (float) {{var}}{{synapse_model.name}}[i]);
-      {% endfor %}
-  }
-  {% endfor %}
-  
-  fprintf(f,"\n");
-}
 
 #ifndef CPU_ONLY
 //--------------------------------------------------------------------------
@@ -246,47 +207,9 @@ void engine::getSpikesFromGPU()
   copySpikesFromDevice();
 }
 
-//--------------------------------------------------------------------------
-/*! \brief Method for copying the number of spikes in all neuron populations that have occurred during the last time step
- 
-This method is a simple wrapper for the convenience function copySpikeNFromDevice() provided by GeNN.
-*/
-//--------------------------------------------------------------------------
-
-void engine::getSpikeNumbersFromGPU() 
-{
-  copySpikeNFromDevice();
-}
 
 #endif
 
-//--------------------------------------------------------------------------
-/*! \brief Method for writing the spikes occurred in the last time step to a file
- */
-//--------------------------------------------------------------------------
-
-void engine::output_spikes(FILE *f, //!< File handle for a file to write spike times to
-			    unsigned int which //!< Flag determining whether using GPU or CPU only
-			    )
-{
-  {% for neuron_model in neuron_models %}
-  for (int i= 0; i < glbSpkCnt{{neuron_model.name}}[0]; i++) {
-    fprintf(f, "%f %d\n", t, glbSpk{{neuron_model.name}}[i]);
-  }
-  {% endfor %}
-}
-
-//--------------------------------------------------------------------------
-/*! \brief Method for summing up spike numbers
- */
-//--------------------------------------------------------------------------
-
-void engine::sum_spikes()
-{
-  {% for neuron_model in neuron_models %}
-  sum{{neuron_model.name}}+= glbSpkCnt{{neuron_model.name}}[0];
-  {% endfor %}
-}
 
 #endif	
 

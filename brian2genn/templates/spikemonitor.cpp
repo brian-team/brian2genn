@@ -59,7 +59,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 		_true_events++;
 	    }
 	}
-	{{N}}[0] += _true_events;
+	{{N}} += _true_events;
     }
 
 {% endblock %}
@@ -71,7 +71,7 @@ void _debugmsg_{{codeobj_name}}()
 	{# We need the pointers and constants here to get the access to N working #}
     %CONSTANTS%
     {{pointers_lines|autoindent}}
-	std::cout << "Number of spikes: " << {{N}}[0] << endl;
+	std::cout << "Number of spikes: " << {{N}} << endl;
 }
 {% endblock %}
 
