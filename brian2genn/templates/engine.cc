@@ -21,12 +21,6 @@ class engine
 {
  public:
   NNmodel model;
-  //------------------------------------------------------------------------
-  // on the device:
-  //------------------------------------------------------------------------
-  {% for neuron_model in neuron_models %} 
-  unsigned int sum{{neuron_model.name}};
-  {% endfor %}
   // end of data fields 
 
   engine();
@@ -48,6 +42,8 @@ class engine
 #ifndef _ENGINE_CC_
 #define _ENGINE_CC_
 
+double brian::_last_run_time;
+double brian::_last_run_completed_fraction;
 
 //--------------------------------------------------------------------------
 /*! \file engine.cc
@@ -62,9 +58,8 @@ engine::engine()
   modelDefinition(model);
   allocateMem();
   initialize();
-  {% for neuron_model in neuron_models %}
-  sum{{neuron_model.name}}= 0;
-  {% endfor %}
+  brian::_last_run_time= 0.0;
+  brian::_last_run_completed_fraction= 0.0;
 }
 
 //--------------------------------------------------------------------------
@@ -96,13 +91,18 @@ engine::~engine()
  */
 //--------------------------------------------------------------------------
 
-void engine::run(double runtime, //!< Duration of time to run the model for 
+void engine::run(double duration, //!< Duration of time to run the model for 
 		  unsigned int which //!< Flag determining whether to run on GPU or CPU only
 		  )
 {
+  std::clock_t start, current; 
+  const double t_start = t;
   unsigned int pno;
   unsigned int offset= 0;
-  int riT= (int) (runtime/DT+1e-2);
+
+  start = std::clock();
+  int riT= (int) (duration/DT+1e-2);
+  double elapsed_realtime;
 
   for (int i= 0; i < riT; i++) {
       // report state
@@ -177,6 +177,20 @@ void engine::run(double runtime, //!< Duration of time to run the model for
       {% for rateMon in rate_monitor_models %}
       _run_{{rateMon.name}}_codeobject();
       {% endfor %}
+      {% if maximum_run_time is not none %}
+      current= std::clock();
+      elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
+      if (elapsed_realtime > {{maximum_run_time}}) {
+	  break;
+      }
+      {% endif %}
+  }  
+  brian::_last_run_time = elapsed_realtime;
+  if (duration > 0)
+  {
+      brian::_last_run_completed_fraction = (t-t_start)/duration;
+  } else {
+      brian::_last_run_completed_fraction = 1.0;
   }
 }
 

@@ -891,6 +891,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      )        
         open(os.path.join(directory, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
         open(os.path.join(directory, 'runner.h'), 'w').write(runner_tmp.h_file)
+        maximum_run_time = self._maximum_run_time
+        if maximum_run_time is not None:
+            maximum_run_time = float(maximum_run_time)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models= self.neuron_models,
                                                      spikegenerator_models= self.spikegenerator_models,
@@ -899,6 +902,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      rate_monitor_models= self.rate_monitor_models,
                                                      state_monitor_models= self.state_monitor_models,
                                                      model_name= self.model_name,
+                                                     maximum_run_time= maximum_run_time
                                                      )        
         open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
         open(os.path.join(directory, 'engine.h'), 'w').write(engine_tmp.h_file)

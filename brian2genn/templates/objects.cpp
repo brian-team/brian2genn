@@ -6,11 +6,9 @@
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
 #include "brianlib/stdint_compat.h"
-//#include "network.h"
 #include<vector>
 #include<iostream>
 #include<fstream>
-
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -186,6 +184,18 @@ void _write_arrays()
 	{
 	    std::cout << "Error writing profiling info to file." << std::endl;
 	}
+
+	// Write last run info to disk
+	ofstream outfile_last_run_info;
+	outfile_last_run_info.open("results/last_run_info.txt", ios::out);
+	if(outfile_last_run_info.is_open())
+	{
+		outfile_last_run_info << (brian::_last_run_time) << " " << (brian::_last_run_completed_fraction) << std::endl;
+		outfile_last_run_info.close();
+	} else
+	{
+	    std::cout << "Error writing last run info to file." << std::endl;
+	}
 }
 
 void _dealloc_arrays()
@@ -278,6 +288,8 @@ extern SynapticPathway<double> {{path.name}};
 extern double {{codeobj.name}}_profiling_info;
 {% endfor %}
 
+extern double _last_run_time;
+extern double _last_run_completed_fraction;
 }
 
 void _init_arrays();
