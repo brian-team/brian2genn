@@ -9,6 +9,7 @@
 #include<vector>
 #include<iostream>
 #include<fstream>
+#include <ctime>
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}

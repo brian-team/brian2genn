@@ -15,6 +15,7 @@
  */
 //--------------------------------------------------------------------------
 
+#include <ctime>
 #include "magicnetwork_model_CODE/definitions.h"
 
 class engine
