@@ -15,6 +15,7 @@
  */
 //--------------------------------------------------------------------------
 
+#include <ctime>
 #include "magicnetwork_model_CODE/definitions.h"
 
 class engine
@@ -186,7 +187,7 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% endif %}
   }  
   brian::_last_run_time = elapsed_realtime;
-  if (duration > 0)
+  if (duration > 0.0)
   {
       brian::_last_run_completed_fraction = (t-t_start)/duration;
   } else {

@@ -2,16 +2,15 @@
 Module implementing the bulk of the brian2genn interface by defining the "genn" device.
 '''
 
+import os
+import shutil
+from subprocess import call
+import inspect
+from collections import defaultdict
 import tempfile
 import pprint
 import numpy
-import numpy as np
-import os
 import numbers
-from subprocess import call
-import inspect
-import shutil
-from collections import defaultdict
 import time
 
 from brian2.units import second
@@ -990,7 +989,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 call(["./runner", "test", str(self.run_duration), gpu_arg],
                               cwd=directory, stdout=stdout, stderr=stderr)
             self.has_been_run= True
-            self._last_run_time = time.time()-start_time
+            last_run_info = open(os.path.join(directory,'results/last_run_info.txt'), 'r').read()
+            self._last_run_time, self._last_run_completed_fraction = map(float, last_run_info.split())
+
 
 #------------------------------------------------------------------------------
 # the network run function - needs to throw some errors for not-implemented features such as multiple clocks

@@ -9,6 +9,7 @@
 #include<vector>
 #include<iostream>
 #include<fstream>
+#include <ctime>
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -190,8 +191,9 @@ void _write_arrays()
 	outfile_last_run_info.open("results/last_run_info.txt", ios::out);
 	if(outfile_last_run_info.is_open())
 	{
-		outfile_last_run_info << (brian::_last_run_time) << " " << (brian::_last_run_completed_fraction) << std::endl;
-		outfile_last_run_info.close();
+	    outfile_last_run_info.precision(10);
+	    outfile_last_run_info << (brian::_last_run_time) << " " << (brian::_last_run_completed_fraction) << std::endl;
+	    outfile_last_run_info.close();
 	} else
 	{
 	    std::cout << "Error writing last run info to file." << std::endl;
