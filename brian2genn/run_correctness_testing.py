@@ -24,7 +24,7 @@ if __name__=='__main__':
     #f.run()
     #c.after_run()
     #print run_single_feature_test(CPPStandaloneConfiguration, SynapsesSTDP)
-    print run_single_feature_test(GeNNConfiguration, SpikeGeneratorGroupTest)
+    #print run_single_feature_test(GeNNConfiguration, SpikeGeneratorGroupTest)
     #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
     #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
     #print run_feature_tests(configurations=[DefaultConfiguration,
@@ -34,15 +34,12 @@ if __name__=='__main__':
     #print run_feature_tests(configurations=[DefaultConfiguration, 
     #                                         GeNNConfiguration],
     #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
-    #print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
+    print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
         #run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[ 
-    #    NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
+        NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
         # SynapsesSTDPNoAutapse, 
-    #    SynapsesSTDP, 
-    #    SpikeMonitorTest,
-    #    StateMonitorTest, SpikeGeneratorGroupTest 
-    #]).tables_and_exceptions
-    #print run_feature_tests(configurations=[DefaultConfiguration,
-    #                                        GeNNConfiguration], feature_tests=[SynapsesSTDP]).tables_and_exceptions
-    #print run_single_feature_test(CPPStandaloneConfiguration, SpikeMonitorTest)
-    #print run_single_feature_test(GeNNConfiguration, SpikeMonitorTest)
+        SynapsesSTDP, 
+        SpikeMonitorTest,
+        StateMonitorTest, SpikeGeneratorGroupTest 
+    ]).tables_and_exceptions
+    
