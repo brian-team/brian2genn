@@ -6,10 +6,13 @@
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
 #include "brianlib/stdint_compat.h"
+#include "randomkit.h"
 #include<vector>
 #include<iostream>
 #include<fstream>
 #include <ctime>
+
+std::vector< rk_state* > brian::_mersenne_twister_states;
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -99,6 +102,8 @@ void _init_arrays()
 	{{name}} = new {{dtype_spec}}[{{N}}];
 	{% endif %}
 	{% endfor %}
+
+	_mersenne_twister_states.push_back(new rk_state());
 }
 
 void _load_arrays()
@@ -239,11 +244,13 @@ void _dealloc_arrays()
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
 #include "brianlib/stdint_compat.h"
-//#include "network.h"
+#include "randomkit.h"
 #include<vector>
 {{ openmp_pragma('include') }}
 
 namespace brian {
+
+extern std::vector< rk_state* > _mersenne_twister_states;
 
 //////////////// clocks ///////////////////
 {% for clock in clocks %}

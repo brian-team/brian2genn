@@ -13,6 +13,7 @@ import numpy
 import numbers
 import time
 
+import brian2
 from brian2.units import second
 from brian2.units import have_same_dimensions
 from brian2.codegen.generators.cpp_generator import c_data_type
@@ -855,6 +856,16 @@ class GeNNDevice(CPPStandaloneDevice):
                      os.path.join(directory, 'brianlib', 'spikequeue.h'))
         shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), 
                      os.path.join(directory, 'brianlib', 'stdint_compat.h'))
+
+# Copy the RandomKit implementation
+        if not os.path.exists(os.path.join(directory, 'brianlib', 'randomkit')):
+            os.mkdir(os.path.join(directory, 'brianlib', 'randomkit'))
+        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(brian2))[0],
+                                  'random', 'randomkit', 'randomkit.c'),
+                     os.path.join(directory, 'brianlib', 'randomkit', 'randomkit.c'))
+        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(brian2))[0],
+                                  'random', 'randomkit', 'randomkit.h'),
+                     os.path.join(directory, 'brianlib', 'randomkit', 'randomkit.h'))
 
 #------------------------------------------------------------------------------
 # Copy the b2glib directory

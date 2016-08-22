@@ -5,9 +5,9 @@ CPU_ONLY	= 1
 {% else %}
 CPU_ONLY	= 0
 {% endif %}
-SOURCES		= main.cpp {% for source in source_files %} {{source}} {% endfor %}
+SOURCES		= main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.c
 
-EXTRA_INCLUDE	= /I %CD%
+EXTRA_INCLUDE	= /I %CD% /I brianlib/randomkit
 OPTIMIZATIONFLAGS = {{prefs.devices.genn.windows_compiler_flags}}
 
 
