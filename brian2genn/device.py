@@ -400,7 +400,7 @@ class GeNNDevice(CPPStandaloneDevice):
         return model, code
 
     #---------------------------------------------------------------------------------
-    def build(self, directory='GeNNworkspace', compile=True, run=True, use_GPU=True,
+    def build(self, directory='GeNNworkspace', compile=True, run=True, use_GPU=False,
               debug=False, with_output=True, direct_call=True):
         '''
         This function does the main post-translation work for the genn device. It uses the code generated during/before run() and extracts information about neuron groups, synapse groups, monitors, etc. that is then formatted for use in GeNN-specific templates.
@@ -774,11 +774,17 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in spike_monitors:
             if obj.event != 'spike':
                 raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
+            if set(obj.record_variables) != set(['i', 't']):
+                raise NotImplementedError('GeNN only supports SpikeMonitors that record spike time and index.')
             sm= spikeMonitorModel()
             sm.name= obj.name
             if (hasattr(obj,'when')):
-                if (not obj.when == 'end'):
-                    logger.warn("Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
+                if (not obj.when in ['end', 'thresholds']):
+                    # GeNN always records in the end slot but this should almost never make a difference and
+                    # we therefore do not raise a warning if the SpikeMonitor records in the default thresholds
+                    # slot. We do raise a NotImplementedError if the user manually changed the time slot to
+                    # something else -- there was probably a reason for doing it.
+                    raise NotImplementedError("Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
             src= obj.source
             if isinstance(src,Subgroup):
                 src= src.source
