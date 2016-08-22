@@ -403,7 +403,7 @@ class GeNNDevice(CPPStandaloneDevice):
               debug=False, with_output=True):
         '''
         This function does the main post-translation work for the genn device. It uses the code generated during/before run() and extracts information about neuron groups, synapse groups, monitors, etc. that is then formatted for use in GeNN-specific templates.
-        The overarching strategy of the brian2genn interface is to use cpp_standalone code generation and templates for most of the "user-side code" (in the meaning defined in GeNN) and have GeNN specific templates for the model definition and the main code for the executable that pulls everything together (in runner.cc and engine.cc templates). The haqndling of input/output arrays for everything is lent from cpp_standalone and the cpp_standalone arrays are then translated into GeNN-suitable data structures using the static (not code-generated) b2glib library functions. This means that the GeNN specific cod only has to be concerned about execyting the correct model and feeding back results into the appropriate cpp_standlaone data structures.
+        The overarching strategy of the brian2genn interface is to use cpp_standalone code generation and templates for most of the "user-side code" (in the meaning defined in GeNN) and have GeNN specific templates for the model definition and the main code for the executable that pulls everything together (in main.cc and engine.cc templates). The haqndling of input/output arrays for everything is lent from cpp_standalone and the cpp_standalone arrays are then translated into GeNN-suitable data structures using the static (not code-generated) b2glib library functions. This means that the GeNN specific cod only has to be concerned about execyting the correct model and feeding back results into the appropriate cpp_standlaone data structures.
         '''
 
         print 'building genn executable ...'
@@ -526,7 +526,7 @@ class GeNNDevice(CPPStandaloneDevice):
         rate_monitors= [ obj for obj in net.objects if isinstance(obj, PopulationRateMonitor)]
         state_monitors= [ obj for obj in net.objects if isinstance(obj, StateMonitor)]
         self.model_name= net.name+'_model'
-        self.dtDef= '#define DT '+ repr(float(defaultclock.dt))
+        self.dtDef= 'model.setDT('+ repr(float(defaultclock.dt))+');'
         for obj in neuron_groups:
             # throw error if events other than spikes are used
             if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
@@ -880,7 +880,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    )
         open(os.path.join(directory,self.model_name+'.cc'), 'w').write(model_tmp)
 
-        runner_tmp = GeNNCodeObject.templater.runner(None, None,
+        runner_tmp = GeNNCodeObject.templater.main(None, None,
                                                      neuron_models= self.neuron_models,
                                                      synapse_models= self.synapse_models,
                                                      model_name= self.model_name,
@@ -888,8 +888,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      header_files= self.header_files,
                                                      source_files= self.source_files,
                                                      )        
-        open(os.path.join(directory, 'runner.cu'), 'w').write(runner_tmp.cpp_file)
-        open(os.path.join(directory, 'runner.h'), 'w').write(runner_tmp.h_file)
+        open(os.path.join(directory, 'main.cu'), 'w').write(runner_tmp.cpp_file)
+        open(os.path.join(directory, 'main.h'), 'w').write(runner_tmp.h_file)
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
@@ -932,7 +932,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 if os.sys.platform == 'win32':
                     # copy .cu file of cpu_only is desired
                     if prefs.devices.genn.cpu_only:
-                        cmd= "copy runner.cu runnner_cpu_only.cc"  
+                        cmd= "copy main.cu main_cpu_only.cc"  
                         call(cmd, cwd=directory) 
                     bitversion= ''
                     if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
@@ -954,7 +954,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     call(cmd, cwd=directory)
                 else:
                     if prefs.devices.genn.cpu_only:
-                        shutil.copy(directory+"/runner.cu", directory+"/runner_cpu_only.cc")  
+                        shutil.copy(directory+"/main.cu", directory+"/main_cpu_only.cc")  
                         call(["buildmodel.sh", self.model_name, "DEBUG=0", "CPU_ONLY=1"], cwd=directory)
                         call(["make", "clean"], cwd=directory)
                         call(["make", "release", "CPU_ONLY=1"], cwd=directory)
@@ -981,12 +981,12 @@ class GeNNDevice(CPPStandaloneDevice):
                 where= 'on CPU'
             print 'executing genn binary %s ...' % where
             if  os.sys.platform == 'win32':
-                cmd= directory + "\\runner.exe test " + str(self.run_duration) + " " + gpu_arg
+                cmd= directory + "\\main.exe test " + str(self.run_duration) + " " + gpu_arg
                 #os.system(cmd)
                 call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
             else:
-                #print ["./runner", "test", str(self.run_duration), gpu_arg]
-                call(["./runner", "test", str(self.run_duration), gpu_arg],
+                #print ["./main", "test", str(self.run_duration), gpu_arg]
+                call(["./main", "test", str(self.run_duration), gpu_arg],
                               cwd=directory, stdout=stdout, stderr=stderr)
             self.has_been_run= True
             last_run_info = open(os.path.join(directory,'results/last_run_info.txt'), 'r').read()

@@ -26,7 +26,7 @@ if __name__=='__main__':
     #print run_single_feature_test(CPPStandaloneConfiguration, SynapsesSTDP)
     #print run_single_feature_test(GeNNConfiguration, SpikeGeneratorGroupTest)
     #print run_single_feature_test(CPPStandaloneConfiguration, NeuronGroupLIFRefractory)
-    #print run_single_feature_test(DefaultConfiguration, SynapsesPost)
+    #print run_single_feature_test(GeNNConfiguration, SynapsesPost)
     #print run_feature_tests(configurations=[DefaultConfiguration,
     #                                        GeNNConfiguration],
     #                        feature_tests=[SynapsesPre,
@@ -37,7 +37,7 @@ if __name__=='__main__':
     print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration,CPPStandaloneConfiguration],feature_tests=[ 
         #run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[ 
         NeuronGroupIntegrationLinear, NeuronGroupIntegrationEuler, NeuronGroupLIF, NeuronGroupLIFRefractory, SynapsesPre, SynapsesPost,
-        # SynapsesSTDPNoAutapse, 
+         #SynapsesSTDPNoAutapse, 
         SynapsesSTDP, 
         SpikeMonitorTest,
         StateMonitorTest, SpikeGeneratorGroupTest 
