@@ -562,6 +562,9 @@ class GeNNDevice(CPPStandaloneDevice):
                     continue
                     
                 codeobj = objects[obj.name+suffix].codeobj
+                if codeobj is None:
+                    continue
+
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
