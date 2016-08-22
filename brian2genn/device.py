@@ -1012,7 +1012,10 @@ class GeNNDevice(CPPStandaloneDevice):
 #------------------------------------------------------------------------------
 # the network run function - needs to throw some errors for not-implemented features such as multiple clocks
     def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, level=0, **kwds):
+                    namespace=None, profile=False, level=0, **kwds):
+        # We quietly ignore the profile argument instead of raising a warning
+        # every time...
+
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
 + '%s') % ', '.join(kwds.keys()))
