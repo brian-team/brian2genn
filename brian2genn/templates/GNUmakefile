@@ -1,6 +1,6 @@
 ROOTDIR         := {{ROOTDIR}}
 EXECUTABLE      := main
-SOURCES         := main.cu {% for source in source_files %} {{source}} {% endfor %}
+SOURCES         := main.cc {% for source in source_files %} {{source}} {% endfor %}
 
 INCLUDE_FLAGS   := -I.
 OPTIMIZATIONFLAGS := {{prefs['devices.genn.unix_compiler_flags']}}

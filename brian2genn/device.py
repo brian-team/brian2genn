@@ -888,7 +888,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      header_files= self.header_files,
                                                      source_files= self.source_files,
                                                      )        
-        open(os.path.join(directory, 'main.cu'), 'w').write(runner_tmp.cpp_file)
+        open(os.path.join(directory, 'main.cc'), 'w').write(runner_tmp.cpp_file)
         open(os.path.join(directory, 'main.h'), 'w').write(runner_tmp.h_file)
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
@@ -954,12 +954,12 @@ class GeNNDevice(CPPStandaloneDevice):
                     call(cmd, cwd=directory)
                 else:
                     if prefs.devices.genn.cpu_only:
-                        shutil.copy(directory+"/main.cu", directory+"/main_cpu_only.cc")  
-                        call(["buildmodel.sh", self.model_name, "DEBUG=0", "CPU_ONLY=1"], cwd=directory)
+                        #shutil.copy(directory+"/main.cu", directory+"/main_cpu_only.cc")
+                        call(["genn-buildmodel.sh", self.model_name+'.cc', "-c"], cwd=directory)
                         call(["make", "clean"], cwd=directory)
-                        call(["make", "release", "CPU_ONLY=1"], cwd=directory)
+                        call(["make", "CPU_ONLY=1"], cwd=directory)
                     else:
-                        call(["buildmodel.sh", self.model_name], cwd=directory)
+                        call(["genn-buildmodel.sh", self.model_name], cwd=directory)
                         call(["make", "clean"], cwd=directory)
                         call(["make"], cwd=directory)
 
