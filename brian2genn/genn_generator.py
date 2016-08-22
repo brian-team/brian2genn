@@ -257,75 +257,131 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 
 # Functions that need to be implemented specifically
 randn_code = '''
+#ifdef CPU_ONLY
+inline double _ranf(uint64_t &seed)
+{
+    uint64_t x;
+    MYRAND(seed,x);
+    return ((double)x)/MYRAND_MAX;
+}
 
-    __host__ __device__ inline double _ranf(uint64_t &seed)
-    {
-        uint64_t x;
-        MYRAND(seed,x);
-        return ((double)x)/MYRAND_MAX;
-    }
+double _randn(uint64_t seed)
+{
+     double x1, x2, w;
+     double y1, y2;
+     do {
+         x1 = 2.0 * _ranf(seed) - 1.0;
+         x2 = 2.0 * _ranf(seed) - 1.0;
+         w = x1 * x1 + x2 * x2;
+     } while ( w >= 1.0 );
 
-    __host__ __device__ double _randn(uint64_t seed)
-    {
-         double x1, x2, w;
-         double y1, y2;
-         do {
-             x1 = 2.0 * _ranf(seed) - 1.0;
-             x2 = 2.0 * _ranf(seed) - 1.0;
-             w = x1 * x1 + x2 * x2;
-         } while ( w >= 1.0 );
+     w = sqrt( (-2.0 * log( w ) ) / w );
+     y1 = x1 * w;
+     return y1;
+}
+#else
+inline double _ranf(uint64_t &seed)
+{
+    uint64_t x;
+    MYRAND(seed,x);
+    return ((double)x)/MYRAND_MAX;
+}
 
-         w = sqrt( (-2.0 * log( w ) ) / w );
-         y1 = x1 * w;
-         return y1;
-    } 
-        '''
+double _randn(uint64_t seed)
+{
+     double x1, x2, w;
+     double y1, y2;
+     do {
+         x1 = 2.0 * _ranf(seed) - 1.0;
+         x2 = 2.0 * _ranf(seed) - 1.0;
+         w = x1 * x1 + x2 * x2;
+     } while ( w >= 1.0 );
+
+     w = sqrt( (-2.0 * log( w ) ) / w );
+     y1 = x1 * w;
+     return y1;
+}
+#endif
+'''
 
 DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
                                                               code=randn_code,
                                                               name='_randn')
 
 rand_code = '''
-        __host__ __device__ double _rand(uint64_t &seed)
-        {
-                uint64_t x;
-                MYRAND(seed,x);
-	        return ((double)x)/MYRAND_MAX;
-        }
-        '''
+#ifdef CPU_ONLY
+double _rand(uint64_t &seed)
+{
+        uint64_t x;
+        MYRAND(seed,x);
+    return ((double)x)/MYRAND_MAX;
+}
+#else
+__host__ __device__ double _rand(uint64_t &seed)
+{
+        uint64_t x;
+        MYRAND(seed,x);
+    return ((double)x)/MYRAND_MAX;
+}
+#endif
+'''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=rand_code,
                                                              name='_rand')
 
 clip_code = '''
-        __host__ __device__ double _clip(const float value, const float a_min, const float a_max)
-        {
-	        if (value < a_min)
-	            return a_min;
-	        if (value > a_max)
-	            return a_max;
-	        return value;
-	    }
-        '''
+#ifdef CPU_ONLY
+double _clip(const float value, const float a_min, const float a_max)
+{
+    if (value < a_min)
+        return a_min;
+    if (value > a_max)
+        return a_max;
+    return value;
+}
+#else
+__host__ __device__ double _clip(const float value, const float a_min, const float a_max)
+{
+    if (value < a_min)
+        return a_min;
+    if (value > a_max)
+        return a_max;
+    return value;
+}
+#endif
+'''
 DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=clip_code,
                                                              name='_clip')
 
 int_code = '''
-        __host__ __device__ int int_(const bool value)
-        {
-	        return value ? 1 : 0;
-        }
-        '''
+#ifdef CPU_ONLY
+int int_(const bool value)
+{
+    return value ? 1 : 0;
+}
+#else
+__host__ __device__ int int_(const bool value)
+{
+    return value ? 1 : 0;
+}
+#endif
+'''
 DEFAULT_FUNCTIONS['int'].implementations.add_implementation(GeNNCodeGenerator,
                                                             code=int_code,
                                                             name='int_')
 
 sign_code = '''
+#ifdef CPU_ONLY
+template <typename T> int sign_(T val) {
+    return (T(0) < val) - (val < T(0));
+}
+#else
 template <typename T> __host__ __device__ int sign_(T val) {
     return (T(0) < val) - (val < T(0));
 }
-        '''
+#endif
+'''
 DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=sign_code,
                                                              name='sign_')
