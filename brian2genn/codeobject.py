@@ -17,9 +17,10 @@ class GeNNCodeObject(CPPStandaloneCodeObject):
     '''
     Class of code objects that generate GeNN "code snippets"
     '''
-    templater = Templater('brian2genn', env_globals={'c_data_type': c_data_type,
-                                                     'openmp_pragma': openmp_pragma,
-                                                     'constant_or_scalar': constant_or_scalar})
+    templater = Templater('brian2genn', '.cpp',
+                          env_globals={'c_data_type': c_data_type,
+                                       'openmp_pragma': openmp_pragma,
+                                       'constant_or_scalar': constant_or_scalar})
     generator_class = GeNNCodeGenerator
 
 class GeNNUserCodeObject(CPPStandaloneCodeObject):

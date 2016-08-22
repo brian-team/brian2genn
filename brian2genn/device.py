@@ -400,10 +400,10 @@ class GeNNDevice(CPPStandaloneDevice):
 
     #---------------------------------------------------------------------------------
     def build(self, directory='output', compile=True, run=True, use_GPU=True,
-              debug=False, with_output=True):
+              debug=False, with_output=True, direct_call=True):
         '''
         This function does the main post-translation work for the genn device. It uses the code generated during/before run() and extracts information about neuron groups, synapse groups, monitors, etc. that is then formatted for use in GeNN-specific templates.
-        The overarching strategy of the brian2genn interface is to use cpp_standalone code generation and templates for most of the "user-side code" (in the meaning defined in GeNN) and have GeNN specific templates for the model definition and the main code for the executable that pulls everything together (in main.cc and engine.cc templates). The haqndling of input/output arrays for everything is lent from cpp_standalone and the cpp_standalone arrays are then translated into GeNN-suitable data structures using the static (not code-generated) b2glib library functions. This means that the GeNN specific cod only has to be concerned about execyting the correct model and feeding back results into the appropriate cpp_standlaone data structures.
+        The overarching strategy of the brian2genn interface is to use cpp_standalone code generation and templates for most of the "user-side code" (in the meaning defined in GeNN) and have GeNN specific templates for the model definition and the main code for the executable that pulls everything together (in main.cpp and engine.cpp templates). The haqndling of input/output arrays for everything is lent from cpp_standalone and the cpp_standalone arrays are then translated into GeNN-suitable data structures using the static (not code-generated) b2glib library functions. This means that the GeNN specific cod only has to be concerned about execyting the correct model and feeding back results into the appropriate cpp_standlaone data structures.
         '''
 
         print 'building genn executable ...'
@@ -457,6 +457,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         static_array_specs=static_array_specs,
                         networks=[net],
                         get_array_filename=self.get_array_filename,
+                        get_array_name=self.get_array_name,
                         code_objects= the_objects
         )
         writer.write('objects.*', arr_tmp)
@@ -861,7 +862,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                     'b2glib')
         b2glib_files = copy_directory(b2glib_dir, os.path.join(directory, 'b2glib'))
         for file in b2glib_files:
-            if file.lower().endswith('.cc'):
+            if file.lower().endswith('.cpp'):
                 self.source_files.append('b2glib/'+file)
             elif file.lower().endswith('.h'):
                 self.header_files.append('b2glib/'+file)
@@ -878,7 +879,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    dtDef= self.dtDef,
                                                    model_name= self.model_name,
                                                    )
-        open(os.path.join(directory,self.model_name+'.cc'), 'w').write(model_tmp)
+        open(os.path.join(directory,self.model_name+'.cpp'), 'w').write(model_tmp)
 
         runner_tmp = GeNNCodeObject.templater.main(None, None,
                                                      neuron_models= self.neuron_models,
@@ -888,7 +889,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      header_files= self.header_files,
                                                      source_files= self.source_files,
                                                      )        
-        open(os.path.join(directory, 'main.cc'), 'w').write(runner_tmp.cpp_file)
+        open(os.path.join(directory, 'main.cpp'), 'w').write(runner_tmp.cpp_file)
         open(os.path.join(directory, 'main.h'), 'w').write(runner_tmp.h_file)
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
@@ -903,7 +904,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      model_name= self.model_name,
                                                      maximum_run_time= maximum_run_time
                                                      )        
-        open(os.path.join(directory, 'engine.cc'), 'w').write(engine_tmp.cpp_file)
+        open(os.path.join(directory, 'engine.cpp'), 'w').write(engine_tmp.cpp_file)
         open(os.path.join(directory, 'engine.h'), 'w').write(engine_tmp.h_file)
 
         if os.sys.platform == 'win32':
@@ -932,7 +933,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 if os.sys.platform == 'win32':
                     # copy .cu file of cpu_only is desired
                     if prefs.devices.genn.cpu_only:
-                        cmd= "copy main.cu main_cpu_only.cc"  
                         call(cmd, cwd=directory) 
                     bitversion= ''
                     if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
@@ -954,8 +954,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     call(cmd, cwd=directory)
                 else:
                     if prefs.devices.genn.cpu_only:
-                        #shutil.copy(directory+"/main.cu", directory+"/main_cpu_only.cc")
-                        call(["genn-buildmodel.sh", self.model_name+'.cc', "-c"], cwd=directory)
+                        call(["genn-buildmodel.sh", self.model_name+'.cpp', "-c"], cwd=directory)
                         call(["make", "clean"], cwd=directory)
                         call(["make", "CPU_ONLY=1"], cwd=directory)
                     else:

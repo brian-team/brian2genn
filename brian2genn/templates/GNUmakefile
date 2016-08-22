@@ -1,6 +1,11 @@
 ROOTDIR         := {{ROOTDIR}}
 EXECUTABLE      := main
-SOURCES         := main.cc {% for source in source_files %} {{source}} {% endfor %}
+{% if prefs['devices.genn.cpu_only'] %}
+CPU_ONLY	    = 1
+{% else %}
+CPU_ONLY	    = 0
+{% endif %}
+SOURCES         := main.cpp {% for source in source_files %} {{source}} {% endfor %}
 
 INCLUDE_FLAGS   := -I.
 OPTIMIZATIONFLAGS := {{prefs['devices.genn.unix_compiler_flags']}}

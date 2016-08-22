@@ -7,14 +7,14 @@
 //--------------------------------------------------------------------------
 
 #include "main.h"
-#include "{{model_name}}.cc"
+#include "{{model_name}}.cpp"
 #include "{{model_name}}_CODE/definitions.h"
 
 {% for header in header_files %}
 #include "{{header}}"
 {% endfor %}
 
-#include "engine.cc"
+#include "engine.cpp"
 
 
 //--------------------------------------------------------------------------
