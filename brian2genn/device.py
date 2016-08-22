@@ -410,6 +410,9 @@ class GeNNDevice(CPPStandaloneDevice):
         print 'building genn executable ...'
         # Check for GeNN compatibility
 
+        if directory is None:  # used during testing
+            directory = tempfile.mkdtemp()
+
         # Start building the project
         self.project_dir = directory
         ensure_directory(directory)
