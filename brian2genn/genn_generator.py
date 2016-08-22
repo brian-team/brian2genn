@@ -18,8 +18,15 @@ from brian2genn.insyn import check_pre_code
 
 logger = get_logger('brian2.devices.genn')
 
-__all__ = ['GeNNCodeGenerator'
-           ]
+__all__ = ['GeNNCodeGenerator']
+
+universal_support_code = '''
+#ifdef _MSC_VER
+#define _brian_pow(x, y) (pow((double)(x), (y)))
+#else
+#define _brian_pow(x, y) (pow((x), (y)))
+#endif
+'''
 
 class GeNNCodeGenerator(CodeGenerator):
     '''
@@ -34,6 +41,14 @@ class GeNNCodeGenerator(CodeGenerator):
     '''
 
     class_name = 'genn'
+
+    universal_support_code = '''
+    #ifdef _MSC_VER
+    #define _brian_pow(x, y) (pow((double)(x), (y)))
+    #else
+    #define _brian_pow(x, y) (pow((x), (y)))
+    #endif
+    '''
 
     def __init__(self, *args, **kwds):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
@@ -221,6 +236,8 @@ class GeNNCodeGenerator(CodeGenerator):
             func_namespace = func.implementations[self.codeobj_class].get_namespace(self.owner)
             if func_namespace is not None:
                 self.variables.update(func_namespace)
+
+        support_code.append(self.universal_support_code)
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
