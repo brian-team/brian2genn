@@ -399,7 +399,7 @@ class GeNNDevice(CPPStandaloneDevice):
         return model, code
 
     #---------------------------------------------------------------------------------
-    def build(self, directory='output', compile=True, run=True, use_GPU=True,
+    def build(self, directory='GeNNworkspace', compile=True, run=True, use_GPU=True,
               debug=False, with_output=True, direct_call=True):
         '''
         This function does the main post-translation work for the genn device. It uses the code generated during/before run() and extracts information about neuron groups, synapse groups, monitors, etc. that is then formatted for use in GeNN-specific templates.
@@ -1017,7 +1017,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     raise NotImplementedError('The function of %s is not yet supported in GeNN.' % obj.template)
                                 
         print 'running brian code generation ...'
-        super(GeNNDevice, self).network_run(net= net, duration= duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
+        super(GeNNDevice, self).network_run(net=net, duration=duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
 
 #------------------------------------------------------------------------------
 # End of GeNNDevice
@@ -1026,24 +1026,3 @@ class GeNNDevice(CPPStandaloneDevice):
 genn_device = GeNNDevice()
 
 all_devices['genn'] = genn_device
-
-class GeNNSimpleDevice(GeNNDevice):
-    '''
-    The `GeNNSimpleDevice` is construct that allows the code generation based "genn" device to be run without explicit call to the device.build() method.
-    '''
-    def network_run(self, net, duration, report=None, report_period=10*second,
-                    namespace=None, profile=True, level=0, **kwds):
-        super(GeNNSimpleDevice, self).network_run(net, duration,
-                                                  report=report,
-                                                  report_period=report_period,
-                                                  namespace=namespace,
-                                                  profile=profile,
-                                                  level=level+1,
-                                                  **kwds)
-        tempdir = tempfile.mkdtemp()
-        self.build(directory=tempdir, compile=True, run=True,
-                   debug=False, with_output=False)
-
-genn_simple_device = GeNNSimpleDevice()
-
-all_devices['genn_simple'] = genn_simple_device
