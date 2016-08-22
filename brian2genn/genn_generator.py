@@ -280,14 +280,14 @@ double _randn(uint64_t seed)
      return y1;
 }
 #else
-inline double _ranf(uint64_t &seed)
+__host__ __device__ inline double _ranf(uint64_t &seed)
 {
     uint64_t x;
     MYRAND(seed,x);
     return ((double)x)/MYRAND_MAX;
 }
 
-double _randn(uint64_t seed)
+__host__ __device__ double _randn(uint64_t seed)
 {
      double x1, x2, w;
      double y1, y2;
