@@ -12,4 +12,7 @@ from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
 if __name__=='__main__':
-    brian2.test([], test_codegen_independent=False, test_standalone='genn')
+    prefs.codegen.loop_invariant_optimisations = False
+    prefs._backup()
+    brian2.test([], test_codegen_independent=False, test_standalone='genn',
+                reset_preferences=False)
