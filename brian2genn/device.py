@@ -441,7 +441,7 @@ class GeNNDevice(CPPStandaloneDevice):
         networks = [net() for net in Network.__instances__() if net().name!='_fake_network']
         
         if len(networks) != 1:
-            raise NotImplementedError("GeNN only supports MagicNetwork")
+            raise NotImplementedError("GeNN only supports a single network")
         net = networks[0]
 
         synapses = []
