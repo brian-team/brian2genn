@@ -27,14 +27,14 @@ from brian2.core.functions import Function
 from brian2.devices.device import Device, set_device, all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
-from brian2.synapses.synapses import Synapses
+from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
 from brian2.utils.stringtools import word_substitute, get_identifiers, stripped_deindented_lines
 from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
-from brian2.groups.neurongroup import *
+from brian2.groups.neurongroup import NeuronGroup, StateUpdater, Resetter, Thresholder
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
 from brian2.input.spikegeneratorgroup import *
@@ -531,6 +531,12 @@ class GeNNDevice(CPPStandaloneDevice):
         spike_monitors= [ obj for obj in net.objects if isinstance(obj, SpikeMonitor)]
         rate_monitors= [ obj for obj in net.objects if isinstance(obj, PopulationRateMonitor)]
         state_monitors= [ obj for obj in net.objects if isinstance(obj, StateMonitor)]
+        for obj in net.objects:
+            if not isinstance(obj, (NeuronGroup, PoissonGroup, SpikeGeneratorGroup, Synapses,
+                                    SpikeMonitor, PopulationRateMonitor, StateMonitor,
+                                    StateUpdater, Resetter, Thresholder, SynapticPathway)):
+                raise NotImplementedError("Brian2GeNN does not support objects of type "
+                                          "'%s'" % str(obj.__class__.__name__))
         self.model_name= net.name+'_model'
         self.dtDef= 'model.setDT('+ repr(float(defaultclock.dt))+');'
         for obj in neuron_groups:
