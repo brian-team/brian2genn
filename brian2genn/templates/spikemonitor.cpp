@@ -29,6 +29,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
     {% set _num_events = 'spikeCount_'+sourcename %}
 	int32_t _num_events = {{_num_events}};
 
+    #ifndef CPU_ONLY
     if (which == 1) { // need to pull monitored data from GPU
 	{% for varname, var in record_variables.items() %}
 	{% if (varname != 't') and (varname != 'i') %}
@@ -36,6 +37,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 	{% endif %}
 	{% endfor %}
     }
+    #endif
 
     if (_num_events > 0)
     {
