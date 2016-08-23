@@ -544,6 +544,9 @@ class GeNNDevice(CPPStandaloneDevice):
             for k, v in obj.variables.iteritems():
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
+                # Do not add variables that are references
+                if v.owner.name != obj.name:
+                    pass
                 elif isinstance(v, ArrayVariable):
                     neuron_model.variables.append(k)
                     neuron_model.variabletypes.append(c_data_type(v.dtype))
