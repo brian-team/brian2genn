@@ -774,8 +774,6 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in spike_monitors:
             if obj.event != 'spike':
                 raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
-            if set(obj.record_variables) != set(['i', 't']):
-                raise NotImplementedError('GeNN only supports SpikeMonitors that record spike time and index.')
             sm= spikeMonitorModel()
             sm.name= obj.name
             if (hasattr(obj,'when')):
