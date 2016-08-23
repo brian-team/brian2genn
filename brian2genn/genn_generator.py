@@ -278,9 +278,9 @@ __host__ __device__ inline double _ranf(uint64_t &seed)
 }
 
 #ifdef CPU_ONLY
-double _randn(uint64_t seed)
+double _randn(uint64_t &seed)
 #else
-__host__ __device__ double _randn(uint64_t seed)
+__host__ __device__ double _randn(uint64_t &seed)
 #endif
 {
      double x1, x2, w;
