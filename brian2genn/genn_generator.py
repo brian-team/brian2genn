@@ -20,14 +20,6 @@ logger = get_logger('brian2.devices.genn')
 
 __all__ = ['GeNNCodeGenerator']
 
-universal_support_code = '''
-#ifdef _MSC_VER
-#define _brian_pow(x, y) (pow((double)(x), (y)))
-#else
-#define _brian_pow(x, y) (pow((x), (y)))
-#endif
-'''
-
 class GeNNCodeGenerator(CodeGenerator):
     '''
     "GeNN language"
@@ -276,35 +268,20 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 randn_code = '''
 #ifdef CPU_ONLY
 inline double _ranf(uint64_t &seed)
-{
-    uint64_t x;
-    MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
-}
-
-double _randn(uint64_t seed)
-{
-     double x1, x2, w;
-     double y1, y2;
-     do {
-         x1 = 2.0 * _ranf(seed) - 1.0;
-         x2 = 2.0 * _ranf(seed) - 1.0;
-         w = x1 * x1 + x2 * x2;
-     } while ( w >= 1.0 );
-
-     w = sqrt( (-2.0 * log( w ) ) / w );
-     y1 = x1 * w;
-     return y1;
-}
 #else
 __host__ __device__ inline double _ranf(uint64_t &seed)
+#endif
 {
     uint64_t x;
     MYRAND(seed,x);
     return ((double)x)/MYRAND_MAX;
 }
 
+#ifdef CPU_ONLY
+double _randn(uint64_t seed)
+#else
 __host__ __device__ double _randn(uint64_t seed)
+#endif
 {
      double x1, x2, w;
      double y1, y2;
@@ -318,7 +295,6 @@ __host__ __device__ double _randn(uint64_t seed)
      y1 = x1 * w;
      return y1;
 }
-#endif
 '''
 
 DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
@@ -328,19 +304,14 @@ DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
 rand_code = '''
 #ifdef CPU_ONLY
 double _rand(uint64_t &seed)
-{
-        uint64_t x;
-        MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
-}
 #else
 __host__ __device__ double _rand(uint64_t &seed)
+#endif
 {
         uint64_t x;
         MYRAND(seed,x);
     return ((double)x)/MYRAND_MAX;
 }
-#endif
 '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=rand_code,
@@ -349,15 +320,9 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
 clip_code = '''
 #ifdef CPU_ONLY
 double _clip(const float value, const float a_min, const float a_max)
-{
-    if (value < a_min)
-        return a_min;
-    if (value > a_max)
-        return a_max;
-    return value;
-}
 #else
 __host__ __device__ double _clip(const float value, const float a_min, const float a_max)
+#endif
 {
     if (value < a_min)
         return a_min;
@@ -365,7 +330,6 @@ __host__ __device__ double _clip(const float value, const float a_min, const flo
         return a_max;
     return value;
 }
-#endif
 '''
 DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=clip_code,
@@ -373,16 +337,13 @@ DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
 
 int_code = '''
 #ifdef CPU_ONLY
-int int_(const bool value)
-{
-    return value ? 1 : 0;
-}
+inline int int_(const bool value)
 #else
-__host__ __device__ int int_(const bool value)
+__host__ __device__ inline int int_(const bool value)
+#endif
 {
     return value ? 1 : 0;
 }
-#endif
 '''
 DEFAULT_FUNCTIONS['int'].implementations.add_implementation(GeNNCodeGenerator,
                                                             code=int_code,
@@ -390,14 +351,13 @@ DEFAULT_FUNCTIONS['int'].implementations.add_implementation(GeNNCodeGenerator,
 
 sign_code = '''
 #ifdef CPU_ONLY
-template <typename T> int sign_(T val) {
-    return (T(0) < val) - (val < T(0));
-}
+template <typename T> int sign_(T val)
 #else
-template <typename T> __host__ __device__ int sign_(T val) {
+template <typename T> __host__ __device__ int sign_(T val)
+#endif
+{
     return (T(0) < val) - (val < T(0));
 }
-#endif
 '''
 DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=sign_code,
