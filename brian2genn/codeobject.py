@@ -6,6 +6,7 @@ Brian2GeNN defines two different types of code objects, `GeNNCodeObject` and `Ge
 
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject, openmp_pragma, constant_or_scalar
 from brian2.codegen.generators.cpp_generator import c_data_type, CPPCodeGenerator
+from brian2.codegen.codeobject import CodeObject
 from brian2.codegen.targets import codegen_targets
 from brian2.codegen.templates import Templater
 from .genn_generator import *
@@ -13,7 +14,7 @@ from .genn_generator import *
 __all__ = ['GeNNCodeObject',
            'GeNNUserCodeObject']    
 
-class GeNNCodeObject(CPPStandaloneCodeObject):
+class GeNNCodeObject(CodeObject):
     '''
     Class of code objects that generate GeNN "code snippets"
     '''
