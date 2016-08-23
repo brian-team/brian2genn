@@ -680,6 +680,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
+                    elif isinstance(v, Subexpression):
+                        raise NotImplementedError('Brian2genn does not support the use of '
+                                                  'subexpressions in synaptic statements')
                 code= codeobj.code.cpp_file
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
@@ -724,6 +727,9 @@ class GeNNDevice(CPPStandaloneDevice):
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
+                    elif isinstance(v, Subexpression):
+                        raise NotImplementedError('Brian2genn does not support the use of '
+                                                  'subexpressions in synaptic statements')
                 if synapse_model.connectivity == 'DENSE':
                     code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
                 synapse_model, code = self.fix_random_generators(synapse_model,code)
