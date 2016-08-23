@@ -14,6 +14,7 @@ import numbers
 import time
 
 import brian2
+from brian2.spatialneuron.spatialneuron import SpatialNeuron
 from brian2.units import second
 from brian2.units import have_same_dimensions
 from brian2.codegen.generators.cpp_generator import c_data_type
@@ -536,7 +537,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # throw error if events other than spikes are used
             if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
                 raise NotImplementedError('Brian2GeNN does not support events that are not spikes')
-
+            if isinstance(obj, SpatialNeuron):
+                raise NotImplementedError('Brian2GeNN does not support multicompartmental neurons')
             # Extract the variables
             neuron_model= neuronModel()
             neuron_model.name= obj.name
