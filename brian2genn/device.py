@@ -38,6 +38,7 @@ from brian2.groups.neurongroup import NeuronGroup, StateUpdater, Resetter, Thres
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
 from brian2.input.spikegeneratorgroup import *
+from brian2.synapses.synapses import StateUpdater as SynapsesStateUpdater
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
@@ -534,7 +535,8 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in net.objects:
             if not isinstance(obj, (NeuronGroup, PoissonGroup, SpikeGeneratorGroup, Synapses,
                                     SpikeMonitor, PopulationRateMonitor, StateMonitor,
-                                    StateUpdater, Resetter, Thresholder, SynapticPathway)):
+                                    StateUpdater, SynapsesStateUpdater, Resetter,
+                                    Thresholder, SynapticPathway)):
                 raise NotImplementedError("Brian2GeNN does not support objects of type "
                                           "'%s'" % str(obj.__class__.__name__))
         self.model_name= net.name+'_model'
