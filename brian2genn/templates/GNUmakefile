@@ -2,8 +2,6 @@ ROOTDIR         := {{ROOTDIR}}
 EXECUTABLE      := main
 {% if prefs['devices.genn.cpu_only'] %}
 CPU_ONLY	    = 1
-{% else %}
-CPU_ONLY	    = 0
 {% endif %}
 SOURCES         := main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.c
 
