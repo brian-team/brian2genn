@@ -51,7 +51,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 		{{get_array_name(var, access_data=False)}}.push_back(t);
 		{% else %}
 		{% if varname == 'i' %}
-		{{get_array_name(var, access_data=False)}}.push_back(_idx);
+		{{get_array_name(var, access_data=False)}}.push_back(_idx - _source_start);
 		{% else %}
 		{{get_array_name(var, access_data=False)}}.push_back({{varname}}{{sourcename}}[glbSpkShift{{sourcename}}+_idx]);
 		{% endif %}
