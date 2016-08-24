@@ -985,7 +985,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     # Users are required to set their path to "Visual Studio/VC", e.g.
                     # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
                     cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                    cmd= cmd+" && buildmodel.bat "+self.model_name + " DEBUG=0 ";
+                    cmd= cmd+" && genn-buildmodel.bat "+self.model_name+".cpp" + " DEBUG=0 ";
                     if prefs.devices.genn.cpu_only:
                         cmd+= "CPU_ONLY=1 "
                     cmd+= "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
@@ -998,7 +998,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         call(["make", "clean"], cwd=directory)
                         call(["make", "CPU_ONLY=1"], cwd=directory)
                     else:
-                        call(["genn-buildmodel.sh", self.model_name], cwd=directory)
+                        call(["genn-buildmodel.sh", self.model_name+'.cpp'], cwd=directory)
                         call(["make", "clean"], cwd=directory)
                         call(["make"], cwd=directory)
 
