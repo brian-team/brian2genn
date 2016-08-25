@@ -65,22 +65,3 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
     }
 
 {% endblock %}
-
-{% block extra_functions_cpp %}
-void _debugmsg_{{codeobj_name}}()
-{
-	using namespace brian;
-	{# We need the pointers and constants here to get the access to N working #}
-    %CONSTANTS%
-    {{pointers_lines|autoindent}}
-	std::cout << "Number of spikes: " << {{N}} << endl;
-}
-{% endblock %}
-
-{% block extra_functions_h %}
-void _debugmsg_{{codeobj_name}}();
-{% endblock %}
-
-{% macro main_finalise() %}
-_debugmsg_{{codeobj_name}}();
-{% endmacro %}
