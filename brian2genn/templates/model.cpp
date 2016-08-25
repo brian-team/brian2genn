@@ -157,9 +157,15 @@ void modelDefinition(NNmodel &model)
   {% for spikeGen_model in spikegenerator_models %} 
   model.addNeuronPopulation("{{spikeGen_model.name}}", {{spikeGen_model.N}}, SPIKESOURCE, NULL, NULL);
   {% endfor %}
+  unsigned int delaySteps;
   {% for synapse_model in synapse_models %} 
 // TODO: Consider felxible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
-  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.connectivity}}, INDIVIDUALG, NO_DELAY, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+  {% if synapse_model.delay == 0 %}
+  delaySteps = NO_DELAY;
+  {% else %}
+  delaySteps = {{synapse_model.delay}};
+  {% endif %}
+  model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.connectivity}}, INDIVIDUALG, delaySteps, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
   {% endfor %}
   model.finalize();
 }

@@ -160,6 +160,7 @@ class synapseModel(object):
         self.post_support_code_lines= []
         self.dyn_support_code_lines= []
         self.connectivity=''
+        self.delay = 0
 
 class spikeMonitorModel(object):
     '''
@@ -232,6 +233,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.spikegenerator_models= []
         self.synapse_models = []
+        self.delays = {}
         self.spike_monitor_models= []
         self.rate_monitor_models= []
         self.state_monitor_models= []
@@ -308,11 +310,17 @@ class GeNNDevice(CPPStandaloneDevice):
     # delay variable -- GeNN does not support heterogeneous delays
     def fill_with_array(self, var, arr):
         if isinstance(var.owner, Synapses) and var.name == 'delay':
-            raise NotImplementedError('GeNN does not support assigning to the '
-                                      'delay variable -- set the delay for all'
-                                      'synapses (heterogeneous delays are not '
-                                      'supported) as an argument to the '
-                                      'Synapses initializer.')
+            # Assigning is only allowed if the variable has been declared in the
+            # Synapse constructor and is therefore scalar
+            if not var.scalar:
+                raise NotImplementedError('GeNN does not support assigning to the '
+                                          'delay variable -- set the delay for all'
+                                          'synapses (heterogeneous delays are not '
+                                          'supported) as an argument to the '
+                                          'Synapses initializer.')
+            else:
+                # We store the delay so that we can later access it
+                self.delays[var.owner.name] = numpy.asarray(arr).item()
         super(GeNNDevice, self).fill_with_array(var, arr)
 
     def variableview_set_with_index_array(self, variableview, item,
@@ -716,6 +724,8 @@ class GeNNDevice(CPPStandaloneDevice):
                     elif isinstance(v, Subexpression):
                         raise NotImplementedError('Brian2genn does not support the use of '
                                                   'subexpressions in synaptic statements')
+                # Use the stored scalar delay (if any) for these synapses
+                synapse_model.delay = int(self.delays.get(obj.name, 0.0) / defaultclock.dt_ + 0.5)
                 code= codeobj.code.cpp_file
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
