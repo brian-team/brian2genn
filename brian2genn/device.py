@@ -304,6 +304,31 @@ class GeNNDevice(CPPStandaloneDevice):
             self.code_objects[codeobj.name] = codeobj
         return codeobj
 
+    # The following two methods are only overwritten to catch assignments to the
+    # delay variable -- GeNN does not support heterogeneous delays
+    def fill_with_array(self, var, arr):
+        if isinstance(var.owner, Synapses) and var.name == 'delay':
+            raise NotImplementedError('GeNN does not support assigning to the '
+                                      'delay variable -- set the delay for all'
+                                      'synapses (heterogeneous delays are not '
+                                      'supported) as an argument to the '
+                                      'Synapses initializer.')
+        super(GeNNDevice, self).fill_with_array(var, arr)
+
+    def variableview_set_with_index_array(self, variableview, item,
+                                          value, check_units):
+        var = variableview.variable
+        if isinstance(var.owner, Synapses) and var.name == 'delay':
+            raise NotImplementedError('GeNN does not support assigning to the '
+                                      'delay variable -- set the delay for all'
+                                      'synapses (heterogeneous delays are not '
+                                      'supported) as an argument to the '
+                                      'Synapses initializer.')
+        super(GeNNDevice, self).variableview_set_with_index_array(variableview,
+                                                                  item,
+                                                                  value,
+                                                                  check_units)
+
     #---------------------------------------------------------------------------------
     def make_main_lines(self):
         '''
