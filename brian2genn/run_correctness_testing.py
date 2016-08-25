@@ -11,11 +11,6 @@ from brian2.tests.features.input import *
 from brian2.tests.features import CPPStandaloneConfiguration
 from brian2 import prefs
 
-prefs.codegen.loop_invariant_optimisations = False
-prefs.devices.genn.connectivity = 'AUTO'
-prefs.core.network.default_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
-prefs.devices.genn.unix_compiler_flags="-O1"
-prefs.devices.genn.cpu_only=True
 
 if __name__=='__main__':
     #c = GeNNConfiguration()
@@ -36,15 +31,15 @@ if __name__=='__main__':
     #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
     print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration],feature_tests=[
         #run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[
-        # NeuronGroupIntegrationLinear,
-        # NeuronGroupIntegrationEuler,
-        # NeuronGroupLIF,
-        # NeuronGroupLIFRefractory,
-        # SynapsesPre, SynapsesPost,
+        NeuronGroupIntegrationLinear,
+        NeuronGroupIntegrationEuler,
+        NeuronGroupLIF,
+        NeuronGroupLIFRefractory,
+        SynapsesPre, SynapsesPost,
          #SynapsesSTDPNoAutapse,
         SynapsesSTDP,
-        # SpikeMonitorTest,
-        # StateMonitorTest,
-        # SpikeGeneratorGroupTest
+        SpikeMonitorTest,
+        StateMonitorTest,
+        SpikeGeneratorGroupTest
     ]).tables_and_exceptions
     

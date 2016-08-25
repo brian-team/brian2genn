@@ -440,7 +440,7 @@ class GeNNDevice(CPPStandaloneDevice):
         return model, code
 
     #---------------------------------------------------------------------------------
-    def build(self, directory='GeNNworkspace', compile=True, run=True, use_GPU=False,
+    def build(self, directory='GeNNworkspace', compile=True, run=True, use_GPU=True,
               debug=False, with_output=True, direct_call=True):
         '''
         This function does the main post-translation work for the genn device. It uses the code generated during/before run() and extracts information about neuron groups, synapse groups, monitors, etc. that is then formatted for use in GeNN-specific templates.
@@ -989,20 +989,22 @@ class GeNNDevice(CPPStandaloneDevice):
 
         if os.sys.platform == 'win32':
             Makefile_tmp= GeNNCodeObject.templater.WINmakefile(None, None,
-                                                        neuron_models= self.neuron_models,
-                                                        model_name= self.model_name,
-                                                        ROOTDIR= os.path.abspath(directory),
-                                                        source_files= self.source_files,
-                                                        prefs=prefs
+                                                        neuron_models=self.neuron_models,
+                                                        model_name=self.model_name,
+                                                        ROOTDIR=os.path.abspath(directory),
+                                                        source_files=self.source_files,
+                                                        prefs=prefs,
+                                                        use_GPU=use_GPU
                                                         ) 
             open(os.path.join(directory, 'WINmakefile'), 'w').write(Makefile_tmp)
         else:
             Makefile_tmp= GeNNCodeObject.templater.GNUmakefile(None, None,
-                                                        neuron_models= self.neuron_models,
-                                                        model_name= self.model_name,
-                                                        ROOTDIR= os.path.abspath(directory),
-                                                        source_files= self.source_files,
-                                                        prefs= prefs
+                                                        neuron_models=self.neuron_models,
+                                                        model_name=self.model_name,
+                                                        ROOTDIR=os.path.abspath(directory),
+                                                        source_files=self.source_files,
+                                                        prefs=prefs,
+                                                        use_GPU=use_GPU
                                                         ) 
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
 
@@ -1011,10 +1013,6 @@ class GeNNDevice(CPPStandaloneDevice):
         if compile:
             with std_silent(debug):
                 if os.sys.platform == 'win32':
-                    # copy .cu file of cpu_only is desired
-                    if prefs.devices.genn.cpu_only:
-                        call(cmd, cwd=directory) 
-                    bitversion= ''
                     if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
                         bitversion= 'x86_amd64'
                     elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
@@ -1025,18 +1023,16 @@ class GeNNDevice(CPPStandaloneDevice):
                     # Users are required to set their path to "Visual Studio/VC", e.g.
                     # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
                     cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                    cmd= cmd+" && genn-buildmodel.bat "+self.model_name+".cpp" + " DEBUG=0 ";
-                    if prefs.devices.genn.cpu_only:
-                        cmd+= "CPU_ONLY=1 "
+                    cmd= cmd+" && genn-buildmodel.bat "+self.model_name+".cpp"
+                    if not use_GPU:
+                        cmd += ' -c'
                     cmd+= "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
-                    if prefs.devices.genn.cpu_only:
-                        cmd+= " CPU_ONLY=1"
                     call(cmd, cwd=directory)
                 else:
-                    if prefs.devices.genn.cpu_only:
+                    if not use_GPU:
                         call(["genn-buildmodel.sh", self.model_name+'.cpp', "-c"], cwd=directory)
                         call(["make", "clean"], cwd=directory)
-                        call(["make", "CPU_ONLY=1"], cwd=directory)
+                        call(["make"], cwd=directory)
                     else:
                         call(["genn-buildmodel.sh", self.model_name+'.cpp'], cwd=directory)
                         call(["make", "clean"], cwd=directory)
@@ -1050,9 +1046,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 stdout = None
                 stderr = None
             start_time = time.time()
-            if prefs.devices.genn.cpu_only and use_GPU:
-                logger.warn("Cannot use a GPU in cpu_only mode. Using CPU.")
-                use_GPU= False
+
             gpu_arg = "1" if use_GPU else "0"
             if gpu_arg == "1":
                 where= 'on GPU'
