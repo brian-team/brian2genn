@@ -274,6 +274,11 @@ class GeNNDevice(CPPStandaloneDevice):
         self.connectivityDict = dict()
         self.groupDict= dict()
 
+    def activate(self, build_on_run, **kwargs):
+        prefs.codegen.loop_invariant_optimisations = False
+        prefs._backup()
+        super(GeNNDevice, self).activate(build_on_run, **kwargs)
+
     def code_object_class(self, codeobj_class=None):
         if codeobj_class is GeNNCodeObject:
             return codeobj_class
