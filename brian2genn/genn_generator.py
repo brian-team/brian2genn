@@ -111,12 +111,14 @@ class GeNNCodeGenerator(CodeGenerator):
 
     def translate_one_statement_sequence(self, statements, scalar=False):
         if len(statements) and self.template_name=='synapses':
+            _, _, _, conditional_write_vars = self.arrays_helper(statements)
             vars_pre = [k for k, v in self.variable_indices.items() if v=='_presynaptic_idx']
             vars_syn = [k for k, v in self.variable_indices.items() if v=='_idx']
             vars_post = [k for k, v in self.variable_indices.items() if v=='_postsynaptic_idx']
             if '_pre_codeobject' in self.name:
                 post_write_var, statements = check_pre_code(self, statements,
-                                                vars_pre, vars_syn, vars_post)
+                                                vars_pre, vars_syn, vars_post,
+                                                conditional_write_vars)
                 self.owner._genn_post_write_var = post_write_var
         lines = []
         lines += self.translate_to_statements(statements)

@@ -49,13 +49,17 @@ call this function and rewrite the appropriate statement.
 from brian2.utils.stringtools import get_identifiers
 from brian2.codegen.statements import Statement
 
-def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
+def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post,
+                   conditional_write_vars):
     '''
     Given a set of statements stmts where the variables names in vars_pre are
     presynaptic, in vars_syn are synaptic and in vars_post are postsynaptic,
     check that the conditions for compatibility with GeNN are met, and return
     a new statement sequence translated for compatibility with GeNN, along
     with the name of the targeted variable.
+
+    Also adapts the synaptic statement to be multiplied by 0 for a refractory
+    post-synaptic cell.
     '''
     read, write, indices = codegen.array_read_write(stmts)
     
@@ -76,6 +80,10 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post):
                 if stmt.op!='+=':
                     raise NotImplementedError("GeNN only supports the += in place operation on postsynaptic variables.")
                 accumulation_expr = stmt.expr
+                # "write-protect" a variable during refractoriness to match Brian's semantics
+                if stmt.var in conditional_write_vars:
+                    assert conditional_write_vars[stmt.var] == 'not_refractory'
+                    accumulation_expr = 'int(not_refractory_post) * ({})'.format(accumulation_expr)
             else:
                 # TODO: we could support expressions like v = v + expr, but this requires some additional work
                 # namely, for an expression like v = expr we need to check if (expr-v) when simplified reduces to

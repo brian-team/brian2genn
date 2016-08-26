@@ -799,6 +799,12 @@ class GeNNDevice(CPPStandaloneDevice):
             self.connectivityDict[obj.name] = synapse_model.connectivity
             if hasattr(obj, 'pre'):
                 codeobj = obj.pre.codeobj
+                # A little hack to support "write-protection" for refractory
+                # variables -- brian2genn currently requires that
+                # post-synaptic variables end with "_post"
+                if 'not_refractory' in codeobj.variables:
+                    codeobj.variables['not_refractory_post'] = codeobj.variables['not_refractory']
+                    del codeobj.variables['not_refractory']
                 for k, v in codeobj.variables.iteritems():
                     if k == '_spikespace' or k == 't' or k == 'dt':
                         pass
