@@ -3,37 +3,30 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
-import shutil
 from subprocess import call
 import inspect
 from collections import defaultdict
 import tempfile
-import pprint
 import numpy
 import numbers
 import time
 
-import brian2
 from brian2.spatialneuron.spatialneuron import SpatialNeuron, SpatialStateUpdater
 from brian2.units import second
-from brian2.units import have_same_dimensions
 from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
-from brian2.core.preferences import prefs, brian_prefs
 from brian2.core.variables import *
 from brian2.core.network import Network
-from brian2.core.functions import Function
-from brian2.devices.device import Device, set_device, all_devices
+from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.synapses.synapses import Synapses, SynapticPathway
 from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
-from brian2.utils.filetools import copy_directory, ensure_directory, in_directory
-from brian2.utils.stringtools import word_substitute, get_identifiers, stripped_deindented_lines
-from brian2.memory.dynamicarray import DynamicArray, DynamicArray1D
+from brian2.utils.filetools import copy_directory, ensure_directory
+from brian2.utils.stringtools import word_substitute, get_identifiers
 from brian2.groups.neurongroup import NeuronGroup, StateUpdater, Resetter, Thresholder
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
@@ -41,10 +34,10 @@ from brian2.input.spikegeneratorgroup import *
 from brian2.synapses.synapses import StateUpdater as SynapsesStateUpdater
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
+from brian2.devices.cpp_standalone.device import CPPWriter
 from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
-from .genn_generator import *
-from brian2.core.magic import _get_contained_objects
+
 
 __all__ = ['GeNNDevice']
 
@@ -52,6 +45,7 @@ logger = get_logger('brian2.devices.genn')
 prefs['codegen.generators.cpp.restrict_keyword']= '__restrict'
 prefs['codegen.loop_invariant_optimisations'] = False
 prefs['core.network.default_schedule']= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
+
 
 def freeze(code, ns):
     '''
@@ -97,6 +91,7 @@ def decorate(code, variables, parameters, do_final= True):
         code = word_substitute(code, {'_hidden_weightmatrix' : '$(_hidden_weightmatrix)'})
     return code
 
+
 def extract_source_variables(variables, varname, smvariables):
     '''Support function to extract the "atomic" variables used in a variable that is of instance `Subexpression`.
     '''
@@ -108,7 +103,8 @@ def extract_source_variables(variables, varname, smvariables):
             elif isinstance(var,Subexpression):
                 smvariables= extract_source_variables(variables, vnm, smvariables)
     return smvariables
-                
+
+
 class neuronModel(object):
     '''
     Class that contains all relevant information of a neuron model. 
@@ -162,6 +158,7 @@ class synapseModel(object):
         self.connectivity=''
         self.delay = 0
 
+
 class spikeMonitorModel(object):
     '''
     Class the contains all relevant information about a spike monitor.
@@ -171,6 +168,7 @@ class spikeMonitorModel(object):
         self.neuronGroup=''
         self.notSpikeGeneratorGroup= True
 
+
 class rateMonitorModel(object):
     '''
     CLass that contains all relevant information about a rate monitor.
@@ -179,6 +177,7 @@ class rateMonitorModel(object):
         self.name=''
         self.neuronGroup=''
         self.notSpikeGeneratorGroup= True
+
 
 class stateMonitorModel(object):
     '''
@@ -202,7 +201,7 @@ class CPPWriter(object):
         self.project_dir = project_dir
         self.source_files = []
         self.header_files = []
-        
+
     def write(self, filename, contents):
         logger.debug('Writing file %s:\n%s' % (filename, contents))
         if filename.lower().endswith('.cpp'):
@@ -468,8 +467,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                 for var, start in self.arange_arrays.iteritems()],
                                key=lambda (var, start): var.name)
         
-        #arange_arrays = []
-        
         # write the static arrays
         logger.debug("static arrays: "+str(sorted(self.static_arrays.keys())))
         static_array_specs = []
@@ -485,80 +482,13 @@ class GeNNDevice(CPPStandaloneDevice):
 
         synapses = []
         synapses.extend(s for s in net.objects if isinstance(s, Synapses))
-        
-#------------------------------------------------------------------------------
-# create the objects.cpp and objects.h code
-        the_objects= self.code_objects.values()
-        arr_tmp = GeNNUserCodeObject.templater.objects(
-                        None, None,
-                        array_specs=self.arrays,
-                        dynamic_array_specs=self.dynamic_arrays,
-                        dynamic_array_2d_specs=self.dynamic_arrays_2d,
-                        zero_arrays=self.zero_arrays,
-                        arange_arrays=arange_arrays,
-                        synapses=synapses,
-                        clocks=self.clocks,
-                        static_array_specs=static_array_specs,
-                        networks=[net],
-                        get_array_filename=self.get_array_filename,
-                        get_array_name=self.get_array_name,
-                        code_objects= the_objects
-        )
-        writer.write('objects.*', arr_tmp)
-        self.header_files.append('objects.h')
-        self.source_files.append('objects.cpp')
+
+        self.generate_objects_source(arange_arrays, net, static_array_specs,
+                                     synapses, writer)
 
         main_lines = self.make_main_lines()
 
-        # Generate data for non-constant values
-        code_object_defs = defaultdict(list)
-        for codeobj in self.code_objects.itervalues():
-            lines = []
-            for k, v in codeobj.variables.iteritems():
-                # if isinstance(v, AttributeVariable):
-                #     # We assume all attributes are implemented as property-like methods
-                #     line = 'const {c_type} {varname} = {objname}.{attrname}();'
-                #     # HACK: Avoid over-shadowing the global variable 't' provided by GeNN - code should use GeNN's t anyway
-                #     if (k != 't'):
-                #         lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
-                #                                  attrname=v.attribute))
-                if isinstance(v, ArrayVariable):
-                    try:
-                        if isinstance(v, DynamicArrayVariable):
-                            if v.dimensions == 1:
-                                dyn_array_name = self.dynamic_arrays[v]
-                                array_name = self.arrays[v]
-                                line = '{c_type}* const {array_name} = &{dyn_array_name}[0];'
-                                line = line.format(c_type=c_data_type(v.dtype), array_name=array_name,
-                                                   dyn_array_name=dyn_array_name)
-                                lines.append(line)
-                                line = 'const int _num{k} = {dyn_array_name}.size();'
-                                line = line.format(k=k, dyn_array_name=dyn_array_name)
-                                lines.append(line)
-                        else:
-                            lines.append('const int _num%s = %s;' % (k, v.size))
-                    except TypeError:
-                        pass
-            for line in lines:
-                # Sometimes an array is referred to by to different keys in our
-                # dictionary -- make sure to never add a line twice
-                if not line in code_object_defs[codeobj.name]:
-                    code_object_defs[codeobj.name].append(line)
-        # Generate the code objects
-        for codeobj in self.code_objects.itervalues():
-            ns = codeobj.variables
-            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
-            if not codeobj.template_name in [ 'stateupdate', 'threshold', 'reset', 'synapses' ]:
-                if isinstance(codeobj.code, MultiTemplate):
-                    code = freeze(codeobj.code.cpp_file, ns)
-                    code = code.replace('%CONSTANTS%', '\n'.join(code_object_defs[codeobj.name]))
-                    code = '#include "objects.h"\n'+code
-                    
-                    writer.write('code_objects/'+codeobj.name+'.cpp', code)
-                    self.source_files.append('code_objects/'+codeobj.name+'.cpp')
-                    writer.write('code_objects/'+codeobj.name+'.h', codeobj.code.h_file)
-                    self.header_files.append('code_objects/'+codeobj.name+'.h')
-                
+        self.generate_code_objects(writer)
 
         # assemble the model descriptions:
         objects = dict((obj.name, obj) for obj in net.objects)
@@ -581,14 +511,204 @@ class GeNNDevice(CPPStandaloneDevice):
                                           "'%s'" % str(obj.__class__.__name__))
         self.model_name= net.name+'_model'
         self.dtDef= 'model.setDT('+ repr(float(defaultclock.dt))+');'
+
+        # Process groups
+        self.process_neuron_groups(neuron_groups, objects)
+        self.process_poisson_groups(objects, poisson_groups)
+        self.process_spikegenerators(spikegenerator_groups)
+        self.process_synapses(synapse_groups)
+
+        # Process monitors
+        self.process_spike_monitors(spike_monitors)
+        self.process_rate_monitors(rate_monitors)
+        self.process_state_monitors(directory, state_monitors, writer)
+
+        # Write files from templates
+        self.copy_source_files(writer, directory)
+        self.generate_model_source(writer)
+        self.generate_main_source(writer, main_lines)
+        self.generate_engine_source(writer)
+        self.generate_makefile(directory, use_GPU)
+
+        # Compile and run
+        if compile:
+            self.compile_source(debug, directory, use_GPU)
+        if run:
+            self.run(directory, use_GPU, with_output)
+
+#------------------------------------------------------------------------------
+# the network run function - needs to throw some errors for not-implemented features such as multiple clocks
+
+    def generate_code_objects(self, writer):
+        # Generate data for non-constant values
+        code_object_defs = defaultdict(list)
+        for codeobj in self.code_objects.itervalues():
+            lines = []
+            for k, v in codeobj.variables.iteritems():
+                # if isinstance(v, AttributeVariable):
+                #     # We assume all attributes are implemented as property-like methods
+                #     line = 'const {c_type} {varname} = {objname}.{attrname}();'
+                #     # HACK: Avoid over-shadowing the global variable 't' provided by GeNN - code should use GeNN's t anyway
+                #     if (k != 't'):
+                #         lines.append(line.format(c_type=c_data_type(v.dtype), varname=k, objname=v.obj.name,
+                #                                  attrname=v.attribute))
+                if isinstance(v, ArrayVariable):
+                    try:
+                        if isinstance(v, DynamicArrayVariable):
+                            if v.dimensions == 1:
+                                dyn_array_name = self.dynamic_arrays[v]
+                                array_name = self.arrays[v]
+                                line = '{c_type}* const {array_name} = &{dyn_array_name}[0];'
+                                line = line.format(c_type=c_data_type(v.dtype),
+                                                   array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                lines.append(line)
+                                line = 'const int _num{k} = {dyn_array_name}.size();'
+                                line = line.format(k=k,
+                                                   dyn_array_name=dyn_array_name)
+                                lines.append(line)
+                        else:
+                            lines.append('const int _num%s = %s;' % (k, v.size))
+                    except TypeError:
+                        pass
+            for line in lines:
+                # Sometimes an array is referred to by to different keys in our
+                # dictionary -- make sure to never add a line twice
+                if not line in code_object_defs[codeobj.name]:
+                    code_object_defs[codeobj.name].append(line)
+        # Generate the code objects
+        for codeobj in self.code_objects.itervalues():
+            ns = codeobj.variables
+            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            if not codeobj.template_name in ['stateupdate', 'threshold',
+                                             'reset', 'synapses']:
+                if isinstance(codeobj.code, MultiTemplate):
+                    code = freeze(codeobj.code.cpp_file, ns)
+                    code = code.replace('%CONSTANTS%', '\n'.join(
+                        code_object_defs[codeobj.name]))
+                    code = '#include "objects.h"\n' + code
+
+                    writer.write('code_objects/' + codeobj.name + '.cpp', code)
+                    self.source_files.append(
+                        'code_objects/' + codeobj.name + '.cpp')
+                    writer.write('code_objects/' + codeobj.name + '.h',
+                                 codeobj.code.h_file)
+                    self.header_files.append(
+                        'code_objects/' + codeobj.name + '.h')
+
+    def run(self, directory, use_GPU, with_output):
+        if not with_output:
+            stdout = open(os.devnull, 'w')
+            stderr = open(os.devnull, 'w')
+        else:
+            stdout = None
+            stderr = None
+        start_time = time.time()
+        gpu_arg = "1" if use_GPU else "0"
+        if gpu_arg == "1":
+            where = 'on GPU'
+        else:
+            where = 'on CPU'
+        print 'executing genn binary %s ...' % where
+        if os.sys.platform == 'win32':
+            cmd = directory + "\\main.exe test " + str(
+                self.run_duration) + " " + gpu_arg
+            # os.system(cmd)
+            call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
+        else:
+            # print ["./main", "test", str(self.run_duration), gpu_arg]
+            call(["./main", "test", str(self.run_duration), gpu_arg],
+                 cwd=directory, stdout=stdout, stderr=stderr)
+        self.has_been_run = True
+        last_run_info = open(
+            os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
+        self._last_run_time, self._last_run_completed_fraction = map(float,
+                                                                     last_run_info.split())
+
+    def compile_source(self, debug, directory, use_GPU):
+        with std_silent(debug):
+            if os.sys.platform == 'win32':
+                if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
+                    bitversion = 'x86_amd64'
+                elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
+                    bitversion = 'x86_amd64'
+                else:
+                    bitversion = 'x86'
+
+                # Users are required to set their path to "Visual Studio/VC", e.g.
+                # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
+                cmd = "\"" + os.getenv(
+                    'VS_PATH') + "\\VC\\vcvarsall.bat\" " + bitversion
+                cmd = cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
+                if not use_GPU:
+                    cmd += ' -c'
+                cmd += "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
+                call(cmd, cwd=directory)
+            else:
+                if not use_GPU:
+                    call(["genn-buildmodel.sh", self.model_name + '.cpp', "-c"],
+                         cwd=directory)
+                    call(["make", "clean"], cwd=directory)
+                    call(["make"], cwd=directory)
+                else:
+                    call(["genn-buildmodel.sh", self.model_name + '.cpp'],
+                         cwd=directory)
+                    call(["make", "clean"], cwd=directory)
+                    call(["make"], cwd=directory)
+
+    def process_poisson_groups(self, objects, poisson_groups):
+        for obj in poisson_groups:
+            # throw error if events other than spikes are used
+            if len(obj.events.keys()) > 1 or (len(
+                    obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
+                raise NotImplementedError(
+                    'Brian2GeNN does not support events that are not spikes')
+
+            # Extract the variables
+            neuron_model = neuronModel()
+            neuron_model.name = obj.name
+            neuron_model.N = obj.N
+            for k, v in obj.variables.iteritems():
+                if k == '_spikespace' or k == 't' or k == 'dt':
+                    pass
+                elif isinstance(v, ArrayVariable):
+                    neuron_model.variables.append(k)
+                    neuron_model.variabletypes.append(c_data_type(v.dtype))
+                    neuron_model.variablescope[k] = 'brian'
+            support_lines = []
+            suffix = '_thresholder';
+            lines = neuron_model.thresh_cond_lines;
+            codeobj = objects[obj.name + suffix].codeobj
+            for k, v in codeobj.variables.iteritems():
+                if k != 'dt' and isinstance(v, Constant):
+                    if k not in neuron_model.parameters:
+                        neuron_model.parameters.append(k)
+                        neuron_model.pvalue.append(repr(v.value))
+                code = codeobj.code.cpp_file
+
+            neuron_model, code = self.fix_random_generators(neuron_model, code)
+            code = decorate(code, neuron_model.variables,
+                            neuron_model.parameters).strip()
+            lines.append(code)
+            code = codeobj.code.h_file
+            code = code.replace('\n', '\\n\\\n')
+            code = code.replace('"', '\\"')
+            support_lines.append(code)
+            neuron_model.support_code_lines = support_lines
+            self.neuron_models.append(neuron_model)
+            self.groupDict[neuron_model.name] = neuron_model
+
+    def process_neuron_groups(self, neuron_groups, objects):
         for obj in neuron_groups:
             # throw error if events other than spikes are used
-            if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
-                raise NotImplementedError('Brian2GeNN does not support events that are not spikes')
+            if len(obj.events.keys()) > 1 or (len(
+                    obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
+                raise NotImplementedError(
+                    'Brian2GeNN does not support events that are not spikes')
             # Extract the variables
-            neuron_model= neuronModel()
-            neuron_model.name= obj.name
-            neuron_model.N= obj.N
+            neuron_model = neuronModel()
+            neuron_model.name = obj.name
+            neuron_model.N = obj.N
             for k, v in obj.variables.iteritems():
                 if k == '_spikespace' or k == 't' or k == 'dt':
                     pass
@@ -598,24 +718,27 @@ class GeNNDevice(CPPStandaloneDevice):
                 elif isinstance(v, ArrayVariable):
                     neuron_model.variables.append(k)
                     neuron_model.variabletypes.append(c_data_type(v.dtype))
-                    neuron_model.variablescope[k]='brian'
-            support_lines= []
+                    neuron_model.variablescope[k] = 'brian'
+            support_lines = []
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_run_regularly', neuron_model.code_lines),
-                                  ('_thresholder', neuron_model.thresh_cond_lines),
+                                  ('_thresholder',
+                                   neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
                                   ]:
-                if obj.name+suffix not in objects:
+                if obj.name + suffix not in objects:
                     if suffix == '_thresholder':
                         lines.append('0')
                     if suffix == '_resetter' and not (obj._refractory is False):
-                        code= 'lastspike = t; \n not_refractory= 0;'
-                        neuron_model, code = self.fix_random_generators(neuron_model,code)
-                        code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
-                        lines.append(code)                     
+                        code = 'lastspike = t; \n not_refractory= 0;'
+                        neuron_model, code = self.fix_random_generators(
+                            neuron_model, code)
+                        code = decorate(code, neuron_model.variables,
+                                        neuron_model.parameters).strip()
+                        lines.append(code)
                     continue
-                    
-                codeobj = objects[obj.name+suffix].codeobj
+
+                codeobj = objects[obj.name + suffix].codeobj
                 if codeobj is None:
                     continue
 
@@ -623,93 +746,61 @@ class GeNNDevice(CPPStandaloneDevice):
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             neuron_model.parameters.append(k)
-                            neuron_model.pvalue.append(repr(v.value)) 
-                code= codeobj.code.cpp_file
+                            neuron_model.pvalue.append(repr(v.value))
+                code = codeobj.code.cpp_file
 
                 if (suffix == '_resetter') and not (obj._refractory is False):
-                    code= code+'\n lastspike = t; \n not_refractory= 0;'
-                neuron_model, code = self.fix_random_generators(neuron_model,code)
-                code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
-                lines.append(code)                    
-                code= codeobj.code.h_file
-                code= code.replace('\n', '\\n\\\n')
+                    code = code + '\n lastspike = t; \n not_refractory= 0;'
+                neuron_model, code = self.fix_random_generators(neuron_model,
+                                                                code)
+                code = decorate(code, neuron_model.variables,
+                                neuron_model.parameters).strip()
+                lines.append(code)
+                code = codeobj.code.h_file
+                code = code.replace('\n', '\\n\\\n')
                 code = code.replace('"', '\\"')
                 support_lines.append(code)
-            neuron_model.support_code_lines= support_lines
+            neuron_model.support_code_lines = support_lines
             self.neuron_models.append(neuron_model)
-            self.groupDict[neuron_model.name]= neuron_model
+            self.groupDict[neuron_model.name] = neuron_model
 
-        for obj in poisson_groups:
-            # throw error if events other than spikes are used
-            if len(obj.events.keys()) > 1 or (len(obj.events.keys()) == 1 and not obj.events.iterkeys().next() == 'spike'):
-                raise NotImplementedError('Brian2GeNN does not support events that are not spikes')
-
-            # Extract the variables
-            neuron_model= neuronModel()
-            neuron_model.name= obj.name
-            neuron_model.N= obj.N
-            for k, v in obj.variables.iteritems():
-                if k == '_spikespace' or k == 't' or k == 'dt':
-                    pass
-                elif isinstance(v, ArrayVariable):
-                    neuron_model.variables.append(k)
-                    neuron_model.variabletypes.append(c_data_type(v.dtype))
-                    neuron_model.variablescope[k]='brian'
-            support_lines= []
-            suffix= '_thresholder';
-            lines= neuron_model.thresh_cond_lines;
-            codeobj = objects[obj.name+suffix].codeobj
-            for k, v in codeobj.variables.iteritems():
-                if k != 'dt' and isinstance(v, Constant):
-                    if k not in neuron_model.parameters:
-                        neuron_model.parameters.append(k)
-                        neuron_model.pvalue.append(repr(v.value)) 
-                code= codeobj.code.cpp_file
-
-            neuron_model, code = self.fix_random_generators(neuron_model,code)
-            code= decorate(code, neuron_model.variables, neuron_model.parameters).strip()
-            lines.append(code)                    
-            code= codeobj.code.h_file
-            code= code.replace('\n', '\\n\\\n')
-            code = code.replace('"', '\\"')
-            support_lines.append(code)
-            neuron_model.support_code_lines= support_lines
-            self.neuron_models.append(neuron_model)
-            self.groupDict[neuron_model.name]= neuron_model
-
+    def process_spikegenerators(self, spikegenerator_groups):
         for obj in spikegenerator_groups:
-            spikegenerator_model= spikegeneratorModel()
-            spikegenerator_model.name= obj.name
-            spikegenerator_model.N= obj.N
+            spikegenerator_model = spikegeneratorModel()
+            spikegenerator_model.name = obj.name
+            spikegenerator_model.N = obj.N
             self.spikegenerator_models.append(spikegenerator_model)
 
+    def process_synapses(self, synapse_groups):
         for obj in synapse_groups:
-            synapse_model= synapseModel()
-            synapse_model.name= obj.name
-            if isinstance(obj.source,Subgroup):
-                synapse_model.srcname= obj.source.source.name
-                synapse_model.srcN= obj.source.source.variables['N'].get_value()
+            synapse_model = synapseModel()
+            synapse_model.name = obj.name
+            if isinstance(obj.source, Subgroup):
+                synapse_model.srcname = obj.source.source.name
+                synapse_model.srcN = obj.source.source.variables[
+                    'N'].get_value()
             else:
-                synapse_model.srcname= obj.source.name
-                synapse_model.srcN= obj.source.variables['N'].get_value()
-            if isinstance(obj.target,Subgroup):
-                synapse_model.trgname= obj.target.source.name
-                synapse_model.trgN= obj.target.source.variables['N'].get_value()
+                synapse_model.srcname = obj.source.name
+                synapse_model.srcN = obj.source.variables['N'].get_value()
+            if isinstance(obj.target, Subgroup):
+                synapse_model.trgname = obj.target.source.name
+                synapse_model.trgN = obj.target.source.variables[
+                    'N'].get_value()
             else:
-                synapse_model.trgname= obj.target.name
-                synapse_model.trgN= obj.target.variables['N'].get_value()
-            synapse_model.connectivity= prefs.devices.genn.connectivity
+                synapse_model.trgname = obj.target.name
+                synapse_model.trgN = obj.target.variables['N'].get_value()
+            synapse_model.connectivity = prefs.devices.genn.connectivity
             if synapse_model.connectivity == 'AUTO':
-                Npre= synapse_model.srcN
-                Npost= synapse_model.trgN
-                Nsyn= obj.variables['N'].get_value()
+                Npre = synapse_model.srcN
+                Npost = synapse_model.trgN
+                Nsyn = obj.variables['N'].get_value()
                 if eval(prefs.devices.genn.connectivity_decision):
-                    synapse_model.connectivity= 'DENSE'
-            self.connectivityDict[obj.name]= synapse_model.connectivity
+                    synapse_model.connectivity = 'DENSE'
+            self.connectivityDict[obj.name] = synapse_model.connectivity
             if hasattr(obj, 'pre'):
-                codeobj= obj.pre.codeobj
+                codeobj = obj.pre.codeobj
                 for k, v in codeobj.variables.iteritems():
-                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                    if k == '_spikespace' or k == 't' or k == 'dt':
                         pass
                     elif isinstance(v, Constant):
                         if k not in synapse_model.parameters:
@@ -721,44 +812,50 @@ class GeNNDevice(CPPStandaloneDevice):
                                 if k not in synapse_model.variables:
                                     if codeobj.variable_indices[k] == '_idx':
                                         synapse_model.variables.append(k)
-                                        synapse_model.variabletypes.append(c_data_type(v.dtype))
-                                        synapse_model.variablescope[k]='brian'
+                                        synapse_model.variabletypes.append(
+                                            c_data_type(v.dtype))
+                                        synapse_model.variablescope[k] = 'brian'
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
                     elif isinstance(v, Subexpression):
-                        raise NotImplementedError('Brian2genn does not support the use of '
-                                                  'subexpressions in synaptic statements')
+                        raise NotImplementedError(
+                            'Brian2genn does not support the use of '
+                            'subexpressions in synaptic statements')
                 # Use the stored scalar delay (if any) for these synapses
-                synapse_model.delay = int(self.delays.get(obj.name, 0.0) / defaultclock.dt_ + 0.5)
-                code= codeobj.code.cpp_file
+                synapse_model.delay = int(
+                    self.delays.get(obj.name, 0.0) / defaultclock.dt_ + 0.5)
+                code = codeobj.code.cpp_file
                 code_lines = [line.strip() for line in code.split('\n')]
                 new_code_lines = []
                 for line in code_lines:
                     if line.startswith('addtoinSyn'):
                         if synapse_model.connectivity == 'SPARSE':
-                            line= line.replace('_hidden_weightmatrix*','');
-                            line= line.replace('_hidden_weightmatrix *','');
+                            line = line.replace('_hidden_weightmatrix*', '');
+                            line = line.replace('_hidden_weightmatrix *', '');
                     new_code_lines.append(line)
                     if line.startswith('addtoinSyn'):
                         new_code_lines.append('$(updatelinsyn);')
                 code = '\n'.join(new_code_lines)
                 if synapse_model.connectivity == 'DENSE':
-                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
-                synapse_model, code = self.fix_random_generators(synapse_model,code)
-                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
-                synapse_model.simCode= thecode
-                code= codeobj.code.h_file
-                code= code.replace('\n', '\\n\\\n')
+                    code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
+                synapse_model, code = self.fix_random_generators(synapse_model,
+                                                                 code)
+                thecode = decorate(code, synapse_model.variables,
+                                   synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.external_variables,
+                                   [], True).strip()
+                synapse_model.simCode = thecode
+                code = codeobj.code.h_file
+                code = code.replace('\n', '\\n\\\n')
                 code = code.replace('"', '\\"')
-                synapse_model.pre_support_code_lines= code
+                synapse_model.pre_support_code_lines = code
 
             if hasattr(obj, 'post'):
-                codeobj= obj.post.codeobj
-                code= codeobj.code.cpp_file
+                codeobj = obj.post.codeobj
+                code = codeobj.code.cpp_file
                 for k, v in codeobj.variables.iteritems():
-                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                    if k == '_spikespace' or k == 't' or k == 'dt':
                         pass
                     elif isinstance(v, Constant):
                         if k not in synapse_model.parameters:
@@ -769,31 +866,36 @@ class GeNNDevice(CPPStandaloneDevice):
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
                                     synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
-                                    synapse_model.variablescope[k]='brian'
-                                
+                                    synapse_model.variabletypes.append(
+                                        c_data_type(v.dtype))
+                                    synapse_model.variablescope[k] = 'brian'
+
                             else:
                                 if k not in synapse_model.external_variables:
                                     synapse_model.external_variables.append(k)
                     elif isinstance(v, Subexpression):
-                        raise NotImplementedError('Brian2genn does not support the use of '
-                                                  'subexpressions in synaptic statements')
+                        raise NotImplementedError(
+                            'Brian2genn does not support the use of '
+                            'subexpressions in synaptic statements')
                 if synapse_model.connectivity == 'DENSE':
-                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
-                synapse_model, code = self.fix_random_generators(synapse_model,code)
-                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
-                synapse_model.simLearnPost= thecode  
-                code= codeobj.code.h_file
-                code= code.replace('\n', '\\n\\\n')
+                    code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
+                synapse_model, code = self.fix_random_generators(synapse_model,
+                                                                 code)
+                thecode = decorate(code, synapse_model.variables,
+                                   synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.external_variables,
+                                   [], True).strip()
+                synapse_model.simLearnPost = thecode
+                code = codeobj.code.h_file
+                code = code.replace('\n', '\\n\\\n')
                 code = code.replace('"', '\\"')
-                synapse_model.post_support_code_lines= code
+                synapse_model.post_support_code_lines = code
 
             if obj.state_updater != None:
-                codeobj= obj.state_updater.codeobj
-                code= codeobj.code.cpp_file
+                codeobj = obj.state_updater.codeobj
+                code = codeobj.code.cpp_file
                 for k, v in codeobj.variables.iteritems():
-                    if k == '_spikespace' or k == 't' or k == 'dt' :
+                    if k == '_spikespace' or k == 't' or k == 'dt':
                         pass
                     elif isinstance(v, Constant):
                         if k not in synapse_model.parameters:
@@ -804,270 +906,231 @@ class GeNNDevice(CPPStandaloneDevice):
                             if '_pre' not in k and '_post' not in k:
                                 if k not in synapse_model.variables:
                                     synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(c_data_type(v.dtype))
-                                    synapse_model.variablescope[k]='brian'
+                                    synapse_model.variabletypes.append(
+                                        c_data_type(v.dtype))
+                                    synapse_model.variablescope[k] = 'brian'
                             else:
                                 if k not in synapse_model.external_variables:
-                                    synapse_model.external_variables.append(k) 
+                                    synapse_model.external_variables.append(k)
                 if synapse_model.connectivity == 'DENSE':
-                    code= 'if (_hidden_weightmatrix != 0.0) {'+code+'}'
-                synapse_model, code = self.fix_random_generators(synapse_model,code)
-                thecode = decorate(code, synapse_model.variables, synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables, [], True).strip()
-                synapse_model.synapseDynamics= thecode  
-                code= codeobj.code.h_file
-                code= code.replace('\n', '\\n\\\n')
+                    code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
+                synapse_model, code = self.fix_random_generators(synapse_model,
+                                                                 code)
+                thecode = decorate(code, synapse_model.variables,
+                                   synapse_model.parameters, False).strip()
+                thecode = decorate(thecode, synapse_model.external_variables,
+                                   [], True).strip()
+                synapse_model.synapseDynamics = thecode
+                code = codeobj.code.h_file
+                code = code.replace('\n', '\\n\\\n')
                 code = code.replace('"', '\\"')
-                synapse_model.dyn_support_code_lines=code
-             
-            if (hasattr(obj,'_genn_post_write_var')):
-                synapse_model.postSyntoCurrent= '0; $(' + obj._genn_post_write_var.replace('_post','') + ') += $(inSyn); $(inSyn)= 0'
-            else:
-                synapse_model.postSyntoCurrent= '0'
-            self.synapse_models.append(synapse_model)
-            self.groupDict[synapse_model.name]= synapse_model
-                         
-#------------------------------------------------------------------------------
-# Process spike monitors
+                synapse_model.dyn_support_code_lines = code
 
+            if (hasattr(obj, '_genn_post_write_var')):
+                synapse_model.postSyntoCurrent = '0; $(' + obj._genn_post_write_var.replace(
+                    '_post', '') + ') += $(inSyn); $(inSyn)= 0'
+            else:
+                synapse_model.postSyntoCurrent = '0'
+            self.synapse_models.append(synapse_model)
+            self.groupDict[synapse_model.name] = synapse_model
+
+    def process_spike_monitors(self, spike_monitors):
         for obj in spike_monitors:
             if obj.event != 'spike':
-                raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
-            sm= spikeMonitorModel()
-            sm.name= obj.name
-            if (hasattr(obj,'when')):
+                raise NotImplementedError(
+                    'GeNN does not yet support event monitors for non-spike events.');
+            sm = spikeMonitorModel()
+            sm.name = obj.name
+            if (hasattr(obj, 'when')):
                 if (not obj.when in ['end', 'thresholds']):
                     # GeNN always records in the end slot but this should almost never make a difference and
                     # we therefore do not raise a warning if the SpikeMonitor records in the default thresholds
                     # slot. We do raise a NotImplementedError if the user manually changed the time slot to
                     # something else -- there was probably a reason for doing it.
-                    raise NotImplementedError("Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
-            src= obj.source
-            if isinstance(src,Subgroup):
-                src= src.source
-            sm.neuronGroup= src.name
+                    raise NotImplementedError(
+                        "Spike monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(
+                            sm.name, obj.when))
+            src = obj.source
+            if isinstance(src, Subgroup):
+                src = src.source
+            sm.neuronGroup = src.name
             if (isinstance(src, SpikeGeneratorGroup)):
-                sm.notSpikeGeneratorGroup= False;
+                sm.notSpikeGeneratorGroup = False;
             self.spike_monitor_models.append(sm)
-            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
-            
-#------------------------------------------------------------------------------
-# Process rate monitors
+            self.header_files.append(
+                'code_objects/' + sm.name + '_codeobject.h')
 
+        # ------------------------------------------------------------------------------
+        # Process rate monitors
+
+    def process_rate_monitors(self, rate_monitors):
         for obj in rate_monitors:
-#            if obj.event != 'spike':
-#                raise NotImplementedError('GeNN does not yet support event monitors for non-spike events.');
-            sm= rateMonitorModel()
-            sm.name= obj.name
-            if (hasattr(obj,'when')):
+            sm = rateMonitorModel()
+            sm.name = obj.name
+            if (hasattr(obj, 'when')):
                 if (not obj.when == 'end'):
-                    logger.warn("Rate monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,obj.when))
-            src= obj.source
-            if isinstance(src,Subgroup):
-                src= src.source
+                    logger.warn(
+                        "Rate monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(
+                            sm.name, obj.when))
+            src = obj.source
+            if isinstance(src, Subgroup):
+                src = src.source
                 print src
-            sm.neuronGroup= src.name
+            sm.neuronGroup = src.name
             if (isinstance(src, SpikeGeneratorGroup)):
-                sm.notSpikeGeneratorGroup= False;
+                sm.notSpikeGeneratorGroup = False;
             self.rate_monitor_models.append(sm)
-            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
-            
-#------------------------------------------------------------------------------
-# Process state monitors
+            self.header_files.append(
+                'code_objects/' + sm.name + '_codeobject.h')
 
+    def process_state_monitors(self, directory, state_monitors, writer):
         for obj in state_monitors:
-            sm= stateMonitorModel()
-            sm.name= obj.name
-            src= obj.source
-            if isinstance(src,Subgroup):
-                src= src.source
-            sm.monitored= src.name
-            sm.when= obj.when
-            if not (sm.when == 'start' or sm.when == 'end'): 
-                logger.warn("State monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(sm.name,sm.when))
-                sm.when= 'end'
-            if isinstance(src,Synapses):
-                sm.isSynaptic= True
-                sm.srcN= src.source.variables['N'].get_value()
-                sm.trgN= src.target.variables['N'].get_value()
-                sm.connectivity= self.connectivityDict[src.name]
+            sm = stateMonitorModel()
+            sm.name = obj.name
+            src = obj.source
+            if isinstance(src, Subgroup):
+                src = src.source
+            sm.monitored = src.name
+            sm.when = obj.when
+            if not (sm.when == 'start' or sm.when == 'end'):
+                logger.warn(
+                    "State monitor {!s} has 'when' property '{!s}' which is not supported in GeNN, defaulting to 'end'.".format(
+                        sm.name, sm.when))
+                sm.when = 'end'
+            if isinstance(src, Synapses):
+                sm.isSynaptic = True
+                sm.srcN = src.source.variables['N'].get_value()
+                sm.trgN = src.target.variables['N'].get_value()
+                sm.connectivity = self.connectivityDict[src.name]
             else:
-                sm.isSynaptic= False
-                sm.N= src.variables['N'].get_value()
+                sm.isSynaptic = False
+                sm.N = src.variables['N'].get_value()
             for varname in obj.record_variables:
-                if isinstance(src.variables[varname],Subexpression):
-                    extract_source_variables(src.variables, varname, sm.variables)
-                elif isinstance(src.variables[varname],Constant):
-                    logger.warn("variable '%s' is a constant - not monitoring" % varname)
+                if isinstance(src.variables[varname], Subexpression):
+                    extract_source_variables(src.variables, varname,
+                                             sm.variables)
+                elif isinstance(src.variables[varname], Constant):
+                    logger.warn(
+                        "variable '%s' is a constant - not monitoring" % varname)
                 elif varname not in self.groupDict[sm.monitored].variables:
-                    logger.warn("variable '%s' is unused - not monitoring" % varname)
+                    logger.warn(
+                        "variable '%s' is unused - not monitoring" % varname)
                 else:
                     sm.variables.append(varname)
-           
+
             self.state_monitor_models.append(sm)
-            self.header_files.append('code_objects/'+sm.name+'_codeobject.h')
+            self.header_files.append(
+                'code_objects/' + sm.name + '_codeobject.h')
 
-#------------------------------------------------------------------------------
-# Copy the brianlib directory
-
-        brianlib_dir = os.path.join(os.path.split(inspect.getsourcefile(CPPStandaloneCodeObject))[0],
-                                    'brianlib')
-        brianlib_files = copy_directory(brianlib_dir, os.path.join(directory, 'brianlib'))
-        for file in brianlib_files:
-            if file.lower().endswith('.cpp'):
-                self.source_files.append('brianlib/'+file)
-            elif file.lower().endswith('.h'):
-                self.header_files.append('brianlib/'+file)
-
-#-----------------------------------------------------------------------------------------------------------
-# Copy the CSpikeQueue implementation
-        shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'cspikequeue.cpp'),
-                     os.path.join(directory, 'brianlib', 'spikequeue.h'))
-        shutil.copy(os.path.join(os.path.split(inspect.getsourcefile(Synapses))[0], 'stdint_compat.h'), 
-                     os.path.join(directory, 'brianlib', 'stdint_compat.h'))
-
-# Copy the RandomKit implementation
-        if not os.path.exists(os.path.join(directory, 'brianlib', 'randomkit')):
-            os.mkdir(os.path.join(directory, 'brianlib', 'randomkit'))
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(brian2))[0],
-                                  'random', 'randomkit', 'randomkit.c'),
-                     os.path.join(directory, 'brianlib', 'randomkit', 'randomkit.c'))
-        shutil.copy2(os.path.join(os.path.split(inspect.getsourcefile(brian2))[0],
-                                  'random', 'randomkit', 'randomkit.h'),
-                     os.path.join(directory, 'brianlib', 'randomkit', 'randomkit.h'))
-
-#------------------------------------------------------------------------------
-# Copy the b2glib directory
-        b2glib_dir = os.path.join(os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
-                                    'b2glib')
-        b2glib_files = copy_directory(b2glib_dir, os.path.join(directory, 'b2glib'))
-        for file in b2glib_files:
-            if file.lower().endswith('.cpp'):
-                self.source_files.append('b2glib/'+file)
-            elif file.lower().endswith('.h'):
-                self.header_files.append('b2glib/'+file)
-        
-#------------------------------------------------------------------------------
-# Write files from templates
-        synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
+    def generate_model_source(self, writer):
+        synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(
+            None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
-
         model_tmp = GeNNCodeObject.templater.model(None, None,
-                                                   neuron_models= self.neuron_models,
-                                                   spikegenerator_models= self.spikegenerator_models,
-                                                   synapse_models= self.synapse_models,
-                                                   dtDef= self.dtDef,
-                                                   model_name= self.model_name,
+                                                   neuron_models=self.neuron_models,
+                                                   spikegenerator_models=self.spikegenerator_models,
+                                                   synapse_models=self.synapse_models,
+                                                   dtDef=self.dtDef,
+                                                   model_name=self.model_name,
                                                    )
-        open(os.path.join(directory,self.model_name+'.cpp'), 'w').write(model_tmp)
+        writer.write(self.model_name + '.cpp', model_tmp)
 
+    def generate_main_source(self, writer, main_lines):
         runner_tmp = GeNNCodeObject.templater.main(None, None,
-                                                     neuron_models= self.neuron_models,
-                                                     synapse_models= self.synapse_models,
-                                                     model_name= self.model_name,
-                                                     main_lines= main_lines,
-                                                     header_files= self.header_files,
-                                                     source_files= self.source_files,
-                                                     )        
-        open(os.path.join(directory, 'main.cpp'), 'w').write(runner_tmp.cpp_file)
-        open(os.path.join(directory, 'main.h'), 'w').write(runner_tmp.h_file)
+                                                   neuron_models=self.neuron_models,
+                                                   synapse_models=self.synapse_models,
+                                                   model_name=self.model_name,
+                                                   main_lines=main_lines,
+                                                   header_files=self.header_files,
+                                                   source_files=self.source_files,
+                                                   )
+        writer.write('main.*', runner_tmp)
+
+    def generate_engine_source(self, writer):
         maximum_run_time = self._maximum_run_time
         if maximum_run_time is not None:
             maximum_run_time = float(maximum_run_time)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
-                                                     neuron_models= self.neuron_models,
-                                                     spikegenerator_models= self.spikegenerator_models,
-                                                     synapse_models= self.synapse_models,
-                                                     spike_monitor_models= self.spike_monitor_models,
-                                                     rate_monitor_models= self.rate_monitor_models,
-                                                     state_monitor_models= self.state_monitor_models,
-                                                     model_name= self.model_name,
-                                                     maximum_run_time= maximum_run_time
-                                                     )        
-        open(os.path.join(directory, 'engine.cpp'), 'w').write(engine_tmp.cpp_file)
-        open(os.path.join(directory, 'engine.h'), 'w').write(engine_tmp.h_file)
+                                                     neuron_models=self.neuron_models,
+                                                     spikegenerator_models=self.spikegenerator_models,
+                                                     synapse_models=self.synapse_models,
+                                                     spike_monitor_models=self.spike_monitor_models,
+                                                     rate_monitor_models=self.rate_monitor_models,
+                                                     state_monitor_models=self.state_monitor_models,
+                                                     model_name=self.model_name,
+                                                     maximum_run_time=maximum_run_time
+                                                     )
+        writer.write('engine.*', engine_tmp)
 
+    def generate_makefile(self, directory, use_GPU):
         if os.sys.platform == 'win32':
-            Makefile_tmp= GeNNCodeObject.templater.WINmakefile(None, None,
-                                                        neuron_models=self.neuron_models,
-                                                        model_name=self.model_name,
-                                                        ROOTDIR=os.path.abspath(directory),
-                                                        source_files=self.source_files,
-                                                        prefs=prefs,
-                                                        use_GPU=use_GPU
-                                                        ) 
-            open(os.path.join(directory, 'WINmakefile'), 'w').write(Makefile_tmp)
+            Makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
+                                                                neuron_models=self.neuron_models,
+                                                                model_name=self.model_name,
+                                                                ROOTDIR=os.path.abspath(
+                                                                    directory),
+                                                                source_files=self.source_files,
+                                                                prefs=prefs,
+                                                                use_GPU=use_GPU
+                                                                )
+            open(os.path.join(directory, 'WINmakefile'), 'w').write(
+                Makefile_tmp)
         else:
-            Makefile_tmp= GeNNCodeObject.templater.GNUmakefile(None, None,
-                                                        neuron_models=self.neuron_models,
-                                                        model_name=self.model_name,
-                                                        ROOTDIR=os.path.abspath(directory),
-                                                        source_files=self.source_files,
-                                                        prefs=prefs,
-                                                        use_GPU=use_GPU
-                                                        ) 
-            open(os.path.join(directory, 'GNUmakefile'), 'w').write(Makefile_tmp)
+            Makefile_tmp = GeNNCodeObject.templater.GNUmakefile(None, None,
+                                                                neuron_models=self.neuron_models,
+                                                                model_name=self.model_name,
+                                                                ROOTDIR=os.path.abspath(
+                                                                    directory),
+                                                                source_files=self.source_files,
+                                                                prefs=prefs,
+                                                                use_GPU=use_GPU
+                                                                )
+            open(os.path.join(directory, 'GNUmakefile'), 'w').write(
+                Makefile_tmp)
 
-#------------------------------------------------------------------------------
-# Compile it
-        if compile:
-            with std_silent(debug):
-                if os.sys.platform == 'win32':
-                    if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                        bitversion= 'x86_amd64'
-                    elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                        bitversion= 'x86_amd64'
-                    else:
-                        bitversion= 'x86'
+        # ------------------------------------------------------------------------------
+        # Compile it
 
-                    # Users are required to set their path to "Visual Studio/VC", e.g.
-                    # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
-                    cmd= "\""+os.getenv('VS_PATH')+"\\VC\\vcvarsall.bat\" " + bitversion
-                    cmd= cmd+" && genn-buildmodel.bat "+self.model_name+".cpp"
-                    if not use_GPU:
-                        cmd += ' -c'
-                    cmd+= "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
-                    call(cmd, cwd=directory)
-                else:
-                    if not use_GPU:
-                        call(["genn-buildmodel.sh", self.model_name+'.cpp', "-c"], cwd=directory)
-                        call(["make", "clean"], cwd=directory)
-                        call(["make"], cwd=directory)
-                    else:
-                        call(["genn-buildmodel.sh", self.model_name+'.cpp'], cwd=directory)
-                        call(["make", "clean"], cwd=directory)
-                        call(["make"], cwd=directory)
+    def generate_objects_source(self, arange_arrays, net, static_array_specs,
+                                synapses, writer):
+        # ------------------------------------------------------------------------------
+        # create the objects.cpp and objects.h code
+        the_objects = self.code_objects.values()
+        arr_tmp = GeNNUserCodeObject.templater.objects(
+            None, None,
+            array_specs=self.arrays,
+            dynamic_array_specs=self.dynamic_arrays,
+            dynamic_array_2d_specs=self.dynamic_arrays_2d,
+            zero_arrays=self.zero_arrays,
+            arange_arrays=arange_arrays,
+            synapses=synapses,
+            clocks=self.clocks,
+            static_array_specs=static_array_specs,
+            networks=[net],
+            get_array_filename=self.get_array_filename,
+            get_array_name=self.get_array_name,
+            code_objects=the_objects
+        )
+        writer.write('objects.*', arr_tmp)
+        self.header_files.append('objects.h')
+        self.source_files.append('objects.cpp')
 
-        if run:
-            if not with_output:
-                stdout = open(os.devnull, 'w')
-                stderr = open(os.devnull, 'w')
-            else:
-                stdout = None
-                stderr = None
-            start_time = time.time()
+    def copy_source_files(self, writer, directory):
+        # Copies brianlib, spikequeue and randomkit
+        super(GeNNDevice, self).copy_source_files(writer, directory)
 
-            gpu_arg = "1" if use_GPU else "0"
-            if gpu_arg == "1":
-                where= 'on GPU'
-            else:
-                where= 'on CPU'
-            print 'executing genn binary %s ...' % where
-            if  os.sys.platform == 'win32':
-                cmd= directory + "\\main.exe test " + str(self.run_duration) + " " + gpu_arg
-                #os.system(cmd)
-                call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
-            else:
-                #print ["./main", "test", str(self.run_duration), gpu_arg]
-                call(["./main", "test", str(self.run_duration), gpu_arg],
-                              cwd=directory, stdout=stdout, stderr=stderr)
-            self.has_been_run= True
-            last_run_info = open(os.path.join(directory,'results/last_run_info.txt'), 'r').read()
-            self._last_run_time, self._last_run_completed_fraction = map(float, last_run_info.split())
+        # Copy the b2glib directory
+        b2glib_dir = os.path.join(
+            os.path.split(inspect.getsourcefile(GeNNCodeObject))[0],
+            'b2glib')
+        b2glib_files = copy_directory(b2glib_dir,
+                                      os.path.join(directory, 'b2glib'))
+        for file in b2glib_files:
+            if file.lower().endswith('.cpp'):
+                self.source_files.append('b2glib/' + file)
+            elif file.lower().endswith('.h'):
+                self.header_files.append('b2glib/' + file)
 
-
-#------------------------------------------------------------------------------
-# the network run function - needs to throw some errors for not-implemented features such as multiple clocks
     def network_run(self, net, duration, report=None, report_period=10*second,
                     namespace=None, profile=False, level=0, **kwds):
         # We quietly ignore the profile argument instead of raising a warning
