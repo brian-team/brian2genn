@@ -8,7 +8,7 @@ extern double t;
 {% endblock%}
 
 {% block maincode %}
-	{# USES_VARIABLES { rate, t, _clock_dt, _spikespace,
+	{# USES_VARIABLES { rate, t, _clock_t, _clock_dt, _spikespace,
 	                    _num_source_neurons, _source_start, _source_stop } #}
 
         {% set sourcename= _spikespace.replace('_ptr_array_','').replace('__spikespace','') %}
@@ -24,7 +24,7 @@ extern double t;
 		_nSpikes++;
 	    }
 	}
-	{{_dynamic_rate}}.push_back(1.0*_nSpikes/_clock_dt/_num_source_neurons);
+	{{_dynamic_rate}}.push_back(1.0*_nSpikes/{{_clock_dt}}/_num_source_neurons);
 	{{_dynamic_t}}.push_back(t);
 {% endblock %}
 

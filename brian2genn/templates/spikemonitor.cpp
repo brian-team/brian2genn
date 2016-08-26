@@ -29,6 +29,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
     {% set _num_events = 'spikeCount_'+sourcename %}
 	int32_t _num_events = {{_num_events}};
 
+    #ifndef CPU_ONLY
     if (which == 1) { // need to pull monitored data from GPU
 	{% for varname, var in record_variables.items() %}
 	{% if (varname != 't') and (varname != 'i') %}
@@ -36,6 +37,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 	{% endif %}
 	{% endfor %}
     }
+    #endif
 
     if (_num_events > 0)
     {
@@ -49,7 +51,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 		{{get_array_name(var, access_data=False)}}.push_back(t);
 		{% else %}
 		{% if varname == 'i' %}
-		{{get_array_name(var, access_data=False)}}.push_back(_idx);
+		{{get_array_name(var, access_data=False)}}.push_back(_idx - _source_start);
 		{% else %}
 		{{get_array_name(var, access_data=False)}}.push_back({{varname}}{{sourcename}}[glbSpkShift{{sourcename}}+_idx]);
 		{% endif %}
@@ -63,22 +65,3 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
     }
 
 {% endblock %}
-
-{% block extra_functions_cpp %}
-void _debugmsg_{{codeobj_name}}()
-{
-	using namespace brian;
-	{# We need the pointers and constants here to get the access to N working #}
-    %CONSTANTS%
-    {{pointers_lines|autoindent}}
-	std::cout << "Number of spikes: " << {{N}} << endl;
-}
-{% endblock %}
-
-{% block extra_functions_h %}
-void _debugmsg_{{codeobj_name}}();
-{% endblock %}
-
-{% macro main_finalise() %}
-_debugmsg_{{codeobj_name}}();
-{% endmacro %}

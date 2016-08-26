@@ -1,4 +1,3 @@
-{# IS_OPENMP_COMPATIBLE #}
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
@@ -6,7 +5,7 @@ extern double t;
 {% endblock %}
 
 {% block maincode %}
-    {# USES_VARIABLES { t, _clock_t, _indices } #}
+    {# USES_VARIABLES { t, _clock_t, _indices, N } #}
 
     {{ openmp_pragma('single') }}
     {{_dynamic_t}}.push_back(t);
@@ -39,5 +38,5 @@ extern double t;
             {% endfor %}
         {% endblock %}
     }
-
+    {{N}} = _new_size;
 {% endblock %}

@@ -6,10 +6,13 @@
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
 #include "brianlib/stdint_compat.h"
+#include "randomkit.h"
 #include<vector>
 #include<iostream>
 #include<fstream>
 #include <ctime>
+
+std::vector< rk_state* > brian::_mersenne_twister_states;
 
 //////////////// arrays ///////////////////
 {% for var, varname in array_specs | dictsort(by='value') %}
@@ -99,6 +102,8 @@ void _init_arrays()
 	{{name}} = new {{dtype_spec}}[{{N}}];
 	{% endif %}
 	{% endfor %}
+
+	_mersenne_twister_states.push_back(new rk_state());
 }
 
 void _load_arrays()
@@ -147,7 +152,16 @@ void _write_arrays()
 	if(outfile_{{varname}}.is_open())
 	{
         if (! {{varname}}.empty() )
+        {
+            {% if var.is_boolean %}
+            // Copy the boolean vector to a char vector so we don't have to deal with its internal representation
+            std::vector<char> _arr_copy = std::vector<char>({{varname}}.size());
+            std::copy({{varname}}.begin(), {{varname}}.end(), _arr_copy.begin());
+            outfile_{{varname}}.write(reinterpret_cast<char*>(&_arr_copy[0]), _arr_copy.size()*sizeof(_arr_copy[0]));
+            {% else %}
 			outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}[0]), {{varname}}.size()*sizeof({{varname}}[0]));
+			{% endif %}
+		}
 		outfile_{{varname}}.close();
 	} else
 	{
@@ -163,7 +177,16 @@ void _write_arrays()
         for (int n=0; n<{{varname}}.n; n++)
         {
             if (! {{varname}}(n).empty())
+            {
+            {% if var.is_boolean %}
+                // Copy the boolean vector to a char vector so we don't have to deal with its internal representation
+                std::vector<char> _arr_copy = std::vector<char>({{varname}}.m);
+                std::copy({{varname}}(n).begin(), {{varname}}(n).end(), _arr_copy.begin());
+                outfile_{{varname}}.write(reinterpret_cast<char*>(&_arr_copy[0]), _arr_copy.size()*sizeof(_arr_copy[0]));
+            {% else %}
                 outfile_{{varname}}.write(reinterpret_cast<char*>(&{{varname}}(n, 0)), {{varname}}.m*sizeof({{varname}}(0, 0)));
+            {% endif %}
+            }
         }
         outfile_{{varname}}.close();
 	} else
@@ -239,11 +262,13 @@ void _dealloc_arrays()
 #include "brianlib/clocks.h"
 #include "brianlib/dynamic_array.h"
 #include "brianlib/stdint_compat.h"
-//#include "network.h"
+#include "randomkit.h"
 #include<vector>
 {{ openmp_pragma('include') }}
 
 namespace brian {
+
+extern std::vector< rk_state* > _mersenne_twister_states;
 
 //////////////// clocks ///////////////////
 {% for clock in clocks %}

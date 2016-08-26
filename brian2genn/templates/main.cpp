@@ -7,14 +7,14 @@
 //--------------------------------------------------------------------------
 
 #include "main.h"
-#include "{{model_name}}.cc"
+#include "{{model_name}}.cpp"
 #include "{{model_name}}_CODE/definitions.h"
 
 {% for header in header_files %}
 #include "{{header}}"
 {% endfor %}
 
-#include "engine.cc"
+#include "engine.cpp"
 
 
 //--------------------------------------------------------------------------
@@ -51,7 +51,7 @@ int main(int argc, char *argv[])
   // load variables and parameters and translate them from Brian to Genn
   _init_arrays();
   _load_arrays();
-
+  rk_randomseed(brian::_mersenne_twister_states[0]);
   {
 	  using namespace brian;
 	  {{ main_lines | autoindent }}
