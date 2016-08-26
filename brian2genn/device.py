@@ -790,12 +790,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.trgname = obj.target.name
                 synapse_model.trgN = obj.target.variables['N'].get_value()
             synapse_model.connectivity = prefs.devices.genn.connectivity
-            if synapse_model.connectivity == 'AUTO':
-                Npre = synapse_model.srcN
-                Npost = synapse_model.trgN
-                Nsyn = obj.variables['N'].get_value()
-                if eval(prefs.devices.genn.connectivity_decision):
-                    synapse_model.connectivity = 'DENSE'
             self.connectivityDict[obj.name] = synapse_model.connectivity
             if hasattr(obj, 'pre'):
                 codeobj = obj.pre.codeobj
