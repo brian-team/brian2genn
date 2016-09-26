@@ -131,12 +131,12 @@ void modelDefinition(NNmodel &model)
   s.pNames.push_back("{{par}}");
   {% endfor %}
   // step 3: add simcode
-  s.simCode= "{% for line in synapse_model.simCode['pre'] %}{{line}}{% endfor %}";
-  s.simLearnPost= "{% for line in synapse_model.simCode['post'] %}{{line}}{% endfor %}";
-  s.synapseDynamics= "{% for line in synapse_model.synapseDynamics %}{{line}}{% endfor %}";  
+  s.simCode= "{% for line in synapse_model.main_code_lines['pre'] %}{{line}}{% endfor %}";
+  s.simLearnPost= "{% for line in synapse_model.main_code_lines['post'] %}{{line}}{% endfor %}";
+  s.synapseDynamics= "{% for line in synapse_model.main_code_lines['dynamics'] %}{{line}}{% endfor %}";
   s.simCode_supportCode= "{% for line in synapse_model.support_code_lines['pre'] %}{{line}}{% endfor %}";
   s.simLearnPost_supportCode= "{% for line in synapse_model.support_code_lines['post'] %}{{line}}{% endfor %}";
-  s.synapseDynamics_supportCode= "{% for line in synapse_model.dyn_support_code_lines %}{{line}}{% endfor %}";
+  s.synapseDynamics_supportCode= "{% for line in synapse_model.support_code_lines['dynamics'] %}{{line}}{% endfor %}";
   weightUpdateModels.push_back(s);
   {{synapse_model.name}}WEIGHTUPDATE= weightUpdateModels.size()-1;
   // post-synaptic model
