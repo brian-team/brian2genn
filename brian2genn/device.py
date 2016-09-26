@@ -27,6 +27,7 @@ from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory
 from brian2.utils.stringtools import word_substitute, get_identifiers
+from brian2.groups.group import Group
 from brian2.groups.neurongroup import NeuronGroup, StateUpdater, Resetter, Thresholder
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
@@ -624,6 +625,30 @@ class GeNNDevice(CPPStandaloneDevice):
             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
         self._last_run_time, self._last_run_completed_fraction = map(float,
                                                                      last_run_info.split())
+
+        # The following is a verbatim copy of the respective code in
+        # CPPStandaloneDevice.run. In the long run, we can hopefully implement
+        # this on the device-independent level, see #761 and discussion in
+        # #750.
+
+        # Make sure that integration did not create NaN or very large values
+        owners = [var.owner for var in self.arrays]
+        # We don't want to check the same owner twice but var.owner is a
+        # weakproxy which we can't put into a set. We therefore store the name
+        # of all objects we already checked. Furthermore, under some specific
+        # instances a variable might have been created whose owner no longer
+        # exists (e.g. a `_sub_idx` variable for a subgroup) -- we ignore the
+        # resulting reference error.
+        already_checked = set()
+        for owner in owners:
+            try:
+                if owner.name in already_checked:
+                    continue
+                if isinstance(owner, Group):
+                    owner._check_for_invalid_states()
+                    already_checked.add(owner.name)
+            except ReferenceError:
+                pass
 
     def compile_source(self, debug, directory, use_GPU):
         with std_silent(debug):
