@@ -137,26 +137,24 @@ class synapseModel(object):
     Class that contains all relevant information about a synapse model.
     '''
     def __init__(self):
-        self.name=''
-        self.srcname=''
-        self.srcN= 0
-        self.trgname=''
-        self.trgN= 0
-        self.N= 0
-        self.variables= []
-        self.variabletypes= []
-        self.variablescope= dict()
-        self.external_variables= []
-        self.parameters= []
-        self.pvalue= []
-        self.simCode= []
-        self.simLearnPost= []
-        self.synapseDynamics= []
-        self.postSyntoCurrent= []
-        self.pre_support_code_lines= []
-        self.post_support_code_lines= []
-        self.dyn_support_code_lines= []
-        self.connectivity=''
+        self.name = ''
+        self.srcname = ''
+        self.srcN = 0
+        self.trgname = ''
+        self.trgN = 0
+        self.N = 0
+        self.variables = []
+        self.variabletypes = []
+        self.variablescope = dict()
+        self.external_variables = []
+        self.parameters = []
+        self.pvalue = []
+        self.simCode = defaultdict(str)
+        self.synapseDynamics = []
+        self.postSyntoCurrent = []
+        self.support_code_lines = defaultdict(str)
+        self.dyn_support_code_lines = []
+        self.connectivity = ''
         self.delay = 0
 
 
@@ -816,105 +814,69 @@ class GeNNDevice(CPPStandaloneDevice):
                 synapse_model.trgN = obj.target.variables['N'].get_value()
             synapse_model.connectivity = prefs.devices.genn.connectivity
             self.connectivityDict[obj.name] = synapse_model.connectivity
-            if hasattr(obj, 'pre'):
-                codeobj = obj.pre.codeobj
-                # A little hack to support "write-protection" for refractory
-                # variables -- brian2genn currently requires that
-                # post-synaptic variables end with "_post"
-                if 'not_refractory' in codeobj.variables:
-                    codeobj.variables['not_refractory_post'] = codeobj.variables['not_refractory']
-                    del codeobj.variables['not_refractory']
-                for k, v in codeobj.variables.iteritems():
-                    if k == '_spikespace' or k == 't' or k == 'dt':
-                        pass
-                    elif isinstance(v, Constant):
-                        if k not in synapse_model.parameters:
-                            synapse_model.parameters.append(k)
-                            synapse_model.pvalue.append(repr(v.value))
-                    elif isinstance(v, ArrayVariable):
-                        if k in codeobj.code.__str__():
-                            if '_pre' not in k and '_post' not in k:
-                                if k not in synapse_model.variables:
-                                    if codeobj.variable_indices[k] == '_idx':
-                                        synapse_model.variables.append(k)
-                                        synapse_model.variabletypes.append(
-                                            c_data_type(v.dtype))
-                                        synapse_model.variablescope[k] = 'brian'
-                            else:
-                                if k not in synapse_model.external_variables:
-                                    synapse_model.external_variables.append(k)
-                    elif isinstance(v, Subexpression):
-                        raise NotImplementedError(
-                            'Brian2genn does not support the use of '
-                            'subexpressions in synaptic statements')
-                # Use the stored scalar delay (if any) for these synapses
-                synapse_model.delay = int(
-                    self.delays.get(obj.name, 0.0) / defaultclock.dt_ + 0.5)
-                code = codeobj.code.cpp_file
-                code_lines = [line.strip() for line in code.split('\n')]
-                new_code_lines = []
-                for line in code_lines:
-                    if line.startswith('addtoinSyn'):
-                        if synapse_model.connectivity == 'SPARSE':
-                            line = line.replace('_hidden_weightmatrix*', '');
-                            line = line.replace('_hidden_weightmatrix *', '');
-                    new_code_lines.append(line)
-                    if line.startswith('addtoinSyn'):
-                        new_code_lines.append('$(updatelinsyn);')
-                code = '\n'.join(new_code_lines)
-                if synapse_model.connectivity == 'DENSE':
-                    code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
-                synapse_model, code = self.fix_random_generators(synapse_model,
-                                                                 code)
-                thecode = decorate(code, synapse_model.variables,
-                                   synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables,
-                                   [], True).strip()
-                synapse_model.simCode = thecode
-                code = codeobj.code.h_file
-                code = code.replace('\n', '\\n\\\n')
-                code = code.replace('"', '\\"')
-                synapse_model.pre_support_code_lines = code
 
-            if hasattr(obj, 'post'):
-                codeobj = obj.post.codeobj
-                code = codeobj.code.cpp_file
-                for k, v in codeobj.variables.iteritems():
-                    if k == '_spikespace' or k == 't' or k == 'dt':
-                        pass
-                    elif isinstance(v, Constant):
-                        if k not in synapse_model.parameters:
-                            synapse_model.parameters.append(k)
-                            synapse_model.pvalue.append(repr(v.value))
-                    elif isinstance(v, ArrayVariable):
-                        if k in codeobj.code.__str__():
-                            if '_pre' not in k and '_post' not in k:
-                                if k not in synapse_model.variables:
-                                    synapse_model.variables.append(k)
-                                    synapse_model.variabletypes.append(
-                                        c_data_type(v.dtype))
-                                    synapse_model.variablescope[k] = 'brian'
-
-                            else:
-                                if k not in synapse_model.external_variables:
-                                    synapse_model.external_variables.append(k)
-                    elif isinstance(v, Subexpression):
-                        raise NotImplementedError(
-                            'Brian2genn does not support the use of '
-                            'subexpressions in synaptic statements')
-                if synapse_model.connectivity == 'DENSE':
-                    code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
-                synapse_model, code = self.fix_random_generators(synapse_model,
-                                                                 code)
-                thecode = decorate(code, synapse_model.variables,
-                                   synapse_model.parameters, False).strip()
-                thecode = decorate(thecode, synapse_model.external_variables,
-                                   [], True).strip()
-                synapse_model.simLearnPost = thecode
-                code = codeobj.code.h_file
-                code = code.replace('\n', '\\n\\\n')
-                code = code.replace('"', '\\"')
-                synapse_model.post_support_code_lines = code
+            for pathway in ['pre', 'post']:
+                if hasattr(obj, pathway):
+                    codeobj = getattr(obj, pathway).codeobj
+                    # A little hack to support "write-protection" for refractory
+                    # variables -- brian2genn currently requires that
+                    # post-synaptic variables end with "_post"
+                    if pathway == 'pre' and 'not_refractory' in codeobj.variables:
+                        codeobj.variables['not_refractory_post'] = codeobj.variables['not_refractory']
+                        del codeobj.variables['not_refractory']
+                    for k, v in codeobj.variables.iteritems():
+                        if k == '_spikespace' or k == 't' or k == 'dt':
+                            pass
+                        elif isinstance(v, Constant):
+                            if k not in synapse_model.parameters:
+                                synapse_model.parameters.append(k)
+                                synapse_model.pvalue.append(repr(v.value))
+                        elif isinstance(v, ArrayVariable):
+                            if k in codeobj.code.__str__():
+                                if '_pre' not in k and '_post' not in k:
+                                    if k not in synapse_model.variables:
+                                        if codeobj.variable_indices[k] == '_idx':
+                                            synapse_model.variables.append(k)
+                                            synapse_model.variabletypes.append(
+                                                c_data_type(v.dtype))
+                                            synapse_model.variablescope[k] = 'brian'
+                                else:
+                                    if k not in synapse_model.external_variables:
+                                        synapse_model.external_variables.append(k)
+                        elif isinstance(v, Subexpression):
+                            raise NotImplementedError(
+                                'Brian2genn does not support the use of '
+                                'subexpressions in synaptic statements')
+                    if pathway == 'pre':
+                        # Use the stored scalar delay (if any) for these synapses
+                        synapse_model.delay = int(
+                            self.delays.get(obj.name, 0.0) / defaultclock.dt_ + 0.5)
+                    code = codeobj.code.cpp_file
+                    code_lines = [line.strip() for line in code.split('\n')]
+                    new_code_lines = []
+                    if pathway == 'pre':
+                        for line in code_lines:
+                            if line.startswith('addtoinSyn'):
+                                if synapse_model.connectivity == 'SPARSE':
+                                    line = line.replace('_hidden_weightmatrix*', '')
+                                    line = line.replace('_hidden_weightmatrix *', '')
+                            new_code_lines.append(line)
+                            if line.startswith('addtoinSyn'):
+                                new_code_lines.append('$(updatelinsyn);')
+                        code = '\n'.join(new_code_lines)
+                    if synapse_model.connectivity == 'DENSE':
+                        code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
+                    synapse_model, code = self.fix_random_generators(synapse_model,
+                                                                     code)
+                    thecode = decorate(code, synapse_model.variables,
+                                       synapse_model.parameters, False).strip()
+                    thecode = decorate(thecode, synapse_model.external_variables,
+                                       [], True).strip()
+                    synapse_model.simCode[pathway] = thecode
+                    code = codeobj.code.h_file
+                    code = code.replace('\n', '\\n\\\n')
+                    code = code.replace('"', '\\"')
+                    synapse_model.support_code_lines[pathway] = code
 
             if obj.state_updater != None:
                 codeobj = obj.state_updater.codeobj
