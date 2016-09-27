@@ -836,7 +836,9 @@ class GeNNDevice(CPPStandaloneDevice):
                     # post-synaptic variables end with "_post"
                     if pathway == 'pre' and 'not_refractory' in codeobj.variables:
                         codeobj.variables['not_refractory_post'] = codeobj.variables['not_refractory']
+                        codeobj.variable_indices['not_refractory_post'] = codeobj.variable_indices['not_refractory']
                         del codeobj.variables['not_refractory']
+                        del codeobj.variable_indices['not_refractory']
                     self.collect_synapses_variables(synapse_model, codeobj)
                     if pathway == 'pre':
                         # Use the stored scalar delay (if any) for these synapses
@@ -875,25 +877,27 @@ class GeNNDevice(CPPStandaloneDevice):
             self.groupDict[synapse_model.name] = synapse_model
 
     def collect_synapses_variables(self, synapse_model, codeobj):
+        identifiers = set()
+        for code in codeobj.code.values():
+            identifiers |= get_identifiers(code)
+        indices = codeobj.variable_indices
         for k, v in codeobj.variables.iteritems():
-            if k in ['_spikespace', 't', 'dt']:
+            if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
                 pass
             elif isinstance(v, Constant):
                 if k not in synapse_model.parameters:
                     self.add_parameter(synapse_model, k, v)
             elif isinstance(v, ArrayVariable):
-                if k in codeobj.code.__str__():
-                    if '_pre' not in k and '_post' not in k:
-                        if k not in synapse_model.variables:
-                            self.add_array_variable(synapse_model, k, v)
-                    else:
-                        if k not in synapse_model.external_variables:
-                            synapse_model.external_variables.append(k)
+                if indices[k] == '_idx':
+                    if k not in synapse_model.variables:
+                        self.add_array_variable(synapse_model, k, v)
+                else:
+                    if k not in synapse_model.external_variables:
+                        synapse_model.external_variables.append(k)
             elif isinstance(v, Subexpression):
                 raise NotImplementedError(
                     'Brian2genn does not support the use of '
                     'subexpressions in synaptic statements')
-
 
     def fix_synapses_code(self, synapse_model, pathway, codeobj, code):
         if synapse_model.connectivity == 'DENSE':
