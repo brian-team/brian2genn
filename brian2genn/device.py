@@ -53,13 +53,10 @@ def stringify(code):
     Helper function to prepare multiline strings (potentially including
     quotation marks) to be included in strings.
 
-    Examples
-    --------
-    >>> print(stringify('v = 0*mV;\nv_th += 3*mV;'))
-    v = 0*mV;\n\
-    v_th += 3*mV;
-    >>> print(stringify('name = "foo";'))
-    name = \"foo\";
+    Parameters
+    ----------
+    code : str
+        The code to convert.
     '''
     code = code.replace('\n', '\\n\\\n')
     code = code.replace('"', '\\"')
