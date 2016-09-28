@@ -46,9 +46,8 @@ setup(name='Brian2GeNN',
 #                        'pyparsing',
                         'jinja2>=2.7',
                         'setuptools>=6.0',  # FIXME: setuptools>=6.0 is only needed for Windows
-                        'brian2'
+                        'brian2>=2.0'
                        ],
-      dependency_links=["https://github.com/brian-team/brian2/tarball/fd3afff2be7b506d8aa76e6fd2259f888fa40ba0#egg=brian2-2.0b4"],
       setup_requires=[
 #'numpy>=1.8.0',
                       'setuptools>=6.0'
