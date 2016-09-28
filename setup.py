@@ -46,7 +46,7 @@ setup(name='Brian2GeNN',
 #                        'pyparsing',
                         'jinja2>=2.7',
                         'setuptools>=6.0',  # FIXME: setuptools>=6.0 is only needed for Windows
-                        'brian2'
+                        'brian2>=2.0'
                        ],
       setup_requires=[
 #'numpy>=1.8.0',
