@@ -13,4 +13,5 @@ from brian2 import prefs
 
 if __name__=='__main__':
     brian2.test([], test_codegen_independent=False, test_standalone='genn',
-                build_options={'use_GPU': False})
+                build_options={'use_GPU': False},
+                fail_for_not_implemented=False)
