@@ -824,6 +824,13 @@ class GeNNDevice(CPPStandaloneDevice):
             synapse_model.connectivity = prefs.devices.genn.connectivity
             self.connectivityDict[obj.name] = synapse_model.connectivity
 
+            for pathway in obj._synaptic_updaters:
+                if pathway not in ['pre', 'post']:
+                    raise NotImplementedError("brian2genn only supports a "
+                                              "single synaptic pre and post "
+                                              "pathway, cannot use pathway "
+                                              "'%s'." % pathway)
+
             for pathway in ['pre', 'post']:
                 if hasattr(obj, pathway):
                     codeobj = getattr(obj, pathway).codeobj
