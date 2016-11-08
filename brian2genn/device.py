@@ -11,6 +11,7 @@ import numpy
 import numbers
 import time
 
+from brian2.codegen.cpp_prefs import get_compiler_and_args
 from brian2.spatialneuron.spatialneuron import SpatialNeuron, SpatialStateUpdater
 from brian2.units import second
 from brian2.codegen.generators.cpp_generator import c_data_type
@@ -1051,6 +1052,7 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('engine.*', engine_tmp)
 
     def generate_makefile(self, directory, use_GPU):
+        _, compiler_flags = get_compiler_and_args()
         if os.sys.platform == 'win32':
             Makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
@@ -1059,7 +1061,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                     directory),
                                                                 source_files=self.source_files,
                                                                 prefs=prefs,
-                                                                use_GPU=use_GPU
+                                                                use_GPU=use_GPU,
+                                                                compiler_flags=' '.join(compiler_flags)
                                                                 )
             open(os.path.join(directory, 'WINmakefile'), 'w').write(
                 Makefile_tmp)
@@ -1071,7 +1074,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                     directory),
                                                                 source_files=self.source_files,
                                                                 prefs=prefs,
-                                                                use_GPU=use_GPU
+                                                                use_GPU=use_GPU,
+                                                                compiler_flags=' '.join(compiler_flags)
                                                                 )
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(
                 Makefile_tmp)

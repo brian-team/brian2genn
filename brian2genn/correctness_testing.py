@@ -1,5 +1,5 @@
 '''
-Definitions of theconfiguration for correctness testing.
+Definitions of the configuration for correctness testing.
 '''
 import brian2
 import os
@@ -16,21 +16,20 @@ __all__ = ['GeNNConfiguration',
 class GeNNConfiguration(Configuration):
     name = 'GeNN'
     def before_run(self):
-        brian2.prefs.devices.genn.unix_compiler_flags=''
-        brian2.prefs.devices.genn.windows_compiler_flags=''
+        brian2.prefs.codegen.cpp.extra_compile_args = []
+        brian2.prefs._backup()
         brian2.set_device('genn')
 
 class GeNNConfigurationCPU(Configuration):
     name = 'GeNN_CPU'
     def before_run(self):
-        #brian2.prefs.reset_to_defaults()
-        brian2.prefs.devices.genn.unix_compiler_flags=''
-        brian2.prefs.devices.windows_compiler_flags=''
+        brian2.prefs.codegen.cpp.extra_compile_args = []
+        brian2.prefs._backup()
         brian2.set_device('genn', use_GPU=False)
 
 class GeNNConfigurationOptimized(Configuration):
-    name = 'GeNN'
+    name = 'GeNN_optimized'
     def before_run(self):
         brian2.prefs.reset_to_defaults()
+        brian2.prefs._backup()
         brian2.set_device('genn')
-
