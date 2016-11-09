@@ -1,11 +1,11 @@
-Exclusions in Brian2GeNN
-========================
+Unsupported features in Brian2GeNN
+==================================
 
 .. highlight:: python
    :linenothreshold: 5
 
 Summed variables
---------------------
+----------------
 Summed variables are currently not supported in GeNN due to the cross-
 population nature of this feature. However, a simple form of summed
 variable is supported and intrinsic to GeNN. This is the action of
@@ -15,7 +15,7 @@ variable from each ``Synapses`` group.
 
 
 Linked variables
---------------------
+----------------
 Linked variables create a communication overhead that is problematic in
 GeNN. They are therefore at the moment not supported. In principle
 support for this feature could be added but in the meantime we suggest
@@ -89,38 +89,61 @@ i.e. contains a random element, then moving the common input into the
 'noisy neuron' population would make it individual, independent noisy
 inputs with likely quite different results.
 
+Custom events
+-------------
+GeNN does not support custom event types in addition to the standard threshold
+and reset, they can therefore not be used with the Brian2GeNN backend.
+
+Heterogeneous delays
+--------------------
+At the moment, GeNN only has support for a single homogeneous delay for each
+synaptic population. Brian simulations that use heterogeneous delays can
+therefore not use the Brian2GeNN backend. In simple cases with just a few
+different delay values (e.g. one set of connections with a short and another
+set of connections with a long delay), this limitation can be worked around by
+creating multiple ``Synapses`` objects with each using a homogeneous delay.
+
+Multiple synaptic pathways
+--------------------------
+GeNN does not have support for multiple synaptic pathways as Brian 2 does, you
+can therefore only use a single ``pre`` and ``post`` pathway with Brian2GeNN.
 
 Timed arrays
---------------------
+------------
 Timed arrays post a problem in the Brian2GeNN interface because they
-necessitate communication from teh timed array to the target group at
+necessitate communication from the timed array to the target group at
 runtime that would result in host to GPU copies in the final CUDA/C++
 code. This could lead to large inefficiences and for the moment we
 have therefore decided to not support this feature.
 
-
 Multiple clocks
---------------------
+---------------
 GeNN is by design operated with a single clock with a fixed time step
 across the entire simulation. If you are using multiple clocks and
-they are commencurate, please reformulate your script using just the
+they are commensurate, please reformulate your script using just the
 fastest clock as the standard clock. If your clocks are not
 commensurate, and this is essential for your simulation, Brian2GeNN
 can unfortunately not be used.
 
 Multiple runs
---------------------
+-------------
 GeNN is designed for single runs and cannot be used for the Brian style
 multiple runs. However, if this is of use, code can be run repeatedly
 "in multiple runs" that are completely independent. This just needs a
-``reset_device`` command issued after the ``run(runtime)`` and
-``device.build(...,run=True,...)`` commands. Note, however, that these
-multiple runs are completely independent, i.e. for the second run the
-code generation pipeline for Brian2GeNN is repeated in its entirety
-which may incur a measurable delay.
+``reset_device`` command issued after the ``run(runtime)`` command.
+Note, however, that these multiple runs are completely independent, i.e. for
+the second run the code generation pipeline for Brian2GeNN is repeated in its
+entirety which may incur a measurable delay.
 
 Multiple networks
---------------------
-Multiple networks cannot be supporten in the Brian2GeNN
-interface. Please use only the ``magicnetwork``, i.e. refrain from
-defining any ``Network`` objects.
+-----------------
+Multiple networks cannot be supported in the Brian2GeNN
+interface. Please use only a single network, either by creating it explicitly
+as a ``Network`` object or by not creating any (i.e. using Brian's "magic"
+system).
+
+Custom schedules
+----------------
+GeNN has a fixed order of operations during a time step, Brian's more flexible
+scheduling model (e.g. changing a network's schedule or individual objects'
+``when`` attribute) can therefore not be used.

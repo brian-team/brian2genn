@@ -1,12 +1,13 @@
 Devices in Brian 2
-=====================
+==================
 
 Brian supports generating standalone code for multiple devices. In
 this mode, running a Brian script generates source code in a project
 tree for the target device/language. This code can then be compiled
 and run on the device, and modified if needed. The Brian2GeNN package
-provides such a 'device' to run Brian 2 code on the GeNN (GPU enhanced
-nNeuronal Networks) backend. GeNN is in itself a code-generation based
+provides such a 'device' to run `Brian 2 <https://brian2.readthedocs.io>`_ code
+on the `GeNN <http://genn-team.github.io/genn/>`_ (GPU enhanced
+Neuronal Networks) backend. GeNN is in itself a code-generation based
 framework to generate and execute code for NVIDIA CUDA. Through
 Brian2GeNN one can hence generate and run CUDA code on NVIDIA GPUs
 based solely in Brian 2 input.
@@ -30,22 +31,14 @@ add::
 
   set_device('genn')
 
-Then, after ``run(duration)`` in your script, add::
+At the encounter of the first ``run`` statement (Brian2GeNN does currently
+only support a single ``run`` statement per script), code for GeNN will be
+generated, compiled and executed.
 
-  device.build(directory='output', compile=True, run=True, useGPU='True')
+The ``set_device`` function can also take additional arguments, e.g. to run
+GeNN in its "CPU-only" mode and to get additional debugging output, use::
 
-The build function has several arguments to specify the output
-directory, whether or not to compile and run the project after
-creating it and whether to actually run on a GPU or to use the CPU
-mode of GeNN.
+  set_device('genn', useGPU=False, debug=True)
 
-Alternatively, one can use the 'simple device' to avoid having to give
-the somewhat involved build command. In this case one would set the
-command::
-  set_device('genn_simple')
-
-And this would automatically trigger a build with ``run=True`` after
-each ``run(duration)`` command.
-
-Not all features of brian work with Brian2GeNN. The current list of
+Not all features of Brian work with Brian2GeNN. The current list of
 excluded features is detailed in :doc:`exclusions`.
