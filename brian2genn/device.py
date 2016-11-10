@@ -3,6 +3,7 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
+import platform
 from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
@@ -700,18 +701,32 @@ class GeNNDevice(CPPStandaloneDevice):
     def compile_source(self, debug, directory, use_GPU):
         with std_silent(debug):
             if os.sys.platform == 'win32':
-                if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                    bitversion = 'x86_amd64'
-                elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                    bitversion = 'x86_amd64'
-                else:
-                    bitversion = 'x86'
+                vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
+                if vcvars_loc == '':
+                    from distutils import msvc9compiler
+                    for version in xrange(16, 8, -1):
+                        fname = msvc9compiler.find_vcvarsall(version)
+                        if fname:
+                            vcvars_loc = fname
+                            break
+                if vcvars_loc == '':
+                    raise IOError("Cannot find vcvarsall.bat on standard "
+                                  "search path. Set the "
+                                  "codegen.cpp.msvc_vars_location preference "
+                                  "explicitly.")
 
-                # Users are required to set their path to "Visual Studio/VC", e.g.
-                # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
-                cmd = "\"" + os.getenv(
-                    'VS_PATH') + "\\VC\\vcvarsall.bat\" " + bitversion
-                cmd = cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
+                arch_name = prefs['codegen.cpp.msvc_architecture']
+                if arch_name == '':
+                    mach = platform.machine()
+                    if mach == 'AMD64':
+                        arch_name = 'x86_amd64'
+                    else:
+                        arch_name = 'x86'
+
+                vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
+                    vcvars_loc=vcvars_loc, arch_name=arch_name)
+
+                cmd = vcvars_cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
                 check_call(cmd, cwd=directory)
