@@ -6,7 +6,7 @@ CPU_ONLY	= 1
 SOURCES		= main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.c
 
 EXTRA_INCLUDE	= /I %CD% /I brianlib/randomkit
-OPTIMIZATIONFLAGS = {{prefs.devices.genn.windows_compiler_flags}}
-
+OPTIMIZATIONFLAGS = {{compiler_flags}}
+NVCC_OPTIMIZATIONFLAGS = {{nvcc_compiler_flags}}
 
 !include $(GENN_PATH)\userproject\include\makefile_common_win.mk

@@ -90,6 +90,33 @@ def freeze(code, ns):
     return code
 
 
+def get_compile_args():
+    '''
+    Get the compile args based on the users preferences. Uses Brian's
+    preferences for the C++ compilation (either `codegen.cpp.extra_compile_args`
+    for both Windows and UNIX, or `codegen.cpp.extra_compile_args_gcc` for UNIX
+    and `devices.extra_compile_args_msvc` for Windows), and the Brian2GeNN
+    preference `devices.genn.extra_compile_args_nvcc` for the CUDA compilation
+    with nvcc.
+
+    Returns
+    -------
+    (compile_args_gcc, compile_args_msvc, compile_args_nvcc) : (str, str, str)
+        Tuple with the respective compiler arguments (as strings).
+    '''
+    if prefs.codegen.cpp.extra_compile_args is not None:
+        args = ' '.join(prefs.codegen.cpp.extra_compile_args)
+        compile_args_gcc = args
+        compile_args_msvc = args
+    else:
+        compile_args_gcc = ' '.join(prefs.codegen.cpp.extra_compile_args_gcc)
+        compile_args_msvc = ' '.join(prefs.codegen.cpp.extra_compile_args_msvc)
+
+    compile_args_nvcc = ' '.join(prefs.devices.genn.extra_compile_args_nvcc)
+
+    return compile_args_gcc, compile_args_msvc, compile_args_nvcc
+
+
 def decorate(code, variables, parameters, do_final= True):
     '''
     Support function for inserting GeNN-specific "decorations" for variables and parameters, such as $(.).
@@ -1014,12 +1041,16 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(
             None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
+        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
                                                    dtDef=self.dtDef,
                                                    model_name=self.model_name,
+                                                   compile_args_gcc=compile_args_gcc,
+                                                   compile_args_msvc=compile_args_msvc,
+                                                   compile_args_nvcc=compile_args_nvcc
                                                    )
         writer.write(self.model_name + '.cpp', model_tmp)
 
@@ -1051,6 +1082,7 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('engine.*', engine_tmp)
 
     def generate_makefile(self, directory, use_GPU):
+        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         if os.sys.platform == 'win32':
             Makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
@@ -1058,8 +1090,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 ROOTDIR=os.path.abspath(
                                                                     directory),
                                                                 source_files=self.source_files,
-                                                                prefs=prefs,
-                                                                use_GPU=use_GPU
+                                                                use_GPU=use_GPU,
+                                                                compiler_flags=compile_args_msvc,
+                                                                nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'WINmakefile'), 'w').write(
                 Makefile_tmp)
@@ -1070,8 +1103,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 ROOTDIR=os.path.abspath(
                                                                     directory),
                                                                 source_files=self.source_files,
-                                                                prefs=prefs,
-                                                                use_GPU=use_GPU
+                                                                use_GPU=use_GPU,
+                                                                compiler_flags=compile_args_gcc,
+                                                                nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(
                 Makefile_tmp)
