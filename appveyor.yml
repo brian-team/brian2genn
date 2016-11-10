@@ -1,0 +1,29 @@
+environment:
+  matrix:
+    - PYTHON: "C:\\Miniconda35-x64"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      platform: x64
+
+    - PYTHON: "C:\\Miniconda-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      platform: x64
+
+install:
+  # Add the paths for anaconda
+  - 'set PATH=%PYTHON%;%PYTHON%\Library\bin;%PYTHON%\Scripts;%PATH%'
+  # Install Brian 2
+  - conda install --yes --quiet -c brian-team brian2 nose
+  # Install GeNN
+  - cd ..
+  - git clone https://github.com/genn-team/genn.git
+  - set GENN_PATH=%CD%\genn
+  - set PATH=%GENN_PATH%\lib\bin;%PATH%
+  - cd brian2genn
+
+build: false  # not a C# project
+
+test_script:
+  - pip install .
+  - python scripts/run_brian_tests_CPU.py
