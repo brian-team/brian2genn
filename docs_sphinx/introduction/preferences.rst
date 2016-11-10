@@ -20,7 +20,7 @@ Compiler preferences
 --------------------
 Brian2GeNN will use the compiler preferences specified for Brian2 for the
 C++ compiler call. This means you should set the
-`codegen.cpp.extra_compile_args`` preference, or set
+``codegen.cpp.extra_compile_args`` preference, or set
 ``codegen.cpp.extra_compile_args_gcc`` and
 ``codegen.cpp.extra_compile_args_msvc`` to set preferences specifically for
 compilation under Linux/OS-X and Windows, respectively.
