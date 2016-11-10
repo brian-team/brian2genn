@@ -3,13 +3,12 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
-from subprocess import call
+from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
 import tempfile
 import numpy
 import numbers
-import time
 
 from brian2.spatialneuron.spatialneuron import SpatialNeuron, SpatialStateUpdater
 from brian2.units import second
@@ -572,9 +571,25 @@ class GeNNDevice(CPPStandaloneDevice):
 
         # Compile and run
         if compile:
-            self.compile_source(debug, directory, use_GPU)
+            try:
+                self.compile_source(debug, directory, use_GPU)
+            except CalledProcessError as ex:
+                raise RuntimeError(('Project compilation failed (Command {cmd} '
+                                    'failed with error code {returncode}).\n'
+                                    'See the output above (if any) for more '
+                                    'details.').format(cmd=ex.cmd,
+                                                       returncode=ex.returncode)
+                                   )
         if run:
-            self.run(directory, use_GPU, with_output)
+            try:
+                self.run(directory, use_GPU, with_output)
+            except CalledProcessError as ex:
+                raise RuntimeError(('Project run failed (Command {cmd} '
+                                    'failed with error code {returncode}).\n'
+                                    'See the output above (if any) for more '
+                                    'details.').format(cmd=ex.cmd,
+                                                       returncode=ex.returncode)
+                                   )
 
 #------------------------------------------------------------------------------
 # the network run function - needs to throw some errors for not-implemented features such as multiple clocks
@@ -637,28 +652,21 @@ class GeNNDevice(CPPStandaloneDevice):
                         'code_objects/' + codeobj.name + '.h')
 
     def run(self, directory, use_GPU, with_output):
-        if not with_output:
-            stdout = open(os.devnull, 'w')
-            stderr = open(os.devnull, 'w')
-        else:
-            stdout = None
-            stderr = None
-        start_time = time.time()
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
             where = 'on GPU'
         else:
             where = 'on CPU'
         print 'executing genn binary %s ...' % where
-        if os.sys.platform == 'win32':
-            cmd = directory + "\\main.exe test " + str(
-                self.run_duration) + " " + gpu_arg
-            # os.system(cmd)
-            call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
-        else:
-            # print ["./main", "test", str(self.run_duration), gpu_arg]
-            call(["./main", "test", str(self.run_duration), gpu_arg],
-                 cwd=directory, stdout=stdout, stderr=stderr)
+        with std_silent(with_output):
+            if os.sys.platform == 'win32':
+                cmd = directory + "\\main.exe test " + str(
+                    self.run_duration) + " " + gpu_arg
+                check_call(cmd, cwd=directory)
+            else:
+                # print ["./main", "test", str(self.run_duration), gpu_arg]
+                check_call(["./main", "test", str(self.run_duration), gpu_arg],
+                           cwd=directory)
         self.has_been_run = True
         last_run_info = open(
             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
@@ -706,19 +714,16 @@ class GeNNDevice(CPPStandaloneDevice):
                 cmd = cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
-                call(cmd, cwd=directory)
+                check_call(cmd, cwd=directory)
+                call('nmake /f WINmakefile clean', cwd=directory)
+                check_call('nmake /f WINmakefile', cwd=directory)
             else:
+                args = ["genn-buildmodel.sh", self.model_name + '.cpp']
                 if not use_GPU:
-                    call(["genn-buildmodel.sh", self.model_name + '.cpp', "-c"],
-                         cwd=directory)
-                    call(["make", "clean"], cwd=directory)
-                    call(["make"], cwd=directory)
-                else:
-                    call(["genn-buildmodel.sh", self.model_name + '.cpp'],
-                         cwd=directory)
-                    call(["make", "clean"], cwd=directory)
-                    call(["make"], cwd=directory)
+                    args += ['-c']
+                check_call(args, cwd=directory)
+                call(["make", "clean"], cwd=directory)
+                check_call(["make"], cwd=directory)
 
     def add_parameter(self, model, varname, variable):
         model.parameters.append(varname)
