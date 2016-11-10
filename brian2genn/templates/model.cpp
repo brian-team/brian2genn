@@ -74,7 +74,12 @@ double *{{synapse_model.name}}_postsyn_ini= NULL;
 void modelDefinition(NNmodel &model)
 {
   initGeNN();
-  GENN_PREFERENCES::autoRefractory= 0;
+  GENN_PREFERENCES::autoRefractory = 0;
+  // Compiler optimization flags
+  GENN_PREFERENCES::userCxxFlagsWIN = "{{compile_args_msvc}}";
+  GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
+  GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
+
   {{ dtDef }}
   // Define the relevant neuron models
   neuronModel n;

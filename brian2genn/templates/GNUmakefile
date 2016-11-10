@@ -7,5 +7,6 @@ SOURCES         := main.cpp {% for source in source_files %} {{source}} {% endfo
 
 INCLUDE_FLAGS   := -I. -Ibrianlib/randomkit -Lbrianlib/randomkit
 OPTIMIZATIONFLAGS := {{compiler_flags}}
+NVCC_OPTIMIZATIONFLAGS := {{nvcc_compiler_flags}}
 
 include $(GENN_PATH)/userproject/include/makefile_common_gnu.mk

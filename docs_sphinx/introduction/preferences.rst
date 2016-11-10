@@ -18,9 +18,18 @@ sparse matrix methods ('SPARSE'). You can set the preference like this::
 
 Compiler preferences
 --------------------
-Brian2GeNN will use the compiler preferences specified for Brian2 (both for the
-C++ compiler call, as well as for NVIDIA's nvcc compiler). This means you should
-set the ``codegen.cpp.extra_compile_args`` preference, or set
+Brian2GeNN will use the compiler preferences specified for Brian2 for the
+C++ compiler call. This means you should set the
+`codegen.cpp.extra_compile_args`` preference, or set
 ``codegen.cpp.extra_compile_args_gcc`` and
 ``codegen.cpp.extra_compile_args_msvc`` to set preferences specifically for
 compilation under Linux/OS-X and Windows, respectively.
+
+Brian2GeNN also offers a preference to specify additional compiler flags for the
+CUDA compilation with the nvcc compiler: `devices.genn.extra_compile_args_nvcc`.
+
+Note that all of the above preferences expect a *Python list* of individual
+compiler arguments, i.e. to for example add an argument for the nvcc compiler,
+use::
+
+    prefs.devices.genn.extra_compile_args_nvcc += ['--verbose']
