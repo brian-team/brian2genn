@@ -41,7 +41,7 @@ before_install:
 install:
   - conda install --yes --quiet -c brian-team brian2 nose
   # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
-  - conda install --yes --quiet gcc
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
   - cd ../..
   - git clone https://github.com/genn-team/genn.git
   - export GENN_PATH=$(pwd)/genn

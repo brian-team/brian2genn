@@ -127,7 +127,7 @@ def decorate(code, variables, parameters, do_final= True):
     for p in parameters:
         code = word_substitute(code, {p : '$('+p+')'})
     code = word_substitute(code, {'dt' : 'DT'}).strip()
-    if do_final: 
+    if do_final:
         code = stringify(code)
         code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
         code = word_substitute(code, {'_hidden_weightmatrix' : '$(_hidden_weightmatrix)'})
