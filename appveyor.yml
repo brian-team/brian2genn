@@ -17,9 +17,10 @@ install:
   - conda install --yes --quiet -c brian-team brian2 nose
   # Install GeNN
   - cd ..
-  - git clone https://github.com/genn-team/genn.git
-  - set GENN_PATH=%CD%\genn
-  - set PATH=%GENN_PATH%\lib\bin;%PATH%
+  - git clone -b development https://github.com/genn-team/genn.git
+  - 'set GENN_PATH=%CD%\genn'
+  - 'set PATH=%GENN_PATH%\lib\bin;%PATH%'
+  - 'setx PATH "%PATH%"'
   - cd brian2genn
 
 build: false  # not a C# project
