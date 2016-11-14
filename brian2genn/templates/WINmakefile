@@ -6,6 +6,7 @@ CPU_ONLY	= 1
 SOURCES		= main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.c
 
 INCLUDE_FLAGS	= /I %CD% /I brianlib/randomkit
+LINK_FLAGS = advapi32.lib
 OPTIMIZATIONFLAGS = {{compiler_flags}}
 NVCC_OPTIMIZATIONFLAGS = {{nvcc_compiler_flags}}
 
