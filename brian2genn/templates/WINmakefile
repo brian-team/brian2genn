@@ -1,4 +1,4 @@
-EXECUTABLE	= runner.exe
+EXECUTABLE	= main.exe
 
 {% if not use_GPU %}
 CPU_ONLY	= 1
