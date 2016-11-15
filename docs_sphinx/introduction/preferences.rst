@@ -33,3 +33,8 @@ compiler arguments, i.e. to for example add an argument for the nvcc compiler,
 use::
 
     prefs.devices.genn.extra_compile_args_nvcc += ['--verbose']
+
+On Windows, Brian2GeNN will try to find the file ``vcvarsall.bat`` to enable
+compilation with the MSVC compiler automatically. If this fails, or if you have
+multiple versions of MSVC installed and want to select a specific one, you can
+set the ``codegen.cpp.msvc_vars_location`` preference.

@@ -1,12 +1,14 @@
-EXECUTABLE	= runner.exe
+EXECUTABLE	= main.exe
 
 {% if not use_GPU %}
 CPU_ONLY	= 1
 {% endif %}
 SOURCES		= main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.c
 
-EXTRA_INCLUDE	= /I %CD% /I brianlib/randomkit
+INCLUDE_FLAGS	= /I %CD% /I brianlib/randomkit
+LINK_FLAGS = advapi32.lib
 OPTIMIZATIONFLAGS = {{compiler_flags}}
 NVCC_OPTIMIZATIONFLAGS = {{nvcc_compiler_flags}}
+SIM_CODE = {{model_name}}_CODE
 
 !include $(GENN_PATH)\userproject\include\makefile_common_win.mk

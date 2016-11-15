@@ -3,13 +3,13 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
-from subprocess import call
+import platform
+from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
 import tempfile
 import numpy
 import numbers
-import time
 
 from brian2.spatialneuron.spatialneuron import SpatialNeuron, SpatialStateUpdater
 from brian2.units import second
@@ -127,7 +127,7 @@ def decorate(code, variables, parameters, do_final= True):
     for p in parameters:
         code = word_substitute(code, {p : '$('+p+')'})
     code = word_substitute(code, {'dt' : 'DT'}).strip()
-    if do_final: 
+    if do_final:
         code = stringify(code)
         code = word_substitute(code, {'addtoinSyn' : '$(addtoinSyn)'})
         code = word_substitute(code, {'_hidden_weightmatrix' : '$(_hidden_weightmatrix)'})
@@ -572,9 +572,25 @@ class GeNNDevice(CPPStandaloneDevice):
 
         # Compile and run
         if compile:
-            self.compile_source(debug, directory, use_GPU)
+            try:
+                self.compile_source(debug, directory, use_GPU)
+            except CalledProcessError as ex:
+                raise RuntimeError(('Project compilation failed (Command {cmd} '
+                                    'failed with error code {returncode}).\n'
+                                    'See the output above (if any) for more '
+                                    'details.').format(cmd=ex.cmd,
+                                                       returncode=ex.returncode)
+                                   )
         if run:
-            self.run(directory, use_GPU, with_output)
+            try:
+                self.run(directory, use_GPU, with_output)
+            except CalledProcessError as ex:
+                raise RuntimeError(('Project run failed (Command {cmd} '
+                                    'failed with error code {returncode}).\n'
+                                    'See the output above (if any) for more '
+                                    'details.').format(cmd=ex.cmd,
+                                                       returncode=ex.returncode)
+                                   )
 
 #------------------------------------------------------------------------------
 # the network run function - needs to throw some errors for not-implemented features such as multiple clocks
@@ -637,28 +653,21 @@ class GeNNDevice(CPPStandaloneDevice):
                         'code_objects/' + codeobj.name + '.h')
 
     def run(self, directory, use_GPU, with_output):
-        if not with_output:
-            stdout = open(os.devnull, 'w')
-            stderr = open(os.devnull, 'w')
-        else:
-            stdout = None
-            stderr = None
-        start_time = time.time()
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
             where = 'on GPU'
         else:
             where = 'on CPU'
         print 'executing genn binary %s ...' % where
-        if os.sys.platform == 'win32':
-            cmd = directory + "\\main.exe test " + str(
-                self.run_duration) + " " + gpu_arg
-            # os.system(cmd)
-            call(cmd, cwd=directory, stdout=stdout, stderr=stderr)
-        else:
-            # print ["./main", "test", str(self.run_duration), gpu_arg]
-            call(["./main", "test", str(self.run_duration), gpu_arg],
-                 cwd=directory, stdout=stdout, stderr=stderr)
+        with std_silent(with_output):
+            if os.sys.platform == 'win32':
+                cmd = directory + "\\main.exe test " + str(
+                    self.run_duration) + " " + gpu_arg
+                check_call(cmd, cwd=directory)
+            else:
+                # print ["./main", "test", str(self.run_duration), gpu_arg]
+                check_call(["./main", "test", str(self.run_duration), gpu_arg],
+                           cwd=directory)
         self.has_been_run = True
         last_run_info = open(
             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
@@ -692,33 +701,43 @@ class GeNNDevice(CPPStandaloneDevice):
     def compile_source(self, debug, directory, use_GPU):
         with std_silent(debug):
             if os.sys.platform == 'win32':
-                if os.getenv('PROCESSOR_ARCHITECTURE') == "AMD64":
-                    bitversion = 'x86_amd64'
-                elif os.getenv('PROCESSOR_ARCHITEW6432') == "AMD64":
-                    bitversion = 'x86_amd64'
-                else:
-                    bitversion = 'x86'
+                vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
+                if vcvars_loc == '':
+                    from distutils import msvc9compiler
+                    for version in xrange(16, 8, -1):
+                        fname = msvc9compiler.find_vcvarsall(version)
+                        if fname:
+                            vcvars_loc = fname
+                            break
+                if vcvars_loc == '':
+                    raise IOError("Cannot find vcvarsall.bat on standard "
+                                  "search path. Set the "
+                                  "codegen.cpp.msvc_vars_location preference "
+                                  "explicitly.")
 
-                # Users are required to set their path to "Visual Studio/VC", e.g.
-                # setx VS_PATH "C:\Program Files (x86)\Microsoft Visual Studio 10.0"
-                cmd = "\"" + os.getenv(
-                    'VS_PATH') + "\\VC\\vcvarsall.bat\" " + bitversion
-                cmd = cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
+                arch_name = prefs['codegen.cpp.msvc_architecture']
+                if arch_name == '':
+                    mach = platform.machine()
+                    if mach == 'AMD64':
+                        arch_name = 'x86_amd64'
+                    else:
+                        arch_name = 'x86'
+
+                vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
+                    vcvars_loc=vcvars_loc, arch_name=arch_name)
+
+                cmd = vcvars_cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += "&& nmake /f WINmakefile clean && nmake /f WINmakefile"
-                call(cmd, cwd=directory)
+                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
+                check_call(cmd, cwd=directory)
             else:
+                args = ["genn-buildmodel.sh", self.model_name + '.cpp']
                 if not use_GPU:
-                    call(["genn-buildmodel.sh", self.model_name + '.cpp', "-c"],
-                         cwd=directory)
-                    call(["make", "clean"], cwd=directory)
-                    call(["make"], cwd=directory)
-                else:
-                    call(["genn-buildmodel.sh", self.model_name + '.cpp'],
-                         cwd=directory)
-                    call(["make", "clean"], cwd=directory)
-                    call(["make"], cwd=directory)
+                    args += ['-c']
+                check_call(args, cwd=directory)
+                call(["make", "clean"], cwd=directory)
+                check_call(["make"], cwd=directory)
 
     def add_parameter(self, model, varname, variable):
         model.parameters.append(varname)
