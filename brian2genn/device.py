@@ -729,9 +729,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 cmd = vcvars_cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
+                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
                 check_call(cmd, cwd=directory)
-                call('nmake /f WINmakefile clean', cwd=directory)
-                check_call('nmake /f WINmakefile', cwd=directory)
             else:
                 args = ["genn-buildmodel.sh", self.model_name + '.cpp']
                 if not use_GPU:
