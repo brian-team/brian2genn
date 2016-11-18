@@ -14,19 +14,29 @@ void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32
     assert(source.size() == gvector.size());
     unsigned int size= source.size(); 
     for (int s= 0; s < srcNN; s++) {
-	for (int t= 0; t < trgNN; t++) {
-	    g[s*trgNN+t]= (scalar) 0.0;
-	}
+	    for (int t= 0; t < trgNN; t++) {
+	        g[s*trgNN+t]= (scalar)NAN;
+	    }
     }
-//    cerr << size << "!!!!!!" << endl;
+
     for (int i= 0; i < size; i++) {
-	assert(source[i] < srcNN);
-	assert(target[i] < trgNN);
-//	cerr << source[i] << " " << target[i] << " " << gvector[i] << endl;
-	g[source[i]*trgNN+target[i]]= gvector[i];
+	    assert(source[i] < srcNN);
+	    assert(target[i] < trgNN);
+	    // Check for duplicate entries
+	    if (! isnan(g[source[i]*trgNN+target[i]])) {
+	        std::cerr << "*****" << std::endl;
+	        std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << target[i] << std::endl;
+	        std::cerr << "*****" << std::endl;
+	        exit(1);
+	    }
+    	g[source[i]*trgNN+target[i]]= gvector[i];
     }
-//    cerr << endl;
-//    cerr << "-------------------------";
+    for (int s= 0; s < srcNN; s++) {
+	    for (int t= 0; t < trgNN; t++) {
+	        if (isnan(g[s*trgNN+t]))
+	            g[s*trgNN+t] = 0.0;
+	    }
+    }
 }
 
 namespace b2g {
@@ -91,7 +101,19 @@ void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> &source, vector<in
 	    }
 	}
     }
-//    convertCnt++;
+
+    // Check for duplicate entries
+    for (int i=0; i<srcNN; i++) {
+        vector<int32_t> targets = bypre[i];
+        std::sort(targets.begin(), targets.end());
+        auto duplicate_pos = std::adjacent_find(targets.begin(), targets.end());
+        if (duplicate_pos != targets.end()) {
+        	std::cerr << "*****" << std::endl;
+	        std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << *duplicate_pos << std::endl;
+	        std::cerr << "*****" << std::endl;
+	        exit(1);
+	    }
+    }
 }
 
 template<class scalar>
