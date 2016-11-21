@@ -744,6 +744,10 @@ class GeNNDevice(CPPStandaloneDevice):
         model.pvalue.append(repr(variable.value))
 
     def add_array_variable(self, model, varname, variable):
+        if variable.scalar:
+            raise NotImplementedError('Brian2GeNN does not support scalar (i.e.'
+                                      '"shared") variables (variable: '
+                                      '"%s").' % varname)
         model.variables.append(varname)
         model.variabletypes.append(c_data_type(variable.dtype))
         model.variablescope[varname] = 'brian'
