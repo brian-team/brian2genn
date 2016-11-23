@@ -4,24 +4,45 @@ environment:
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       platform: x64
+      DEPENDENCIES: "stable"
 
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       platform: x64
+      DEPENDENCIES: "stable"
+
+    - PYTHON: "C:\\Miniconda35-x64"
+      PYTHON_VERSION: "3.5"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "latest"
+
+    - PYTHON: "C:\\Miniconda-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "latest"
+
+matrix:
+  allow_failures:
+    - DEPENDENCIES: "latest"
 
 install:
   # Add the paths for anaconda
   - 'set PATH=%PYTHON%;%PYTHON%\Library\bin;%PYTHON%\Scripts;%PATH%'
   # Install Brian 2
-  - conda install --yes --quiet -c brian-team brian2 nose
+  - 'conda install --yes --quiet -c brian-team py-cpuinfo nose'
+  - 'if "%DEPENDENCIES%" == "stable" (set BRIAN_CHANNEL="brian-team") else (set BRIAN_CHANNEL="brian-team/label/dev")'
+  - 'conda install --yes --quiet -c %BRIAN_CHANNEL% brian2'
   # Install GeNN
-  - cd ..
-  - git clone -b development https://github.com/genn-team/genn.git
+  - 'cd ..'
+  - 'if "%DEPENDENCIES%" == "latest" set BRANCH_ARGUMENTS="-bdevelopment"'
+  - 'git clone %BRANCH_ARGUMENTS% https://github.com/genn-team/genn.git'
   - 'set GENN_PATH=%CD%\genn'
   - 'set PATH=%GENN_PATH%\lib\bin;%PATH%'
   - 'setx PATH "%PATH%"'
-  - cd brian2genn
+  - 'cd brian2genn'
 
 build: false  # not a C# project
 
