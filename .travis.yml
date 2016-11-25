@@ -4,17 +4,32 @@ sudo: false  # Make sure we are using the container-based infrastructure
 matrix:
   include:
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64"
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: linux
     - python: "3.5"
-      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64"
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: linux
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64"
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: osx
     - python: "3.5"
-      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64"
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: osx
+    - python: "2.7"
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
+      os: linux
+    - python: "3.5"
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
+      os: linux
+    - python: "2.7"
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
+      os: osx
+    - python: "3.5"
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
+      os: osx
+  allow_failures:
+    env: DEPENDENCIES="latest"
+  fast_finish: true
 
 # Use miniconda to install binary versions of numpy etc. from continuum
 # analytic's repository. Follows an approach described by Dan Blanchard:
@@ -22,15 +37,15 @@ matrix:
 before_install:
 - if [ ${PYTHON:0:1} == "2" ]; then
     if [ "$TRAVIS_OS_NAME" == "linux" ]; then
-    wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-$ARCHITECTURE.sh -O miniconda.sh;
+    travis_retry wget http://repo.continuum.io/miniconda/Miniconda-latest-Linux-$ARCHITECTURE.sh -O miniconda.sh;
     else
-    wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-$ARCHITECTURE.sh -O miniconda.sh;
+    travis_retry wget http://repo.continuum.io/miniconda/Miniconda-latest-MacOSX-$ARCHITECTURE.sh -O miniconda.sh;
     fi;
     else
     if [ "$TRAVIS_OS_NAME" == "linux" ]; then
-    wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-$ARCHITECTURE.sh -O miniconda.sh;
+    travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-latest-Linux-$ARCHITECTURE.sh -O miniconda.sh;
     else
-    wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-$ARCHITECTURE.sh -O miniconda.sh;
+    travis_retry wget http://repo.continuum.io/miniconda/Miniconda3-latest-MacOSX-$ARCHITECTURE.sh -O miniconda.sh;
     fi;
   fi
 - chmod +x miniconda.sh
@@ -39,11 +54,20 @@ before_install:
 
 # command to install dependencies
 install:
-  - conda install --yes --quiet -c brian-team brian2 nose
+  - if [ "$DEPENDENCIES" == "stable" ]; then
+        BRIAN_CHANNEL="brian-team";
+    else
+        BRIAN_CHANNEL="brian-team/label/dev";
+    fi
+  - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose
+  - travis_retry conda install --yes --quiet -c $BRIAN_CHANNEL brian2
   # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
   - cd ../..
-  - git clone https://github.com/genn-team/genn.git
+  - if [ "$DEPENDENCIES" == "latest" ]; then
+       BRANCH_ARGUMENT="-b development";
+    fi
+  - travis_retry git clone $BRANCH_ARGUMENT https://github.com/genn-team/genn.git
   - export GENN_PATH=$(pwd)/genn
   - export PATH=$PATH:$GENN_PATH/lib/bin
   - cd brian-team/brian2genn

@@ -61,14 +61,15 @@ setup(name='Brian2GeNN',
       author='Thomas Nowotny, Marcel Stimberg, Dan Goodman',
       author_email='t.nowotny at sussex.ac.uk',
       classifiers=[
-          'Development Status :: 1 - Beta',
+          'Development Status :: 4 - Beta',
           'Intended Audience :: Science/Research',
-          'License :: GPL',
+          'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
           'Natural Language :: English',
           'Operating System :: OS Independent',
           'Programming Language :: Python',
           'Programming Language :: Python :: 2',
           'Programming Language :: Python :: 3',
-          'Topic :: Scientific/Engineering :: Bio-Informatics'
+          'Topic :: Scientific/Engineering :: Bio-Informatics',
+          'Intended Audience :: Science/Research'
       ]
       )
