@@ -267,7 +267,9 @@ class GeNNDevice(CPPStandaloneDevice):
     The main "genn" device. This does most of the translation work from Brian 2 generated code to functional GeNN code, assisted by the "GeNN language".
     '''
     def __init__(self):
-        super(GeNNDevice, self).__init__()   
+        super(GeNNDevice, self).__init__()
+        # Remember whether we have already passed the "run" statement
+        self.run_statement_used = False
         self.network_schedule= ['start', 'synapses', 'groups', 'thresholds', 'resets', 'end']
         self.neuron_models = []
         self.spikegenerator_models= []
@@ -392,6 +394,10 @@ class GeNNDevice(CPPStandaloneDevice):
         for func, args in self.main_queue:
             if func=='run_code_object':
                 codeobj, = args
+                if self.run_statement_used:
+                    raise NotImplementedError('Cannot execute code after the '
+                                              'run statement '
+                                              '(CodeObject: %s)' % codeobj.name)
                 # a bit of a hack to explicitly exclude spike queue related code objects here: TODO
                 if ('initialise_queue' not in codeobj.name) and ('push_spikes' not in codeobj.name): 
                     main_lines.append('_run_%s();' % codeobj.name)
@@ -1203,6 +1209,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                 
         print 'running brian code generation ...'
         super(GeNNDevice, self).network_run(net=net, duration=duration, report=report, report_period=report_period, namespace=namespace, level=level+1)
+        self.run_statement_used = True
 
 #------------------------------------------------------------------------------
 # End of GeNNDevice
