@@ -81,6 +81,9 @@ int main(int argc, char *argv[])
   {% endif %}
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
+  {% for var in synapses.shared_variables %}
+  copy_brian_to_genn(brian::_array_{{synapses.name}}_{{var}}, &{{var}}{{synapses.name}}, 1);
+  {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
   initmagicnetwork_model();
 
@@ -90,6 +93,13 @@ int main(int argc, char *argv[])
   {% if neuron.variablescope[var] == 'brian' %}
   copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, {{var}}{{neuron.name}}, {{neuron.N}});
   {% endif %}
+  {% endfor %}
+  {% endfor %}
+
+  // copy scalar variables
+  {% for neuron in neuron_models %}
+  {% for var in neuron.shared_variables %}
+  copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, &{{var}}{{neuron.name}}, 1);
   {% endfor %}
   {% endfor %}
   
@@ -149,6 +159,9 @@ int main(int argc, char *argv[])
   {% endif %}
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
+  {% for var in synapses.shared_variables %}
+  copy_genn_to_brian(&{{var}}{{synapses.name}}, brian::_array_{{synapses.name}}_{{var}}, 1);
+  {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
 
   // copy variable arrays
@@ -159,7 +172,14 @@ int main(int argc, char *argv[])
   {% endif %}
   {% endfor %}
   {% endfor %}
-  
+
+  // copy scalar variables
+  {% for neuron in neuron_models %}
+  {% for var in neuron.shared_variables %}
+  copy_genn_to_brian(&{{var}}{{neuron.name}}, brian::_array_{{neuron.name}}_{{var}}, 1);
+  {% endfor %}
+  {% endfor %}
+
   _write_arrays();
   _dealloc_arrays();
   cerr << "everything finished." << endl;
