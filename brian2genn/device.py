@@ -152,6 +152,24 @@ def extract_source_variables(variables, varname, smvariables):
     return smvariables
 
 
+# Dummy classes used for delaying the CodeObject creation of stateupdater and
+# thresholder (which will be merged into a single code object):
+class DummyObject(object):
+    def __init__(self, codeobj):
+        self.codeobj = codeobj
+
+
+class DummyCodeObject(object):
+    def __init__(self, owner, name, abstract_code, variables, variable_indices,
+                 override_conditional_write):
+        self.owner = owner
+        self.name = name
+        self.abstract_code = abstract_code
+        self.variables = variables
+        self.variable_indices = variable_indices
+        self.override_conditional_write = override_conditional_write
+
+
 class neuronModel(object):
     '''
     Class that contains all relevant information of a neuron model. 
@@ -349,7 +367,18 @@ class GeNNDevice(CPPStandaloneDevice):
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
         '''
-        if template_name in ['stateupdate', 'threshold', 'reset', 'synapses']:
+        if (template_name in ['stateupdate', 'threshold'] and
+                isinstance(owner, NeuronGroup)):
+            # Delay the code generation process, we want to merge the two into
+            # one
+            codeobj = DummyCodeObject(owner=owner,
+                                      name=name,
+                                      abstract_code=abstract_code,
+                                      variables=variables,
+                                      variable_indices=variable_indices,
+                                      override_conditional_write=override_conditional_write)
+            self.simple_code_objects[name] = codeobj
+        elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
@@ -866,15 +895,47 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
             support_lines = []
+
+            #Create CodeObject for StateUpdater + thresholder
+            combined_abstract_code = {None: []}
+            combined_variables = {}
+            combined_variable_indices = defaultdict(lambda: '_idx')
+            combined_override_conditional_write = set()
+            if obj.name + '_stateupdater' in objects and objects[obj.name + '_stateupdater'].codeobj is not None:
+                stateupdater_codeobj = objects[obj.name + '_stateupdater'].codeobj
+                combined_abstract_code[None] += [stateupdater_codeobj.abstract_code[None]]
+                combined_variables.update(stateupdater_codeobj.variables)
+                combined_variable_indices.update(stateupdater_codeobj.variable_indices)
+                combined_override_conditional_write.update(stateupdater_codeobj.override_conditional_write)
+                objects[obj.name + '_stateupdater'].codeobj = None
+            if obj.name + '_thresholder' in objects and objects[obj.name + '_thresholder'].codeobj is not None:
+                thresholder_codeobj = objects[obj.name + '_thresholder'].codeobj
+                combined_abstract_code[None] += [thresholder_codeobj.abstract_code[None]]
+                combined_variables.update(thresholder_codeobj.variables)
+                combined_variable_indices.update(thresholder_codeobj.variable_indices)
+                combined_override_conditional_write.update(thresholder_codeobj.override_conditional_write)
+                neuron_model.thresh_cond_lines = '_cond'
+                objects[obj.name + '_thresholder'].codeobj = None
+            else:
+                neuron_model.thresh_cond_lines = '0'
+            combined_abstract_code[None] = '\n'.join(combined_abstract_code[None])
+            if len(combined_abstract_code[None]):
+                codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
+                                                              combined_abstract_code,
+                                                              combined_variables,
+                                                              'stateupdate',
+                                                              combined_variable_indices,
+                                                              codeobj_class=GeNNCodeObject,
+                                                              template_kwds=None,
+                                                              override_conditional_write=combined_override_conditional_write,
+                                                              )
+                objects[obj.name + '_stateupdater'] = DummyObject(codeobj=codeobj)
+
             for suffix, lines in [('_stateupdater', neuron_model.code_lines),
                                   ('_run_regularly', neuron_model.code_lines),
-                                  ('_thresholder',
-                                   neuron_model.thresh_cond_lines),
                                   ('_resetter', neuron_model.reset_code_lines),
                                   ]:
                 if obj.name + suffix not in objects:
-                    if suffix == '_thresholder':
-                        lines.append('0')
                     if suffix == '_resetter' and not (obj._refractory is False):
                         code = 'lastspike = t; \n not_refractory= 0;'
                         code = self.fix_random_generators(neuron_model, code)
@@ -885,6 +946,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     continue
 
                 codeobj = objects[obj.name + suffix].codeobj
+
                 if codeobj is None:
                     continue
 
@@ -1085,7 +1147,6 @@ class GeNNDevice(CPPStandaloneDevice):
             src = obj.source
             if isinstance(src, Subgroup):
                 src = src.source
-                print src
             sm.neuronGroup = src.name
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
