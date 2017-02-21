@@ -367,7 +367,7 @@ class GeNNDevice(CPPStandaloneDevice):
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
         '''
-        if (template_name in ['stateupdate', 'threshold'] and
+        if (template_name in ['stateupdate', 'threshold', 'reset'] and
                 isinstance(owner, NeuronGroup)):
             # Delay the code generation process, we want to merge the two into
             # one
@@ -894,78 +894,85 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.name = obj.name
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
-            support_lines = []
 
-            #Create CodeObject for StateUpdater + thresholder
-            combined_abstract_code = {None: []}
+            # We have previously only created "dummy code objects" for the
+            # state update, threshold, and reset of a NeuronGroup. We will now
+            # generate a single code object for all of them, adding the
+            # threshold calculation code to the end of the state update. When
+            # using subexpressions, the threshold condition code could consist
+            # of multiple lines, and GeNN only supports a threshold condition
+            # that is directly used as an if condition. We therefore store the
+            # result in a boolean variable and only pass this variable as the
+            # threshold condition to GeNN.
+            # It is also important that stateupdate/threshold share the same
+            # code object with the reset, as in GeNN both codes have the same
+            # support code. If they used two separate code objects, adding the
+            # two support codes might lead to duplicate definitions of
+            # functions.
+            combined_abstract_code = {'stateupdate': [], 'reset': []}
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
-            if obj.name + '_stateupdater' in objects and objects[obj.name + '_stateupdater'].codeobj is not None:
-                stateupdater_codeobj = objects[obj.name + '_stateupdater'].codeobj
-                combined_abstract_code[None] += [stateupdater_codeobj.abstract_code[None]]
-                combined_variables.update(stateupdater_codeobj.variables)
-                combined_variable_indices.update(stateupdater_codeobj.variable_indices)
-                combined_override_conditional_write.update(stateupdater_codeobj.override_conditional_write)
-                objects[obj.name + '_stateupdater'].codeobj = None
-            if obj.name + '_thresholder' in objects and objects[obj.name + '_thresholder'].codeobj is not None:
-                thresholder_codeobj = objects[obj.name + '_thresholder'].codeobj
-                combined_abstract_code[None] += [thresholder_codeobj.abstract_code[None]]
-                combined_variables.update(thresholder_codeobj.variables)
-                combined_variable_indices.update(thresholder_codeobj.variable_indices)
-                combined_override_conditional_write.update(thresholder_codeobj.override_conditional_write)
+            for suffix, code_slot in [('_stateupdater', 'stateupdate'),
+                                      ('_thresholder', 'stateupdate'),
+                                      ('_resetter', 'reset')]:
+                full_name = obj.name + suffix
+                if full_name in objects and objects[full_name].codeobj is not None:
+                    codeobj = objects[full_name].codeobj
+                    combined_abstract_code[code_slot] += [codeobj.abstract_code[None]]
+                    combined_variables.update(codeobj.variables)
+                    combined_variable_indices.update(codeobj.variable_indices)
+                    # The resetter includes "not_refractory" as an override_conditional_write
+                    # variable, meaning that it removes the write-protection based on that
+                    # variable that would otherwise apply to "unless refractory" variables,
+                    # e.g. the membrane potential. This is not strictly necessary, it will just
+                    # introduce an unnecessary check, because a neuron that spiked is by
+                    # definition not in its refractory period. However, if we included it as
+                    # a override_conditional_write variable for the whole code object here,
+                    # this would apply also to the state updater, and therefore
+                    # remove the write-protection from "unless refractory" variables in the
+                    # state update code.
+                    if suffix != '_resetter':
+                        combined_override_conditional_write.update(codeobj.override_conditional_write)
+                    objects[full_name].codeobj = None
+
+            if objects.get(obj.name + '_thresholder', None) is not None:
                 neuron_model.thresh_cond_lines = '_cond'
-                objects[obj.name + '_thresholder'].codeobj = None
             else:
                 neuron_model.thresh_cond_lines = '0'
-            combined_abstract_code[None] = '\n'.join(combined_abstract_code[None])
-            if len(combined_abstract_code[None]):
+            if objects.get(obj.name + '_resetter', None) is not None:
+                if obj._refractory is not False:
+                    combined_abstract_code['reset'] += ['lastspike = t',
+                                                        'not_refractory = False']
+
+            combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
+            combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
+            if len(combined_abstract_code['stateupdate']) or len(combined_abstract_code['reset']):
                 codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
                                                               combined_abstract_code,
                                                               combined_variables,
-                                                              'stateupdate',
+                                                              'neuron_code',
                                                               combined_variable_indices,
                                                               codeobj_class=GeNNCodeObject,
                                                               template_kwds=None,
                                                               override_conditional_write=combined_override_conditional_write,
                                                               )
-                objects[obj.name + '_stateupdater'] = DummyObject(codeobj=codeobj)
-
-            for suffix, lines in [('_stateupdater', neuron_model.code_lines),
-                                  ('_run_regularly', neuron_model.code_lines),
-                                  ('_resetter', neuron_model.reset_code_lines),
-                                  ]:
-                if obj.name + suffix not in objects:
-                    if suffix == '_resetter' and not (obj._refractory is False):
-                        code = 'lastspike = t; \n not_refractory= 0;'
-                        code = self.fix_random_generators(neuron_model, code)
-                        code = decorate(code, neuron_model.variables,
-                                        neuron_model.shared_variables,
-                                        neuron_model.parameters).strip()
-                        lines.append(code)
-                    continue
-
-                codeobj = objects[obj.name + suffix].codeobj
-
-                if codeobj is None:
-                    continue
-
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             self.add_parameter(neuron_model, k, v)
-                code = codeobj.code.cpp_file
 
-                if (suffix == '_resetter') and not (obj._refractory is False):
-                    code = code + '\n lastspike = t; \n not_refractory= 0;'
-                code = self.fix_random_generators(neuron_model, code)
-                code = decorate(code, neuron_model.variables,
-                                neuron_model.shared_variables,
-                                neuron_model.parameters).strip()
-                lines.append(code)
-                code = stringify(codeobj.code.h_file)
-                support_lines.append(code)
-            neuron_model.support_code_lines = support_lines
+                update_code = codeobj.code.stateupdate_code
+                reset_code = codeobj.code.reset_code
+                for code, lines in [(update_code, neuron_model.code_lines),
+                                    (reset_code, neuron_model.reset_code_lines)]:
+                    code = self.fix_random_generators(neuron_model, code)
+                    code = decorate(code, neuron_model.variables,
+                                    neuron_model.shared_variables,
+                                    neuron_model.parameters).strip()
+                    lines.append(code)
+                support_code = stringify(codeobj.code.h_file)
+                neuron_model.support_code_lines = support_code
             self.neuron_models.append(neuron_model)
             self.groupDict[neuron_model.name] = neuron_model
 
