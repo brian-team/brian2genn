@@ -59,7 +59,7 @@ install:
     else
         BRIAN_CHANNEL="brian-team/label/dev";
     fi
-  - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose
+  - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose python=$PYTHON
   - travis_retry conda install --yes --quiet -c $BRIAN_CHANNEL brian2
   # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
