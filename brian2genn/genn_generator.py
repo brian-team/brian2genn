@@ -20,6 +20,36 @@ logger = get_logger('brian2.devices.genn')
 
 __all__ = ['GeNNCodeGenerator']
 
+
+def get_var_ndim(v, default_value=None):
+    '''
+    Helper function to get the ``ndim`` attribute of a `DynamicArrayVariable`,
+    falling back to the previous name ``dimensions`` if necessary.
+
+    Parameters
+    ----------
+    v : `ArrayVariable`
+        The variable for which to retrieve the number of dimensions.
+    default_value : optional
+        A default value if the attribute does not exist
+
+    Returns
+    -------
+    ndim : int
+        Number of dimensions
+    '''
+    try:
+        return v.ndim
+    except AttributeError:
+        try:
+            return v.dimensions
+        except AttributeError as ex:
+            if default_value is not None:
+                return default_value
+            else:
+                raise ex
+
+
 class GeNNCodeGenerator(CodeGenerator):
     '''
     "GeNN language"
@@ -201,7 +231,7 @@ class GeNNCodeGenerator(CodeGenerator):
                 pointer_name = self.get_array_name(var)
                 if pointer_name in handled_pointers:
                     continue
-                if getattr(var, 'dimensions', 1) > 1:
+                if get_var_ndim(var, 1) > 1:
                     continue  # multidimensional (dynamic) arrays have to be treated differently
                 line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
                                                     self.restrict,
