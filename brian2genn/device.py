@@ -913,6 +913,11 @@ class GeNNDevice(CPPStandaloneDevice):
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
+            thresholder_codeobj = getattr(objects.get(obj.name + '_thresholder', None), 'codeobj', None)
+            if thresholder_codeobj is not None:
+                neuron_model.thresh_cond_lines = '_cond'
+            else:
+                neuron_model.thresh_cond_lines = '0'
             for suffix, code_slot in [('_stateupdater', 'stateupdate'),
                                       ('_thresholder', 'stateupdate'),
                                       ('_resetter', 'reset')]:
@@ -936,10 +941,6 @@ class GeNNDevice(CPPStandaloneDevice):
                         combined_override_conditional_write.update(codeobj.override_conditional_write)
                     objects[full_name].codeobj = None
 
-            if objects.get(obj.name + '_thresholder', None) is not None:
-                neuron_model.thresh_cond_lines = '_cond'
-            else:
-                neuron_model.thresh_cond_lines = '0'
             if objects.get(obj.name + '_resetter', None) is not None:
                 if obj._refractory is not False:
                     combined_abstract_code['reset'] += ['lastspike = t',
