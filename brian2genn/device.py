@@ -151,15 +151,12 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
-
-# Dummy classes used for delaying the CodeObject creation of stateupdater and
-# thresholder (which will be merged into a single code object):
-class DummyObject(object):
-    def __init__(self, codeobj):
-        self.codeobj = codeobj
-
-
-class DummyCodeObject(object):
+class DelayedCodeObject(object):
+    '''
+    Dummy class used for delaying the CodeObject creation of stateupdater,
+    thresholder, and resetter of a NeuronGroup (which will all be merged into a
+    single code object).
+    '''
     def __init__(self, owner, name, abstract_code, variables, variable_indices,
                  override_conditional_write):
         self.owner = owner
@@ -369,14 +366,14 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
         if (template_name in ['stateupdate', 'threshold', 'reset'] and
                 isinstance(owner, NeuronGroup)):
-            # Delay the code generation process, we want to merge the two into
-            # one
-            codeobj = DummyCodeObject(owner=owner,
-                                      name=name,
-                                      abstract_code=abstract_code,
-                                      variables=variables,
-                                      variable_indices=variable_indices,
-                                      override_conditional_write=override_conditional_write)
+            # Delay the code generation process, we want to merge them into one
+            # code object later
+            codeobj = DelayedCodeObject(owner=owner,
+                                        name=name,
+                                        abstract_code=abstract_code,
+                                        variables=variables,
+                                        variable_indices=variable_indices,
+                                        override_conditional_write=override_conditional_write)
             self.simple_code_objects[name] = codeobj
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
