@@ -3,17 +3,15 @@ The code generator for the "genn" language. This is mostly C++ with some specifi
 decorators (mainly "__host__ __device__") to allow operation in a CUDA context.
 '''
 
-import itertools
-import numpy
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
 from brian2.parsing.rendering import CPPNodeRenderer
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
-from brian2.core.preferences import prefs, BrianPreference
+from brian2.core.preferences import prefs
 from brian2.core.variables import ArrayVariable
 from brian2.codegen.generators.base import CodeGenerator
-from brian2.codegen.generators.cpp_generator import c_data_type, CPPCodeGenerator
+from brian2.codegen.generators.cpp_generator import c_data_type
 from brian2genn.insyn import check_pre_code
 
 logger = get_logger('brian2.devices.genn')
@@ -50,6 +48,33 @@ def get_var_ndim(v, default_value=None):
                 raise ex
 
 
+
+def _mod_support_code():
+    code = ''
+    typestrs = ['int', 'float', 'double']
+    floattypestrs = ['float', 'double']
+    for ix, xtype in enumerate(typestrs):
+        for iy, ytype in enumerate(typestrs):
+            hightype = typestrs[max(ix, iy)]
+            if xtype in floattypestrs or ytype in floattypestrs:
+                expr = 'fmod(fmod(x, y)+y, y)'
+            else:
+                expr = '((x%y)+y)%y'
+            code += '''
+            #ifdef CPU_ONLY
+            inline {hightype} _brian_mod({xtype} ux, {ytype} uy)
+            #else
+            __host__ __device__ inline {hightype} _brian_mod({xtype} ux, {ytype} uy)
+            #endif
+            {{
+                const {hightype} x = ({hightype})ux;
+                const {hightype} y = ({hightype})uy;
+                return {expr};
+            }}
+            '''.format(hightype=hightype, xtype=xtype, ytype=ytype, expr=expr)
+    return deindent(code)
+
+
 class GeNNCodeGenerator(CodeGenerator):
     '''
     "GeNN language"
@@ -64,13 +89,13 @@ class GeNNCodeGenerator(CodeGenerator):
 
     class_name = 'genn'
 
-    universal_support_code = '''
+    universal_support_code = _mod_support_code() + deindent('''
     #ifdef _MSC_VER
     #define _brian_pow(x, y) (pow((double)(x), (y)))
     #else
     #define _brian_pow(x, y) (pow((x), (y)))
     #endif
-    '''
+    ''')
 
     def __init__(self, *args, **kwds):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
