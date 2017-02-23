@@ -29,9 +29,9 @@ from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory
 from brian2.utils.stringtools import word_substitute, get_identifiers
-from brian2.groups.group import Group
+from brian2.groups.group import Group, CodeRunner
 from brian2.groups.neurongroup import (NeuronGroup, StateUpdater, Resetter,
-                                       Thresholder)
+                                       Thresholder, SubexpressionUpdater)
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
 from brian2.input.spikegeneratorgroup import *
@@ -192,7 +192,6 @@ class spikegeneratorModel(object):
     '''
     Class that contains all relevant information of a spike generator group.
     '''
-
     def __init__(self):
         self.name = ''
         self.N = 0
@@ -620,9 +619,14 @@ class GeNNDevice(CPPStandaloneDevice):
                           isinstance(obj, PoissonGroup)]
         spikegenerator_groups = [obj for obj in net.objects if
                                  isinstance(obj, SpikeGeneratorGroup)]
+        # Note that we don't use "isinstance" in the following test, since
+        # StateUpdater etc. are child classes of CodeRunner
+        code_runners = [obj for obj in net.objects if
+                        obj.__class__ in [SubexpressionUpdater, CodeRunner]]
 
         synapse_groups = [obj for obj in net.objects if
                           isinstance(obj, Synapses)]
+
         spike_monitors = [obj for obj in net.objects if
                           isinstance(obj, SpikeMonitor)]
         rate_monitors = [obj for obj in net.objects if
@@ -637,7 +641,7 @@ class GeNNDevice(CPPStandaloneDevice):
             NeuronGroup, PoissonGroup, SpikeGeneratorGroup, Synapses,
             SpikeMonitor, PopulationRateMonitor, StateMonitor,
             StateUpdater, SynapsesStateUpdater, Resetter,
-            Thresholder, SynapticPathway)):
+            Thresholder, SynapticPathway, CodeRunner)):
                 raise NotImplementedError(
                     "Brian2GeNN does not support objects of type "
                     "'%s'" % str(obj.__class__.__name__))
@@ -909,7 +913,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # support code. If they used two separate code objects, adding the
             # two support codes might lead to duplicate definitions of
             # functions.
-            combined_abstract_code = {'stateupdate': [], 'reset': []}
+            combined_abstract_code = {'stateupdate': [], 'reset': [],
+                                      'subexpression_update': []}
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
@@ -920,7 +925,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 neuron_model.thresh_cond_lines = '0'
             for suffix, code_slot in [('_stateupdater', 'stateupdate'),
                                       ('_thresholder', 'stateupdate'),
-                                      ('_resetter', 'reset')]:
+                                      ('_resetter', 'reset'),
+                                      ('_subexpression_update', 'subexpression_update')]:
                 full_name = obj.name + suffix
                 if full_name in objects and objects[full_name].codeobj is not None:
                     codeobj = objects[full_name].codeobj
@@ -947,6 +953,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
             combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
             combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
+            combined_abstract_code['subexpression_update'] = '\n'.join(combined_abstract_code['subexpression_update'])
             if len(combined_abstract_code['stateupdate']) or len(combined_abstract_code['reset']):
                 codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
                                                               combined_abstract_code,
