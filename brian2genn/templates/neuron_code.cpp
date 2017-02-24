@@ -20,11 +20,6 @@ if (fabs(fmod(t, _run_regularly_dt)) < dt/2) {
 {{(scalar_code['reset'] + vector_code['reset'])|autoindent}}
 {% endmacro %}
 
-{% macro subexpression_update_code() %}
-{{(scalar_code['subexpression_update'] + vector_code['subexpression_update'])|autoindent}}
-{% endmacro %}
-
-
 {% macro h_file() %}
 {{support_code_lines|autoindent}}
 {{hashdefine_lines|autoindent}}
