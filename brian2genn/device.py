@@ -12,6 +12,7 @@ import itertools
 import numpy
 import numbers
 
+from brian2.input.poissoninput import PoissonInput
 from brian2.spatialneuron.spatialneuron import (SpatialNeuron,
                                                 SpatialStateUpdater)
 from brian2.units import second
@@ -530,14 +531,19 @@ class GeNNDevice(CPPStandaloneDevice):
         GeNN- compatible calls by replacing the cpp_standalone
         `_vectorisation_idx` argument with the GeNN `_seed` argument.
         '''
-        for func in ['_rand', '_randn', '_binomial', '_binomial_1']:
-            if func + '(_vectorisation_idx)' in code:
-                code = code.replace(func + '(_vectorisation_idx)',
-                                    func + '(_seed)')
-                if not '_seed' in model.variables:
-                    model.variables.append('_seed')
-                    model.variabletypes.append('uint64_t')
-                    model.variablescope['_seed'] = 'genn'
+        # TODO: In principle, _vectorisation_idx is an argument to any
+        # function that does not take any arguments -- in practice, random
+        # number generators are the only argument-less functions that are
+        # commonly used. We cannot check for explicit names `_rand`, etc.,
+        # since multiple uses of binomial or PoissonInput will need to names
+        # that we cannot easily predict (poissoninput_binomial_2, etc.)
+        if '(_vectorisation_idx)' in code:
+            code = code.replace('(_vectorisation_idx)',
+                                '(_seed)')
+            if not '_seed' in model.variables:
+                model.variables.append('_seed')
+                model.variabletypes.append('uint64_t')
+                model.variablescope['_seed'] = 'genn'
 
         return code
 
@@ -911,7 +917,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # functions.
             combined_abstract_code = {'stateupdate': [], 'reset': [],
                                       'subexpression_update': [],
-                                      'run_regularly': []}
+                                      'run_regularly': [],
+                                      'poisson_input': []}
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
@@ -958,10 +965,20 @@ class GeNNDevice(CPPStandaloneDevice):
                 combined_abstract_code['reset'] += ['lastspike = t',
                                                     'not_refractory = False']
 
-            combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
-            combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
-            combined_abstract_code['subexpression_update'] = '\n'.join(combined_abstract_code['subexpression_update'])
-            combined_abstract_code['run_regularly'] = '\n'.join(combined_abstract_code['run_regularly'])
+            # Find PoissonInputs targetting this NeuronGroup
+            poisson_inputs = [o for o in objects.itervalues()
+                              if isinstance(o, PoissonInput) and
+                                 o.group.name == obj.name]
+
+            for poisson_input in poisson_inputs:
+                codeobj = poisson_input.codeobj
+                combined_abstract_code['poisson_input'] += [codeobj.abstract_code[None]]
+                combined_variables.update(codeobj.variables)
+                combined_variable_indices.update(codeobj.variable_indices)
+
+            for code_block in combined_abstract_code.iterkeys():
+                combined_abstract_code[code_block] = '\n'.join(combined_abstract_code[code_block])
+
             if any(len(ac) for ac in combined_abstract_code.itervalues()):
                 codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
                                                               combined_abstract_code,
