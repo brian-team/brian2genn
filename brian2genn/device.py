@@ -646,7 +646,24 @@ class GeNNDevice(CPPStandaloneDevice):
             Thresholder, SynapticPathway, CodeRunner)):
                 raise NotImplementedError(
                     "Brian2GeNN does not support objects of type "
-                    "'%s'" % str(obj.__class__.__name__))
+                    "'%s'" % obj.__class__.__name__)
+            # We only support run_regularly and "constant over dt"
+            # subexpressions for neurons
+            if (isinstance(obj, SubexpressionUpdater) and
+                    not isinstance(obj.group, NeuronGroup)):
+                raise NotImplementedError(
+                    'Subexpressions with the flag "constant over dt" are only '
+                    'supported for NeuronGroup (not for objects of type '
+                    '"%s").' % obj.group.__class__.__name__
+                )
+            if (obj.__class__ ==  CodeRunner and
+                    not isinstance(obj.group, NeuronGroup)):
+                raise NotImplementedError(
+                    'CodeRunner objects (most commonly created with the '
+                    '"run_regularly" method) are only supported for '
+                    'NeuronGroup (not for objects of type '
+                    '"%s").' % obj.group.__class__.__name__
+                )
         self.model_name = net.name + '_model'
         self.dtDef = 'model.setDT(' + repr(float(defaultclock.dt)) + ');'
 
@@ -955,6 +972,10 @@ class GeNNDevice(CPPStandaloneDevice):
                         if has_run_regularly:
                             raise NotImplementedError('Brian2GeNN only supports a single '
                                                       'run_regularly operation per NeuronGroup.')
+                        if objects[full_name].when != 'start':
+                            raise NotImplementedError('Brian2GeNN does not support changing '
+                                                      'the scheduling slot for "run_regularly" '
+                                                      'operations.')
                         has_run_regularly = True
                         neuron_model.parameters.append('_run_regularly_dt')
                         dt_value = CPPNodeRenderer().render_expr(repr(objects[full_name].clock.dt_))
@@ -971,6 +992,10 @@ class GeNNDevice(CPPStandaloneDevice):
                                  o.group.name == obj.name]
 
             for poisson_input in poisson_inputs:
+                if poisson_input.when != 'synapses':
+                    raise NotImplementedError('Brian2GeNN does not support '
+                                              'changing the scheduling slot '
+                                              'of PoissonInput objects.')
                 codeobj = poisson_input.codeobj
                 combined_abstract_code['poisson_input'] += [codeobj.abstract_code[None]]
                 combined_variables.update(codeobj.variables)
