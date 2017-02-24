@@ -619,10 +619,6 @@ class GeNNDevice(CPPStandaloneDevice):
                           isinstance(obj, PoissonGroup)]
         spikegenerator_groups = [obj for obj in net.objects if
                                  isinstance(obj, SpikeGeneratorGroup)]
-        # Note that we don't use "isinstance" in the following test, since
-        # StateUpdater etc. are child classes of CodeRunner
-        code_runners = [obj for obj in net.objects if
-                        obj.__class__ in [SubexpressionUpdater, CodeRunner]]
 
         synapse_groups = [obj for obj in net.objects if
                           isinstance(obj, Synapses)]
@@ -914,7 +910,8 @@ class GeNNDevice(CPPStandaloneDevice):
             # two support codes might lead to duplicate definitions of
             # functions.
             combined_abstract_code = {'stateupdate': [], 'reset': [],
-                                      'subexpression_update': []}
+                                      'subexpression_update': [],
+                                      'run_regularly': []}
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
@@ -923,10 +920,12 @@ class GeNNDevice(CPPStandaloneDevice):
                 neuron_model.thresh_cond_lines = '_cond'
             else:
                 neuron_model.thresh_cond_lines = '0'
+            has_run_regularly = False
             for suffix, code_slot in [('_stateupdater', 'stateupdate'),
                                       ('_thresholder', 'stateupdate'),
                                       ('_resetter', 'reset'),
-                                      ('_subexpression_update', 'subexpression_update')]:
+                                      ('_subexpression_update', 'subexpression_update'),
+                                      ('_run_regularly', 'run_regularly')]:
                 full_name = obj.name + suffix
                 if full_name in objects and objects[full_name].codeobj is not None:
                     codeobj = objects[full_name].codeobj
@@ -945,6 +944,14 @@ class GeNNDevice(CPPStandaloneDevice):
                     # state update code.
                     if suffix != '_resetter':
                         combined_override_conditional_write.update(codeobj.override_conditional_write)
+                    if suffix == '_run_regularly':
+                        if has_run_regularly:
+                            raise NotImplementedError('Brian2GeNN only supports a single '
+                                                      'run_regularly operation per NeuronGroup.')
+                        has_run_regularly = True
+                        neuron_model.parameters.append('_run_regularly_dt')
+                        dt_value = CPPNodeRenderer().render_expr(repr(objects[full_name].clock.dt_))
+                        neuron_model.pvalue.append(dt_value)
                     objects[full_name].codeobj = None
 
             if obj._refractory is not False:
@@ -954,14 +961,15 @@ class GeNNDevice(CPPStandaloneDevice):
             combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
             combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
             combined_abstract_code['subexpression_update'] = '\n'.join(combined_abstract_code['subexpression_update'])
-            if len(combined_abstract_code['stateupdate']) or len(combined_abstract_code['reset']):
+            combined_abstract_code['run_regularly'] = '\n'.join(combined_abstract_code['run_regularly'])
+            if any(len(ac) for ac in combined_abstract_code.itervalues()):
                 codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
                                                               combined_abstract_code,
                                                               combined_variables,
                                                               'neuron_code',
                                                               combined_variable_indices,
                                                               codeobj_class=GeNNCodeObject,
-                                                              template_kwds=None,
+                                                              template_kwds={'has_run_regularly': has_run_regularly},
                                                               override_conditional_write=combined_override_conditional_write,
                                                               )
                 for k, v in codeobj.variables.iteritems():
@@ -1332,7 +1340,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 'Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
         for obj in net.objects:
-            if obj.clock.name is not 'defaultclock':
+            if obj.clock.name is not 'defaultclock' and not (obj.__class__ == CodeRunner):
                 raise NotImplementedError(
                     'Multiple clocks are not supported for the genn device')
 
