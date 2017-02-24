@@ -39,8 +39,14 @@ GNUmakefile
 WINmakefile
 engine.cc
 model.cc
-reset.cc
 runner.cc
-stateupdate.cc
 synapses.cc
+# The following templates are *not* used for NeuronGroup
+reset.cc
+stateupdate.cc
 threshold.cc
+# This template merges the code for stateupdate/threshold/reset in
+# NeuronGroups (in GeNN, they all share the same support Code)
+neuron_model.cc
+
+

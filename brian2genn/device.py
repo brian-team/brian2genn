@@ -151,6 +151,21 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
+class DelayedCodeObject(object):
+    '''
+    Dummy class used for delaying the CodeObject creation of stateupdater,
+    thresholder, and resetter of a NeuronGroup (which will all be merged into a
+    single code object).
+    '''
+    def __init__(self, owner, name, abstract_code, variables, variable_indices,
+                 override_conditional_write):
+        self.owner = owner
+        self.name = name
+        self.abstract_code = abstract_code
+        self.variables = variables
+        self.variable_indices = variable_indices
+        self.override_conditional_write = override_conditional_write
+
 
 class neuronModel(object):
     '''
@@ -349,7 +364,18 @@ class GeNNDevice(CPPStandaloneDevice):
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
         '''
-        if template_name in ['stateupdate', 'threshold', 'reset', 'synapses']:
+        if (template_name in ['stateupdate', 'threshold', 'reset'] and
+                isinstance(owner, NeuronGroup)):
+            # Delay the code generation process, we want to merge them into one
+            # code object later
+            codeobj = DelayedCodeObject(owner=owner,
+                                        name=name,
+                                        abstract_code=abstract_code,
+                                        variables=variables,
+                                        variable_indices=variable_indices,
+                                        override_conditional_write=override_conditional_write)
+            self.simple_code_objects[name] = codeobj
+        elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
@@ -865,45 +891,86 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.name = obj.name
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
-            support_lines = []
-            for suffix, lines in [('_stateupdater', neuron_model.code_lines),
-                                  ('_run_regularly', neuron_model.code_lines),
-                                  ('_thresholder',
-                                   neuron_model.thresh_cond_lines),
-                                  ('_resetter', neuron_model.reset_code_lines),
-                                  ]:
-                if obj.name + suffix not in objects:
-                    if suffix == '_thresholder':
-                        lines.append('0')
-                    if suffix == '_resetter' and not (obj._refractory is False):
-                        code = 'lastspike = t; \n not_refractory= 0;'
-                        code = self.fix_random_generators(neuron_model, code)
-                        code = decorate(code, neuron_model.variables,
-                                        neuron_model.shared_variables,
-                                        neuron_model.parameters).strip()
-                        lines.append(code)
-                    continue
 
-                codeobj = objects[obj.name + suffix].codeobj
-                if codeobj is None:
-                    continue
+            # We have previously only created "dummy code objects" for the
+            # state update, threshold, and reset of a NeuronGroup. We will now
+            # generate a single code object for all of them, adding the
+            # threshold calculation code to the end of the state update. When
+            # using subexpressions, the threshold condition code could consist
+            # of multiple lines, and GeNN only supports a threshold condition
+            # that is directly used as an if condition. We therefore store the
+            # result in a boolean variable and only pass this variable as the
+            # threshold condition to GeNN.
+            # It is also important that stateupdate/threshold share the same
+            # code object with the reset, as in GeNN both codes have the same
+            # support code. If they used two separate code objects, adding the
+            # two support codes might lead to duplicate definitions of
+            # functions.
+            combined_abstract_code = {'stateupdate': [], 'reset': []}
+            combined_variables = {}
+            combined_variable_indices = defaultdict(lambda: '_idx')
+            combined_override_conditional_write = set()
+            thresholder_codeobj = getattr(objects.get(obj.name + '_thresholder', None), 'codeobj', None)
+            if thresholder_codeobj is not None:
+                neuron_model.thresh_cond_lines = '_cond'
+            else:
+                neuron_model.thresh_cond_lines = '0'
+            for suffix, code_slot in [('_stateupdater', 'stateupdate'),
+                                      ('_thresholder', 'stateupdate'),
+                                      ('_resetter', 'reset')]:
+                full_name = obj.name + suffix
+                if full_name in objects and objects[full_name].codeobj is not None:
+                    codeobj = objects[full_name].codeobj
+                    combined_abstract_code[code_slot] += [codeobj.abstract_code[None]]
+                    combined_variables.update(codeobj.variables)
+                    combined_variable_indices.update(codeobj.variable_indices)
+                    # The resetter includes "not_refractory" as an override_conditional_write
+                    # variable, meaning that it removes the write-protection based on that
+                    # variable that would otherwise apply to "unless refractory" variables,
+                    # e.g. the membrane potential. This is not strictly necessary, it will just
+                    # introduce an unnecessary check, because a neuron that spiked is by
+                    # definition not in its refractory period. However, if we included it as
+                    # a override_conditional_write variable for the whole code object here,
+                    # this would apply also to the state updater, and therefore
+                    # remove the write-protection from "unless refractory" variables in the
+                    # state update code.
+                    if suffix != '_resetter':
+                        combined_override_conditional_write.update(codeobj.override_conditional_write)
+                    objects[full_name].codeobj = None
 
+            if objects.get(obj.name + '_resetter', None) is not None:
+                if obj._refractory is not False:
+                    combined_abstract_code['reset'] += ['lastspike = t',
+                                                        'not_refractory = False']
+
+            combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
+            combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
+            if len(combined_abstract_code['stateupdate']) or len(combined_abstract_code['reset']):
+                codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
+                                                              combined_abstract_code,
+                                                              combined_variables,
+                                                              'neuron_code',
+                                                              combined_variable_indices,
+                                                              codeobj_class=GeNNCodeObject,
+                                                              template_kwds=None,
+                                                              override_conditional_write=combined_override_conditional_write,
+                                                              )
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             self.add_parameter(neuron_model, k, v)
-                code = codeobj.code.cpp_file
 
-                if (suffix == '_resetter') and not (obj._refractory is False):
-                    code = code + '\n lastspike = t; \n not_refractory= 0;'
-                code = self.fix_random_generators(neuron_model, code)
-                code = decorate(code, neuron_model.variables,
-                                neuron_model.shared_variables,
-                                neuron_model.parameters).strip()
-                lines.append(code)
-                code = stringify(codeobj.code.h_file)
-                support_lines.append(code)
-            neuron_model.support_code_lines = support_lines
+                update_code = codeobj.code.stateupdate_code
+                reset_code = codeobj.code.reset_code
+                for code, lines in [(update_code, neuron_model.code_lines),
+                                    (reset_code, neuron_model.reset_code_lines)]:
+                    code = self.fix_random_generators(neuron_model, code)
+                    code = decorate(code, neuron_model.variables,
+                                    neuron_model.shared_variables,
+                                    neuron_model.parameters).strip()
+                    lines.append(code)
+                support_code = stringify(codeobj.code.h_file)
+                neuron_model.support_code_lines = support_code
             self.neuron_models.append(neuron_model)
             self.groupDict[neuron_model.name] = neuron_model
 
@@ -1085,7 +1152,6 @@ class GeNNDevice(CPPStandaloneDevice):
             src = obj.source
             if isinstance(src, Subgroup):
                 src = src.source
-                print src
             sm.neuronGroup = src.name
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
