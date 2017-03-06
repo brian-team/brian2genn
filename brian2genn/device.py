@@ -539,8 +539,6 @@ class GeNNDevice(CPPStandaloneDevice):
                     model.variables.append('_seed')
                     model.variabletypes.append('uint64_t')
                     model.variablescope['_seed'] = 'genn'
-        if '_brian_mod' in code:
-            code = code.replace('_brian_mod', 'fmod')
 
         return code
 
