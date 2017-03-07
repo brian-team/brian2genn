@@ -111,6 +111,13 @@ int main(int argc, char *argv[])
   }
   {% endif %}
   {% endfor %}
+  {% for synapses in synapse_models %}
+  {% if '_seed' in synapses.variables %}
+  for (int i= 0; i < C{{synapses.name}}.connN; i++) {
+      _seed{{synapses.name}}[i]= (uint64_t) (rand()*MYRAND_MAX);
+  }
+  {% endif %}
+  {% endfor %}
 
   //-----------------------------------------------------------------
   
