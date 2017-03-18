@@ -941,10 +941,9 @@ class GeNNDevice(CPPStandaloneDevice):
                         combined_override_conditional_write.update(codeobj.override_conditional_write)
                     objects[full_name].codeobj = None
 
-            if objects.get(obj.name + '_resetter', None) is not None:
-                if obj._refractory is not False:
-                    combined_abstract_code['reset'] += ['lastspike = t',
-                                                        'not_refractory = False']
+            if obj._refractory is not False:
+                combined_abstract_code['reset'] += ['lastspike = t',
+                                                    'not_refractory = False']
 
             combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
             combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
