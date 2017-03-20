@@ -677,12 +677,17 @@ class GeNNDevice(CPPStandaloneDevice):
             try:
                 self.run(directory, use_GPU, with_output)
             except CalledProcessError as ex:
-                raise RuntimeError(('Project run failed (Command {cmd} '
-                                    'failed with error code {returncode}).\n'
-                                    'See the output above (if any) for more '
-                                    'details.').format(cmd=ex.cmd,
-                                                       returncode=ex.returncode)
-                                   )
+                if ex.returncode == 222:
+                    raise NotImplementedError('GeNN does not support multiple '
+                                              'synapses per neuron pair (use '
+                                              'multiple Synapses objects).')
+                else:
+                    raise RuntimeError(('Project run failed (Command {cmd} '
+                                        'failed with error code {returncode}).\n'
+                                        'See the output above (if any) for more '
+                                        'details.').format(cmd=ex.cmd,
+                                                           returncode=ex.returncode)
+                                       )
 
     def generate_code_objects(self, writer):
         # Generate data for non-constant values
