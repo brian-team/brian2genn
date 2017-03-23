@@ -944,7 +944,15 @@ class GeNNDevice(CPPStandaloneDevice):
                 neuron_model.thresh_cond_lines = '_cond'
             else:
                 neuron_model.thresh_cond_lines = '0'
-            has_run_regularly = False
+            run_regularly_objects = [o for o in objects
+                                     if o.startswith(obj.name + '_run_regularly')]
+            has_run_regularly = len(run_regularly_objects) > 0
+            if len(run_regularly_objects) > 1:
+                if has_run_regularly:
+                    raise NotImplementedError('Brian2GeNN supports only a '
+                                              'single run_regularly operation '
+                                              'per NeuronGroup.')
+
             for suffix, code_slot in [('_stateupdater', 'stateupdate'),
                                       ('_thresholder', 'stateupdate'),
                                       ('_resetter', 'reset'),
@@ -969,14 +977,10 @@ class GeNNDevice(CPPStandaloneDevice):
                     if suffix != '_resetter':
                         combined_override_conditional_write.update(codeobj.override_conditional_write)
                     if suffix == '_run_regularly':
-                        if has_run_regularly:
-                            raise NotImplementedError('Brian2GeNN only supports a single '
-                                                      'run_regularly operation per NeuronGroup.')
                         if objects[full_name].when != 'start':
                             raise NotImplementedError('Brian2GeNN does not support changing '
                                                       'the scheduling slot for "run_regularly" '
                                                       'operations.')
-                        has_run_regularly = True
                         neuron_model.parameters.append('_run_regularly_dt')
                         dt_value = CPPNodeRenderer().render_expr(repr(objects[full_name].clock.dt_))
                         neuron_model.pvalue.append(dt_value)
