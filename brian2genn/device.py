@@ -981,8 +981,19 @@ class GeNNDevice(CPPStandaloneDevice):
                             raise NotImplementedError('Brian2GeNN does not support changing '
                                                       'the scheduling slot for "run_regularly" '
                                                       'operations.')
-                        neuron_model.parameters.append('_run_regularly_dt')
-                        dt_value = CPPNodeRenderer().render_expr(repr(objects[full_name].clock.dt_))
+                        neuron_model.parameters.append('_run_regularly_steps')
+                        run_regularly_dt = objects[full_name].clock.dt_
+                        neurongroup_dt = objects[full_name].group.dt_[:]
+                        if run_regularly_dt < neurongroup_dt:
+                            raise NotImplementedError('Brian2GeNN does not support run_regularly '
+                                                      'operations with a dt smaller than the dt '
+                                                      'used by the NeuronGroup.')
+                        dt_mismatch = abs(((run_regularly_dt + neurongroup_dt/2) % neurongroup_dt) - neurongroup_dt/2)
+                        if dt_mismatch > 1e-4*neurongroup_dt:
+                            raise NotImplementedError('Brian2GeNN does not support run_regularly '
+                                                      'operations where the dt is not a multiple of '
+                                                      'the dt used by the NeuronGroup.')
+                        dt_value = int(run_regularly_dt/neurongroup_dt + 0.5)
                         neuron_model.pvalue.append(dt_value)
                     objects[full_name].codeobj = None
 

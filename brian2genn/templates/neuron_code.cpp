@@ -1,10 +1,11 @@
 {% macro stateupdate_code() %}
 // Update "constant over dt" subexpressions (if any)
 {{(scalar_code['subexpression_update'] + vector_code['subexpression_update'])|autoindent}}
-{% if has_run_regularly %}
 
+{% if has_run_regularly %}
 // Run regular operations on a slower clock
-if (fabs(fmod(t, _run_regularly_dt)) < dt/2) {
+int _timesteps = (int)(t/dt + 0.5);
+if (_timesteps % (int)_run_regularly_steps == 0) {  {# we need a type cast because GeNN parameters are double values #}
     {{(scalar_code['run_regularly'] + vector_code['run_regularly'])|autoindent}}
 }
 {% endif %}
