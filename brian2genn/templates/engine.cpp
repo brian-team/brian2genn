@@ -124,6 +124,27 @@ void engine::run(double duration, //!< Duration of time to run the model for
       _run_{{sm.name}}_codeobject();
       {% endif %}
       {% endfor %}
+      // Execute scalar code for run_regularly operations (if any)
+      {% for nm in neuron_models %}
+      {% if nm.run_regularly_object != None %}
+      if (i % {{nm.run_regularly_step}} == 0)
+      {
+        {% for var in nm.run_regularly_read %}
+        {% if var == 't' %}
+        copy_genn_to_brian(&t, brian::_array_{{nm.clock.name}}_t, 1);
+        {% elif var == 'dt' %}
+        {# nothing to do #}
+        {% else %}
+        copy_genn_to_brian(&{{var}}{{nm.name}}, brian::_array_{{nm.name}}_{{var}}, 1);
+        {% endif %}
+        {% endfor %}
+        _run_{{nm.run_regularly_object.name}}();
+        {% for var in nm.run_regularly_write %}
+        copy_brian_to_genn(brian::_array_{{nm.name}}_{{var}}, &{{var}}{{nm.name}}, 1);
+        {% endfor %}
+      }
+      {% endif %}
+      {% endfor %}
 #ifndef CPU_ONLY
       if (which == GPU) {
 	  stepTimeGPU();

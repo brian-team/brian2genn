@@ -1,3 +1,4 @@
+{# ALLOWS_SCALAR_WRITE #}
 {% macro stateupdate_code() %}
 // Update "constant over dt" subexpressions (if any)
 {{(scalar_code['subexpression_update'] + vector_code['subexpression_update'])|autoindent}}
@@ -6,7 +7,7 @@
 // Run regular operations on a slower clock
 int _timesteps = (int)(t/dt + 0.5);
 if (_timesteps % (int)_run_regularly_steps == 0) {  {# we need a type cast because GeNN parameters are double values #}
-    {{(scalar_code['run_regularly'] + vector_code['run_regularly'])|autoindent}}
+    {{vector_code['run_regularly']|autoindent}}  {# Note that the scalar code (if any) is in a separate code object #}
 }
 {% endif %}
 
