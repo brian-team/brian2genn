@@ -3,6 +3,7 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
+import shutil
 import platform
 from subprocess import call, check_call, CalledProcessError
 import inspect
@@ -684,6 +685,12 @@ class GeNNDevice(CPPStandaloneDevice):
         self.generate_objects_source(arange_arrays, net, static_array_specs,
                                      synapses, writer)
         self.copy_source_files(writer, directory)
+        # Rename randomkit.c so that it gets compiled by an explicit rule in
+        # GeNN's makefile template, otherwise optimization flags will not be
+        # used.
+        randomkit_dir = os.path.join(directory, 'brianlib', 'randomkit')
+        shutil.move(os.path.join(randomkit_dir, 'randomkit.c'),
+                    os.path.join(randomkit_dir, 'randomkit.cc'))
         self.generate_code_objects(writer)
         self.generate_model_source(writer)
         self.generate_main_source(writer, main_lines)
