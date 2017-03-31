@@ -3,6 +3,7 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
+import shutil
 import platform
 from subprocess import call, check_call, CalledProcessError
 import inspect
@@ -12,10 +13,13 @@ import itertools
 import numpy
 import numbers
 
+from brian2.codegen.translation import make_statements
+from brian2.input.poissoninput import PoissonInput
 from brian2.spatialneuron.spatialneuron import (SpatialNeuron,
                                                 SpatialStateUpdater)
 from brian2.units import second
-from brian2.codegen.generators.cpp_generator import c_data_type
+from brian2.codegen.generators.cpp_generator import (c_data_type,
+                                                     CPPCodeGenerator)
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
@@ -29,9 +33,9 @@ from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory
 from brian2.utils.stringtools import word_substitute, get_identifiers
-from brian2.groups.group import Group
+from brian2.groups.group import Group, CodeRunner
 from brian2.groups.neurongroup import (NeuronGroup, StateUpdater, Resetter,
-                                       Thresholder)
+                                       Thresholder, SubexpressionUpdater)
 from brian2.groups.subgroup import Subgroup
 from brian2.input.poissongroup import PoissonGroup
 from brian2.input.spikegeneratorgroup import *
@@ -174,6 +178,7 @@ class neuronModel(object):
 
     def __init__(self):
         self.name = ''
+        self.clock = None
         self.N = 0
         self.variables = []
         self.variabletypes = []
@@ -186,13 +191,16 @@ class neuronModel(object):
         self.thresh_cond_lines = []
         self.reset_code_lines = []
         self.support_code_lines = []
+        self.run_regularly_object = None
+        self.run_regularly_step = None
+        self.run_regularly_read = None
+        self.run_regularly_write = None
 
 
 class spikegeneratorModel(object):
     '''
     Class that contains all relevant information of a spike generator group.
     '''
-
     def __init__(self):
         self.name = ''
         self.N = 0
@@ -531,14 +539,19 @@ class GeNNDevice(CPPStandaloneDevice):
         GeNN- compatible calls by replacing the cpp_standalone
         `_vectorisation_idx` argument with the GeNN `_seed` argument.
         '''
-        for func in ['_rand', '_randn', '_binomial', '_binomial_1']:
-            if func + '(_vectorisation_idx)' in code:
-                code = code.replace(func + '(_vectorisation_idx)',
-                                    func + '(_seed)')
-                if not '_seed' in model.variables:
-                    model.variables.append('_seed')
-                    model.variabletypes.append('uint64_t')
-                    model.variablescope['_seed'] = 'genn'
+        # TODO: In principle, _vectorisation_idx is an argument to any
+        # function that does not take any arguments -- in practice, random
+        # number generators are the only argument-less functions that are
+        # commonly used. We cannot check for explicit names `_rand`, etc.,
+        # since multiple uses of binomial or PoissonInput will need to names
+        # that we cannot easily predict (poissoninput_binomial_2, etc.)
+        if '(_vectorisation_idx)' in code:
+            code = code.replace('(_vectorisation_idx)',
+                                '(_seed)')
+            if not '_seed' in model.variables:
+                model.variables.append('_seed')
+                model.variabletypes.append('uint64_t')
+                model.variablescope['_seed'] = 'genn'
 
         return code
 
@@ -605,12 +618,7 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses = []
         synapses.extend(s for s in net.objects if isinstance(s, Synapses))
 
-        self.generate_objects_source(arange_arrays, net, static_array_specs,
-                                     synapses, writer)
-
         main_lines = self.make_main_lines()
-
-        self.generate_code_objects(writer)
 
         # assemble the model descriptions:
         objects = dict((obj.name, obj) for obj in net.objects)
@@ -623,6 +631,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         synapse_groups = [obj for obj in net.objects if
                           isinstance(obj, Synapses)]
+
         spike_monitors = [obj for obj in net.objects if
                           isinstance(obj, SpikeMonitor)]
         rate_monitors = [obj for obj in net.objects if
@@ -637,10 +646,27 @@ class GeNNDevice(CPPStandaloneDevice):
             NeuronGroup, PoissonGroup, SpikeGeneratorGroup, Synapses,
             SpikeMonitor, PopulationRateMonitor, StateMonitor,
             StateUpdater, SynapsesStateUpdater, Resetter,
-            Thresholder, SynapticPathway)):
+            Thresholder, SynapticPathway, CodeRunner)):
                 raise NotImplementedError(
                     "Brian2GeNN does not support objects of type "
-                    "'%s'" % str(obj.__class__.__name__))
+                    "'%s'" % obj.__class__.__name__)
+            # We only support run_regularly and "constant over dt"
+            # subexpressions for neurons
+            if (isinstance(obj, SubexpressionUpdater) and
+                    not isinstance(obj.group, NeuronGroup)):
+                raise NotImplementedError(
+                    'Subexpressions with the flag "constant over dt" are only '
+                    'supported for NeuronGroup (not for objects of type '
+                    '"%s").' % obj.group.__class__.__name__
+                )
+            if (obj.__class__ ==  CodeRunner and
+                    not isinstance(obj.group, NeuronGroup)):
+                raise NotImplementedError(
+                    'CodeRunner objects (most commonly created with the '
+                    '"run_regularly" method) are only supported for '
+                    'NeuronGroup (not for objects of type '
+                    '"%s").' % obj.group.__class__.__name__
+                )
         self.model_name = net.name + '_model'
         self.dtDef = 'model.setDT(' + repr(float(defaultclock.dt)) + ');'
 
@@ -656,7 +682,16 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_state_monitors(directory, state_monitors, writer)
 
         # Write files from templates
+        self.generate_objects_source(arange_arrays, net, static_array_specs,
+                                     synapses, writer)
         self.copy_source_files(writer, directory)
+        # Rename randomkit.c so that it gets compiled by an explicit rule in
+        # GeNN's makefile template, otherwise optimization flags will not be
+        # used.
+        randomkit_dir = os.path.join(directory, 'brianlib', 'randomkit')
+        shutil.move(os.path.join(randomkit_dir, 'randomkit.c'),
+                    os.path.join(randomkit_dir, 'randomkit.cc'))
+        self.generate_code_objects(writer)
         self.generate_model_source(writer)
         self.generate_main_source(writer, main_lines)
         self.generate_engine_source(writer)
@@ -859,6 +894,7 @@ class GeNNDevice(CPPStandaloneDevice):
             # Extract the variables
             neuron_model = neuronModel()
             neuron_model.name = obj.name
+            neuron_model.clock = obj.clock
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
             support_lines = []
@@ -892,6 +928,7 @@ class GeNNDevice(CPPStandaloneDevice):
             # Extract the variables
             neuron_model = neuronModel()
             neuron_model.name = obj.name
+            neuron_model.clock = obj.clock
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
 
@@ -909,7 +946,10 @@ class GeNNDevice(CPPStandaloneDevice):
             # support code. If they used two separate code objects, adding the
             # two support codes might lead to duplicate definitions of
             # functions.
-            combined_abstract_code = {'stateupdate': [], 'reset': []}
+            combined_abstract_code = {'stateupdate': [], 'reset': [],
+                                      'subexpression_update': [],
+                                      'run_regularly': [],
+                                      'poisson_input': []}
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
@@ -918,9 +958,19 @@ class GeNNDevice(CPPStandaloneDevice):
                 neuron_model.thresh_cond_lines = '_cond'
             else:
                 neuron_model.thresh_cond_lines = '0'
+            run_regularly_objects = [o for o in objects
+                                     if o.startswith(obj.name + '_run_regularly')]
+            has_run_regularly = len(run_regularly_objects) > 0
+            if len(run_regularly_objects) > 1:
+                raise NotImplementedError('Brian2GeNN supports only a '
+                                          'single run_regularly operation '
+                                          'per NeuronGroup.')
+
             for suffix, code_slot in [('_stateupdater', 'stateupdate'),
                                       ('_thresholder', 'stateupdate'),
-                                      ('_resetter', 'reset')]:
+                                      ('_resetter', 'reset'),
+                                      ('_subexpression_update', 'subexpression_update'),
+                                      ('_run_regularly', 'run_regularly')]:
                 full_name = obj.name + suffix
                 if full_name in objects and objects[full_name].codeobj is not None:
                     codeobj = objects[full_name].codeobj
@@ -939,24 +989,97 @@ class GeNNDevice(CPPStandaloneDevice):
                     # state update code.
                     if suffix != '_resetter':
                         combined_override_conditional_write.update(codeobj.override_conditional_write)
-                    objects[full_name].codeobj = None
+                    if suffix == '_run_regularly':
+                        if objects[full_name].when != 'start':
+                            raise NotImplementedError('Brian2GeNN does not support changing '
+                                                      'the scheduling slot for "run_regularly" '
+                                                      'operations.')
+                        neuron_model.parameters.append('_run_regularly_steps')
+                        run_regularly_dt = objects[full_name].clock.dt_
+                        neurongroup_dt = objects[full_name].group.dt_[:]
+                        if run_regularly_dt < neurongroup_dt:
+                            raise NotImplementedError('Brian2GeNN does not support run_regularly '
+                                                      'operations with a dt smaller than the dt '
+                                                      'used by the NeuronGroup.')
+                        dt_mismatch = abs(((run_regularly_dt + neurongroup_dt/2) % neurongroup_dt) - neurongroup_dt/2)
+                        if dt_mismatch > 1e-4*neurongroup_dt:
+                            raise NotImplementedError('Brian2GeNN does not support run_regularly '
+                                                      'operations where the dt is not a multiple of '
+                                                      'the dt used by the NeuronGroup.')
+                        step_value = int(run_regularly_dt/neurongroup_dt + 0.5)
+                        neuron_model.run_regularly_step = step_value
+                        neuron_model.pvalue.append(step_value)
 
             if obj._refractory is not False:
                 combined_abstract_code['reset'] += ['lastspike = t',
                                                     'not_refractory = False']
 
-            combined_abstract_code['stateupdate'] = '\n'.join(combined_abstract_code['stateupdate'])
-            combined_abstract_code['reset'] = '\n'.join(combined_abstract_code['reset'])
-            if len(combined_abstract_code['stateupdate']) or len(combined_abstract_code['reset']):
+            # Find PoissonInputs targetting this NeuronGroup
+            poisson_inputs = [o for o in objects.itervalues()
+                              if isinstance(o, PoissonInput) and
+                                 o.group.name == obj.name]
+
+            for poisson_input in poisson_inputs:
+                if poisson_input.when != 'synapses':
+                    raise NotImplementedError('Brian2GeNN does not support '
+                                              'changing the scheduling slot '
+                                              'of PoissonInput objects.')
+                codeobj = poisson_input.codeobj
+                combined_abstract_code['poisson_input'] += [codeobj.abstract_code[None]]
+                combined_variables.update(codeobj.variables)
+                combined_variable_indices.update(codeobj.variable_indices)
+
+            for code_block in combined_abstract_code.iterkeys():
+                combined_abstract_code[code_block] = '\n'.join(combined_abstract_code[code_block])
+
+            if any(len(ac) for ac in combined_abstract_code.itervalues()):
                 codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
                                                               combined_abstract_code,
-                                                              combined_variables,
+                                                              combined_variables.copy(),
                                                               'neuron_code',
                                                               combined_variable_indices,
                                                               codeobj_class=GeNNCodeObject,
-                                                              template_kwds=None,
+                                                              template_kwds={'has_run_regularly': has_run_regularly},
                                                               override_conditional_write=combined_override_conditional_write,
                                                               )
+                # Remove the code object from the code_objects dictionary, we
+                # take care of it manually and do not want it to be generated as
+                # part of `generate_code_objects`.
+                del self.code_objects[codeobj.name]
+                if has_run_regularly:
+                    # Add an extra code object that executes the scalar code of
+                    # the run_regularly operation (will be directly called from
+                    # engine.cpp)
+                    abstract_code = {'None': combined_abstract_code['run_regularly']}
+                    rr_codeobject = self.code_object(obj, obj.name + '_run_regularly',
+                                                     abstract_code,
+                                                     combined_variables.copy(),
+                                                     'run_regularly_scalar_code',
+                                                     combined_variable_indices,
+                                                     codeobj_class=GeNNUserCodeObject,
+                                                     override_conditional_write=combined_override_conditional_write)
+                    # FIXME: The following is redundant with what is done during
+                    # the code object creation above. At the moment, the code
+                    # object does not allow us to access the information we
+                    # need (variables that are read/written by the run_regularly
+                    # code), though.
+                    generator = CPPCodeGenerator(combined_variables.copy(),
+                                                 combined_variable_indices, owner=obj,
+                                                 iterate_all=False,
+                                                 codeobj_class=GeNNUserCodeObject,
+                                                 name=obj.name + '_run_regularly',
+                                                 template_name='run_regularly_scalar_code',
+                                                 override_conditional_write=combined_override_conditional_write,
+                                                 allows_scalar_write=True)
+                    scalar_statements, _ = make_statements(abstract_code['None'], combined_variables, numpy.float64)
+                    read, write, _ = generator.array_read_write(scalar_statements)
+                    neuron_model.run_regularly_object = rr_codeobject
+                    # Store which variables are read/written by the
+                    # run_regularly scalar code. We have to copy these variables
+                    # between Brian and GeNN.
+                    neuron_model.run_regularly_read = read
+                    neuron_model.run_regularly_write = write
+
                 for k, v in codeobj.variables.iteritems():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
@@ -1325,7 +1448,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 'Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
         for obj in net.objects:
-            if obj.clock.name is not 'defaultclock':
+            if obj.clock.name is not 'defaultclock' and not (obj.__class__ == CodeRunner):
                 raise NotImplementedError(
                     'Multiple clocks are not supported for the genn device')
 
