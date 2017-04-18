@@ -69,7 +69,6 @@ install:
     fi
   - travis_retry git clone $BRANCH_ARGUMENT https://github.com/genn-team/genn.git
   - export GENN_PATH=$(pwd)/genn
-  - export PATH=$PATH:$GENN_PATH/lib/bin
   - cd brian-team/brian2genn
 
 # command to run tests
