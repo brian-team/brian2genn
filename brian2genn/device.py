@@ -822,6 +822,13 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def compile_source(self, debug, directory, use_GPU):
         with std_silent(debug):
+            if prefs.devices.genn.path is not None:
+                genn_path = prefs.devices.genn.path
+            elif 'GENN_PATH' in os.environ:
+                genn_path = os.environ['GENN_PATH']
+            else:
+                raise RuntimeError('Set the GENN_PATH environment variable or '
+                                   'the devices.genn.path preference.')
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
                 if vcvars_loc == '':
@@ -847,19 +854,21 @@ class GeNNDevice(CPPStandaloneDevice):
 
                 vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
                     vcvars_loc=vcvars_loc, arch_name=arch_name)
-
-                cmd = vcvars_cmd + " && genn-buildmodel.bat " + self.model_name + ".cpp"
+                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin',
+                                              'genn-buildmodel.bat')
+                cmd = vcvars_cmd + " && " + buildmodel_cmd + " " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
+                cmd += ' && nmake /f WINmakefile clean "GENN_PATH={genn_path}" && nmake /f WINmakefile "GENN_PATH={genn_path}"'.format(genn_path=genn_path)
                 check_call(cmd, cwd=directory)
             else:
-                args = ["genn-buildmodel.sh", self.model_name + '.cpp']
+                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin', 'genn-buildmodel.sh')
+                args = [buildmodel_cmd, self.model_name + '.cpp']
                 if not use_GPU:
                     args += ['-c']
                 check_call(args, cwd=directory)
-                call(["make", "clean"], cwd=directory)
-                check_call(["make"], cwd=directory)
+                call(["make", "clean", "GENN_PATH=%s" % genn_path], cwd=directory)
+                check_call(["make", "GENN_PATH=%s" % genn_path], cwd=directory)
 
     def add_parameter(self, model, varname, variable):
         model.parameters.append(varname)
