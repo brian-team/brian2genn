@@ -432,7 +432,7 @@ class GeNNDevice(CPPStandaloneDevice):
         var = variableview.variable
         if isinstance(var.owner, Synapses) and var.name == 'delay':
             raise NotImplementedError('GeNN does not support assigning to the '
-                                      'delay variable -- set the delay for all'
+                                      'delay variable -- set the delay for all '
                                       'synapses (heterogeneous delays are not '
                                       'supported) as an argument to the '
                                       'Synapses initializer.')
@@ -440,6 +440,36 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                   item,
                                                                   value,
                                                                   check_units)
+
+    def variableview_set_with_expression(self, variableview, item, code, run_namespace, check_units=True):
+        var = variableview.variable
+        if isinstance(var.owner, Synapses) and var.name == 'delay':
+            raise NotImplementedError('GeNN does not support assigning to the '
+                                      'delay variable -- set the delay for all '
+                                      'synapses (heterogeneous delays are not '
+                                      'supported) as an argument to the '
+                                      'Synapses initializer.')
+        variableview.set_with_expression.original_function(variableview,
+                                                           item,
+                                                           code,
+                                                           run_namespace,
+                                                           check_units)
+
+    def variableview_set_with_expression_conditional(self, variableview, cond,
+                                                     code, run_namespace,
+                                                     check_units=True):
+        var = variableview.variable
+        if isinstance(var.owner, Synapses) and var.name == 'delay':
+            raise NotImplementedError('GeNN does not support assigning to the '
+                                      'delay variable -- set the delay for all '
+                                      'synapses (heterogeneous delays are not '
+                                      'supported) as an argument to the '
+                                      'Synapses initializer.')
+        variableview.set_with_expression_conditional.original_function(variableview,
+                                                                       cond,
+                                                                       code,
+                                                                       run_namespace,
+                                                                       check_units)
 
     # --------------------------------------------------------------------------
     def make_main_lines(self):
