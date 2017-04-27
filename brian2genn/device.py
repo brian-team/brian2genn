@@ -318,39 +318,14 @@ class GeNNDevice(CPPStandaloneDevice):
         self.rate_monitor_models = []
         self.state_monitor_models = []
         self.run_duration = None
-        #: Dictionary mapping `ArrayVariable` objects to their globally
-        #: unique name
-        self.arrays = {}
-        #: List of all dynamic arrays
-        #: Dictionary mapping `DynamicArrayVariable` objects with 1 dimension to
-        #: their globally unique name
-        self.dynamic_arrays = {}
-        #: Dictionary mapping `DynamicArrayVariable` objects with 2 dimensions
-        #: to their globally unique name
-        self.dynamic_arrays_2d = {}
-        #: List of all arrays to be filled with zeros
-        self.zero_arrays = []
-        #: Dictionary of all arrays to be filled with numbers (mapping
-        #: `ArrayVariable` objects to start value)
-        self.arange_arrays = {}
 
-        #: Whether the simulation has been run
-        self.has_been_run = False
-
-        #: Dict of all static saved arrays
-        self.static_arrays = {}
-
-        self.code_objects = {}
         self.simple_code_objects = {}
-        self.main_queue = []
         self.report_func = ''
-        self.synapses = []
 
         #: List of all source and header files (to be included in runner)
         self.source_files = []
         self.header_files = []
 
-        self.clocks = set([])
         self.connectivityDict = dict()
         self.groupDict = dict()
 
@@ -624,11 +599,14 @@ class GeNNDevice(CPPStandaloneDevice):
         logger.debug(
             "Writing GeNN project to directory " + os.path.normpath(directory))
 
-        # DO WE NEED TO WORRY ABOUT THESE? ARE THERE USER-DEFINED ONES IN THERE?
-        arange_arrays = sorted([(var, start)
-                                for var, start in
-                                self.arange_arrays.iteritems()],
-                               key=lambda (var, start): var.name)
+        # FIXME: This is only needed to keep Brian2GeNN compatible with Brian2 2.0.1 and earlier
+        if isinstance(self.arange_arrays, dict):
+            arange_arrays = sorted([(var, start)
+                                    for var, start in
+                                    self.arange_arrays.iteritems()],
+                                   key=lambda (var, start): var.name)
+        else:
+            arange_arrays = self.arange_arrays
 
         # write the static arrays
         logger.debug("static arrays: " + str(sorted(self.static_arrays.keys())))
@@ -712,9 +690,16 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_state_monitors(directory, state_monitors, writer)
 
         # Write files from templates
-        self.generate_objects_source(arange_arrays, net, static_array_specs,
+        # Create an empty network.h file, this allows us to use Brian2's
+        # objects.cpp template unchanged
+        writer.write('network.*', GeNNUserCodeObject.templater.network(None, None))
+        self.header_files.append('network.h')
+
+        self.generate_objects_source(arange_arrays, net,
+                                     static_array_specs,
                                      synapses, writer)
         self.copy_source_files(writer, directory)
+
         # Rename randomkit.c so that it gets compiled by an explicit rule in
         # GeNN's makefile template, otherwise optimization flags will not be
         # used.
@@ -1448,7 +1433,7 @@ class GeNNDevice(CPPStandaloneDevice):
             synapses=synapses,
             clocks=self.clocks,
             static_array_specs=static_array_specs,
-            networks=[net],
+            networks=[],  # We don't want to create any networks
             get_array_filename=self.get_array_filename,
             get_array_name=self.get_array_name,
             code_objects=the_objects

@@ -17,6 +17,10 @@
 
 #include <ctime>
 #include "magicnetwork_model_CODE/definitions.h"
+#include "network.h"
+
+double Network::_last_run_time = 0.0;
+double Network::_last_run_completed_fraction = 0.0;
 
 class engine
 {
@@ -43,9 +47,6 @@ class engine
 #ifndef _ENGINE_CC_
 #define _ENGINE_CC_
 
-double brian::_last_run_time;
-double brian::_last_run_completed_fraction;
-
 //--------------------------------------------------------------------------
 /*! \file engine.cc
 \brief Implementation of the engine class.
@@ -53,14 +54,15 @@ double brian::_last_run_completed_fraction;
 //--------------------------------------------------------------------------
 
 #include "engine.h"
+#include "network.h"
 
 engine::engine()
 {
   modelDefinition(model);
   allocateMem();
   initialize();
-  brian::_last_run_time= 0.0;
-  brian::_last_run_completed_fraction= 0.0;
+  Network::_last_run_time= 0.0;
+  Network::_last_run_completed_fraction= 0.0;
 }
 
 //--------------------------------------------------------------------------
@@ -207,12 +209,12 @@ void engine::run(double duration, //!< Duration of time to run the model for
       }
       {% endif %}
   }  
-  brian::_last_run_time = elapsed_realtime;
+  Network::_last_run_time = elapsed_realtime;
   if (duration > 0.0)
   {
-      brian::_last_run_completed_fraction = (t-t_start)/duration;
+      Network::_last_run_completed_fraction = (t-t_start)/duration;
   } else {
-      brian::_last_run_completed_fraction = 1.0;
+      Network::_last_run_completed_fraction = 1.0;
   }
 }
 
