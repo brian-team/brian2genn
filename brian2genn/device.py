@@ -50,10 +50,6 @@ from .genn_generator import get_var_ndim
 __all__ = ['GeNNDevice']
 
 logger = get_logger('brian2.devices.genn')
-prefs['codegen.generators.cpp.restrict_keyword'] = '__restrict'
-prefs['codegen.loop_invariant_optimisations'] = False
-prefs['core.network.default_schedule'] = ['start', 'synapses', 'groups',
-                                          'thresholds', 'resets', 'end']
 
 
 def stringify(code):
@@ -330,8 +326,23 @@ class GeNNDevice(CPPStandaloneDevice):
         self.groupDict = dict()
 
     def activate(self, build_on_run=True, **kwargs):
-        prefs.codegen.loop_invariant_optimisations = False
-        prefs._backup()
+        new_prefs = {'codegen.generators.cpp.restrict_keyword': '__restrict',
+                     'codegen.loop_invariant_optimisations': False,
+                     'core.network.default_schedule': ['start', 'synapses',
+                                                       'groups', 'thresholds',
+                                                       'resets', 'end']}
+        changed = []
+        for new_pref, new_value in new_prefs.iteritems():
+            if prefs[new_pref] != new_value:
+                changed.append(new_pref)
+                prefs[new_pref] = new_value
+
+        if changed:
+            logger.info('The following preferences have been changed for '
+                        'Brian2GeNN, reset them manually if you use a '
+                        'different device later in the same script: '
+                        '{}'.format(', '.join(changed)), once=True)
+            prefs._backup()
         super(GeNNDevice, self).activate(build_on_run, **kwargs)
 
     def code_object_class(self, codeobj_class=None):
