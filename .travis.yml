@@ -76,5 +76,10 @@ script:
   - pip install .
   - python scripts/run_brian_tests_CPU.py
 
+after_success:
+  - travis_retry conda install --yes --quiet conda-build
+  - conda build -c brian-team conda_recipe
+  - python scripts/move_conda_package.py conda_recipe
+
 notifications:
   email: false
