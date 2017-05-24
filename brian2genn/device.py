@@ -4,6 +4,7 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 
 import os
 import shutil
+import sys
 import platform
 from subprocess import call, check_call, CalledProcessError
 import inspect
@@ -275,7 +276,7 @@ class CPPWriter(object):
         self.header_files = []
 
     def write(self, filename, contents):
-        logger.debug('Writing file %s:\n%s' % (filename, contents))
+        logger.diagnostic('Writing file %s:\n%s' % (filename, contents))
         if filename.lower().endswith('.cpp'):
             self.source_files.append(filename)
         elif filename.lower().endswith('.h'):
@@ -847,14 +848,22 @@ class GeNNDevice(CPPStandaloneDevice):
                 pass
 
     def compile_source(self, debug, directory, use_GPU):
+        if prefs.devices.genn.path is not None:
+            genn_path = prefs.devices.genn.path
+            logger.debug('Using GeNN path from preference: '
+                         '"{}"'.format(genn_path))
+        elif os.path.isdir(os.path.join(sys.prefix, 'opt', 'genn')):
+            genn_path = os.path.join(sys.prefix, 'opt', 'genn')
+            logger.debug('Using GeNN path from installation: '
+                         '"{}"'.format(genn_path))
+        elif 'GENN_PATH' in os.environ:
+            genn_path = os.environ['GENN_PATH']
+            logger.debug('Using GeNN path from environment variable: '
+                         '"{}"'.format(genn_path))
+        else:
+            raise RuntimeError('Set the GENN_PATH environment variable or '
+                               'the devices.genn.path preference.')
         with std_silent(debug):
-            if prefs.devices.genn.path is not None:
-                genn_path = prefs.devices.genn.path
-            elif 'GENN_PATH' in os.environ:
-                genn_path = os.environ['GENN_PATH']
-            else:
-                raise RuntimeError('Set the GENN_PATH environment variable or '
-                                   'the devices.genn.path preference.')
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
                 if vcvars_loc == '':

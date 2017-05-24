@@ -1,0 +1,33 @@
+package:
+  name: brian2genn
+  version: 0.9b
+
+source:
+  path: ..
+
+build:
+  number: 0
+
+requirements:
+  build:
+    - python
+    - setuptools
+    - gcc
+    - make # [win]
+  run:
+    - brian2
+    - python
+    - gcc
+    - make # [win]
+
+test:
+  imports:
+    - brian2genn
+
+about:
+  home: http://github.com/brian-team/brian2genn
+  license: GPL
+  license_file: LICENSE
+  summary: 'Brian 2 frontend to the GeNN simulator'
+  doc_url: http://brian2genn.readthedocs.io/
+  dev_url: http://github.com/brian-team/brian2genn
