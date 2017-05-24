@@ -1,0 +1,3 @@
+[submodule "genn"]
+	path = genn
+	url = https://github.com/genn-team/genn.git
