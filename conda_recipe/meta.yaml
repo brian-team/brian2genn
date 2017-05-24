@@ -13,11 +13,13 @@ requirements:
     - python
     - setuptools
     - gcc
+    - cudatoolkit
     - make # [win]
   run:
     - brian2
     - python
     - gcc
+    - cudatoolkit
     - make # [win]
 
 test:
