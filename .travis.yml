@@ -79,6 +79,7 @@ install:
       sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
       export CUDA_PATH=/usr/local/cuda-8.0/;
     else
+      brew update &&
       brew cask install cuda &&
       export CUDA_PATH=/usr/local/cuda;
     fi
