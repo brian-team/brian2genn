@@ -88,7 +88,7 @@ install:
       sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
       export CUDA_PATH=/usr/local/cuda-8.0/;
     else
-      sudo hdiutil attach $CUDA_FILE;
+      hdiutil attach -nobrowse -readonly -noidme $CUDA_FILE;
     fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
   - cd brian-team/brian2genn
@@ -101,7 +101,6 @@ script:
 after_success:
   - travis_retry conda install --yes --quiet conda-build
   - unset GENN_PATH
-  - echo "CUDA_PATH: $CUDA_PATH"
   - conda build -c brian-team conda_recipe
   - python scripts/move_conda_package.py conda_recipe
 
