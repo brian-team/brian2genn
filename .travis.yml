@@ -1,5 +1,6 @@
 language: c  # We are not using the Python infrastructure
-sudo: false  # Make sure we are using the container-based infrastructure
+dist: trusty
+sudo: required
 
 matrix:
   include:
@@ -67,8 +68,16 @@ install:
   - if [ "$DEPENDENCIES" == "latest" ]; then
        BRANCH_ARGUMENT="-b development";
     fi
-  - travis_retry git clone $BRANCH_ARGUMENT https://github.com/genn-team/genn.git
-  - export GENN_PATH=$(pwd)/genn
+  # Install minimal CUDA components to build the conda package later
+  - CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb
+  - CUDA_FILE=/tmp/cuda_install.deb
+  - travis_retry curl $CUDA_URL -o $CUDA_FILE
+  - sudo dpkg -i $CUDA_FILE
+  - rm -f $CUDA_FILE
+  - sudo apt-get update -qq -y
+  - sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0
+  - export CUDA_PATH=/usr/local/cuda-8.0/
+  - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
   - cd brian-team/brian2genn
 
 # command to run tests
@@ -78,6 +87,8 @@ script:
 
 after_success:
   - travis_retry conda install --yes --quiet conda-build
+  - unset GENN_PATH
+  - echo "CUDA_PATH: $CUDA_PATH"
   - conda build -c brian-team conda_recipe
   - python scripts/move_conda_package.py conda_recipe
 
