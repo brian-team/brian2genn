@@ -7,6 +7,8 @@ source:
 
 build:
   number: 0
+  script_env:
+    - CUDA_PATH
 
 requirements:
   build:
