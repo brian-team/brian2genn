@@ -13,9 +13,11 @@ matrix:
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: osx
+      osx_image: xcode8.3
     - python: "3.5"
       env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="stable"
       os: osx
+      osx_image: xcode8.3
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
       os: linux
@@ -25,9 +27,11 @@ matrix:
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
       os: osx
+      osx_image: xcode8.3
     - python: "3.5"
       env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest"
       os: osx
+      osx_image: xcode8.3
   allow_failures:
     env: DEPENDENCIES="latest"
   fast_finish: true
@@ -69,14 +73,23 @@ install:
        BRANCH_ARGUMENT="-b development";
     fi
   # Install minimal CUDA components to build the conda package later
-  - CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb
-  - CUDA_FILE=/tmp/cuda_install.deb
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+      CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb;
+      CUDA_FILE=/tmp/cuda_install.deb;
+    else
+      CUDA_URL=https://developer.nvidia.com/compute/cuda/8.0/Prod2/network_installers/cuda_8.0.61_mac_network-dmg;
+      CUDA_FILE=/tmp/cuda_install.dmg;
+    fi
   - travis_retry curl $CUDA_URL -o $CUDA_FILE
-  - sudo dpkg -i $CUDA_FILE
-  - rm -f $CUDA_FILE
-  - sudo apt-get update -qq -y
-  - sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0
-  - export CUDA_PATH=/usr/local/cuda-8.0/
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+      sudo dpkg -i $CUDA_FILE &&
+      rm -f $CUDA_FILE;
+      sudo apt-get update -qq -y &&
+      sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
+      export CUDA_PATH=/usr/local/cuda-8.0/;
+    else
+      hdiutil attach $CUDA_FILE;
+    fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
   - cd brian-team/brian2genn
 
