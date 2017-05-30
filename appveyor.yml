@@ -38,10 +38,10 @@ install:
   # Install GeNN
   - 'cd ..'
   - 'if "%DEPENDENCIES%" == "latest" set BRANCH_ARGUMENTS="-bdevelopment"'
+  - 'cd brian2genn'
   - # Clone the GeNN submodule
   - 'git submodule update --init --recursive'
-  - 'set GENN_PATH=%CD%\brian2genn\genn'
-  - 'cd brian2genn'
+  - 'set GENN_PATH=%CD%\genn'
 
 build: false  # not a C# project
 
