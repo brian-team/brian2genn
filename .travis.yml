@@ -81,7 +81,7 @@ install:
     else
       brew update &&
       brew tap caskroom/drivers &&
-      brew cask install cuda &&
+      travis_wait 30 brew cask install cuda &&
       export CUDA_PATH=/usr/local/cuda;
     fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
