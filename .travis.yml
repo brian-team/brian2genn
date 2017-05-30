@@ -80,6 +80,7 @@ install:
       export CUDA_PATH=/usr/local/cuda-8.0/;
     else
       brew update &&
+      brew tap caskroom/drivers &&
       brew cask install cuda &&
       export CUDA_PATH=/usr/local/cuda;
     fi
