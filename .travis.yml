@@ -79,9 +79,7 @@ install:
       sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
       export CUDA_PATH=/usr/local/cuda-8.0/;
     else
-      brew update &&
-      brew tap caskroom/drivers &&
-      travis_wait 30 brew cask install cuda &&
+      travis_wait 30 brew cask install ./scripts/cuda_toolkit.rb &&
       export CUDA_PATH=/usr/local/cuda;
     fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
