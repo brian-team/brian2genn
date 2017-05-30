@@ -1,4 +1,4 @@
-cask 'cuda' do
+cask 'cuda_toolkit' do
   version '8.0.61'
   sha256 'b70a193cbe0a798d7363abab88ab5190409d237d7e13bf8682682fbbeac01847'
 
