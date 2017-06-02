@@ -3,7 +3,7 @@ Brian2GeNN specific preferences
 
 Connectivity
 ------------
-The preference ``devices.genn.connectivity`` determines what
+The preference `devices.genn.connectivity` determines what
 connectivity scheme is used within GeNN to represent the connections
 between neurons. GeNN supports the use of full connectivity matrices
 ('DENSE') or a representation where connections are represented with
@@ -38,3 +38,7 @@ On Windows, Brian2GeNN will try to find the file ``vcvarsall.bat`` to enable
 compilation with the MSVC compiler automatically. If this fails, or if you have
 multiple versions of MSVC installed and want to select a specific one, you can
 set the ``codegen.cpp.msvc_vars_location`` preference.
+
+List of preferences
+-------------------
+.. document_brian_prefs:: devices.genn

@@ -1,5 +1,5 @@
-Devices in Brian 2
-==================
+Using Brian2GeNN
+================
 
 Brian supports generating standalone code for multiple devices. In
 this mode, running a Brian script generates source code in a project
@@ -12,14 +12,44 @@ framework to generate and execute code for NVIDIA CUDA. Through
 Brian2GeNN one can hence generate and run CUDA code on NVIDIA GPUs
 based solely in Brian 2 input.
 
-Using the Brian2GeNN interface
-==============================
+Installing the Brian2GeNN interface
+-----------------------------------
 
 In order to use the Brian2GeNN interface, all three Brian 2, GeNN and
-Brian2GeNN need to be fully installed. For GeNN there is also a
-dependency on a valid CUDA installation and a CUDA driver, as well as
-an NVIDIA graphics adaptor. For installation instructions see XX
-(Brian 2), YY (GeNN) and ZZ (Brian2GeNN).
+Brian2GeNN need to be fully installed. The easiest way to do this is by using
+the `conda <https://conda.io/docs/>`_ package provided in the
+`brian-team channel <https://anaconda.org/brian-team>`_ on https://anaconda.org.
+This will install Brian 2 and its dependencies, and Brian2GeNN with an internal
+version of GeNN (you can always switch to using an existing GeNN installation
+by setting the `devices.genn.path` preference). Note that this will *not*
+install the CUDA toolkit and driver necessary to run simulations on a NVIDIA
+graphics card. These will have to be installed manually, e.g. from `NVIDIA's
+web site <https://developer.nvidia.com/cuda-downloads>`_ (you can always run
+simulations in the "CPU-only" mode, but that of course defeats the main
+purpose of Brian2GeNN...). Depending on the installation method, you might
+also have to manually set the ``CUDA_PATH`` environment variable to point to
+CUDA's installation directory.
+
+To install Brian2GeNN via conda use::
+
+    conda install -c brian-team brian2genn
+
+If you are not using the conda package manager or if there is no conda package
+for your architecture, you can always install brian2genn from its source
+package on http://pypi.python.org/ ::
+
+    pip install brian2genn
+
+(might require administrator privileges depending on the configuration of your
+system; add ``--user`` to force an installation with user privileges only).
+Note that in this case, GeNN needs to be installed manually (see its
+`installation instructions <http://genn-team.github.io/genn/documentation/html/Installation.html>`_),
+and either the ``GENN_PATH`` environment variable of the `devices.genn.path`
+preference have to point to its directory. In addition, the CUDA libraries have
+to be installed (see above).
+
+Using the Brian2GeNN interface
+------------------------------
 
 To use the interface one then needs to import the brian2genn interface::
 

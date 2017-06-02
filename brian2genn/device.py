@@ -100,7 +100,7 @@ def get_compile_args():
     Get the compile args based on the users preferences. Uses Brian's
     preferences for the C++ compilation (either `codegen.cpp.extra_compile_args`
     for both Windows and UNIX, or `codegen.cpp.extra_compile_args_gcc` for UNIX
-    and `devices.extra_compile_args_msvc` for Windows), and the Brian2GeNN
+    and `codegen.cpp.extra_compile_args_msvc` for Windows), and the Brian2GeNN
     preference `devices.genn.extra_compile_args_nvcc` for the CUDA compilation
     with nvcc.
 

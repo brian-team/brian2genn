@@ -28,6 +28,7 @@ from sphinx.domains.python import PyXRefRole
 if sphinx.__version__ < '1.0.1':
     raise RuntimeError("Sphinx 1.0.1 or newer is required")
 
+import brian2genn
 from brian2.core.preferences import prefs
 
 from .docscrape_sphinx import get_doc_object, SphinxDocString
@@ -93,7 +94,7 @@ def brianobj_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
             try:
                 # A simple class or function name
                 if not '.' in text:
-                    module = __import__('brian2', fromlist=[str(text)])
+                    module = __import__('brian2genn', fromlist=[str(text)])
                     imported = getattr(module, str(text), None)
                     if hasattr(imported, '__module__'):
                         text = '~' + imported.__module__ + '.' + text
@@ -105,7 +106,7 @@ def brianobj_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
                     # Remove trailing parentheses (will be readded for display)
                     if attrname.endswith('()'):
                         attrname = attrname[:-2]
-                    module = __import__('brian2', fromlist=[str(classname)])
+                    module = __import__('brian2genn', fromlist=[str(classname)])
                     imported = getattr(module, str(classname), None)
                     if hasattr(imported, '__module__'):
                         # Add trailing parentheses only for methods not for
