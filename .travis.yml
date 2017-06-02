@@ -2,6 +2,10 @@ language: c  # We are not using the Python infrastructure
 dist: trusty
 sudo: required
 
+cache:  # Cache Homebrew's cache for OS X
+  directories:
+    - $HOME/Library/Caches/Homebrew
+
 matrix:
   include:
     - python: "2.7"
