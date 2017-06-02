@@ -9,6 +9,9 @@ build:
   number: 0
   script_env:
     - CUDA_PATH
+    - PROCESSOR_ARCHITEW6432
+    - PROCESSOR_ARCHITECTURE
+    - PROCESSOR_IDENTIFIER
 
 requirements:
   build:
