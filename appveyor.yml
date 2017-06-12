@@ -52,8 +52,7 @@ after_test:
   - 'cuda-installer.exe -s compiler_8.0 cudart_8.0'
   - 'set CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0'
   - 'conda install --yes --quiet conda-build'
-  - 'conda build -c brian-team conda_recipe'
-  - 'python scripts/move_conda_package.py conda_recipe'
+  - 'python scripts/build_conda_packages.py'
 
 artifacts:
   - path: '*.tar.bz2'

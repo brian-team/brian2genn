@@ -95,13 +95,9 @@ after_success:
       sudo apt-get update -qq -y &&
       sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
       export CUDA_PATH=/usr/local/cuda-8.0/;
-    else
-      travis_wait 30 brew cask install ./scripts/cuda_toolkit.rb &&
-      export CUDA_PATH=/usr/local/cuda;
+      travis_retry conda install --yes --quiet conda-build &&
+      python scripts/build_conda_packages.py;
     fi
-  - travis_retry conda install --yes --quiet conda-build
-  - conda build -c brian-team conda_recipe
-  - python scripts/move_conda_package.py conda_recipe
 
 notifications:
   email: false
