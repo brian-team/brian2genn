@@ -6,35 +6,30 @@ environment:
       platform: x64
       DEPENDENCIES: "stable"
       PYPI_UPLOAD_SOURCE: "no"
-
-- PYTHON: "C:\\Miniconda35-x64"
+    - PYTHON: "C:\\Miniconda35-x64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "stable"
       PYPI_UPLOAD_SOURCE: "yes"
-
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "stable"
       PYPI_UPLOAD_SOURCE: "no"
-
     - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "latest"
       PYPI_UPLOAD_SOURCE: "no"
-
     - PYTHON: "C:\\Miniconda35-x64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "latest"
       PYPI_UPLOAD_SOURCE: "no"
-
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
