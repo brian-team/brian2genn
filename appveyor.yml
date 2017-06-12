@@ -5,24 +5,28 @@ environment:
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "yes"
 
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "no"
 
     - PYTHON: "C:\\Miniconda35-x64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "latest"
+      PYPI_UPLOAD_SOURCE: "no"
 
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "latest"
+      PYPI_UPLOAD_SOURCE: "no"
 
 matrix:
   allow_failures:
@@ -53,6 +57,12 @@ after_test:
   - 'set CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0'
   - 'conda install --yes --quiet conda-build'
   - 'python scripts/build_conda_packages.py'
+  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" (
+      conda install --yes --quiet anaconda-client &&
+      conda install --yes --quiet -c conda-forge twine &&
+      python scripts\conda-server-push.py %APPVEYOR_REPO_TAG_NAME%
+     )'
+  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%PYPI_UPLOAD_SOURCE%" == "yes" (twine upload -u marcelstimberg --skip-existing dist/*.tar.bz2)'
 
 artifacts:
   - path: '*.tar.bz2'
