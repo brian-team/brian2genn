@@ -1,6 +1,13 @@
 environment:
   matrix:
-    - PYTHON: "C:\\Miniconda35-x64"
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "no"
+
+- PYTHON: "C:\\Miniconda35-x64"
       PYTHON_VERSION: "3.5"
       PYTHON_ARCH: "64"
       platform: x64
@@ -12,6 +19,13 @@ environment:
       PYTHON_ARCH: "64"
       platform: x64
       DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "no"
+
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "latest"
       PYPI_UPLOAD_SOURCE: "no"
 
     - PYTHON: "C:\\Miniconda35-x64"
