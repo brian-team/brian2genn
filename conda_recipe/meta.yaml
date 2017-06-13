@@ -18,12 +18,10 @@ requirements:
     - python
     - setuptools
     - gcc # [not win]
-    - make # [win]
   run:
     - brian2
     - python
     - gcc # [not win]
-    - make # [win]
 
 test:
   imports:
