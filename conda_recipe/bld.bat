@@ -1,3 +1,5 @@
+REM The following path assumes an installation of MS Visual Studio 2015
+call "C:\Program Files (x86)\Microsoft Visual Studio 14.0\VC\vcvarsall.bat" amd64
 REM Compile GeNN libraries
 set GENN_PATH=%CD%\genn
 nmake /f genn\lib\WINmakefile %GENN_PATH%\lib\lib\genn.lib "GENN_PATH=%GENN_PATH%"
