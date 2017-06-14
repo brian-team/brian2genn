@@ -51,7 +51,7 @@ install:
   # Install GeNN
   - # Clone the GeNN submodule
   - 'git submodule update --init --recursive'
-  - 'if "%DEPENDENCIES%" == "latest" (cd genn && git checkout 3.0.0 && cd ..)'
+  - 'if "%DEPENDENCIES%" == "latest" (cd genn && git checkout development && cd ..)'
   - 'set GENN_PATH=%CD%\genn'
 
 build: false  # not a C# project
