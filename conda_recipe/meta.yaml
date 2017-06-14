@@ -1,6 +1,6 @@
 package:
   name: brian2genn
-  version: 0.9b
+  version: "{{ load_setup_py_data().get('version') }}"
 
 source:
   path: ..

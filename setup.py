@@ -51,7 +51,7 @@ except ValueError:
 
 setup(name='Brian2GeNN',
       version='0.9b',
-      packages= ['brian2genn', 'brian2genn.sphinxext'], #find_packages(),
+      packages=['brian2genn', 'brian2genn.sphinxext'], #find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
                                    'templates/*.h',
