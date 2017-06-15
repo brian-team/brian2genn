@@ -2,6 +2,10 @@ language: c  # We are not using the Python infrastructure
 dist: trusty
 sudo: required
 
+env:
+  global:
+    secure: "E6tQNjg0V6JBNjd+KumcX/RfmpbCTRqlKtpb6YjvBYBYeaM27pVIC/6lr0VxWsdbflgPzQTMvhnWBvOTONOlgk2kgYYQJSrcF8TMuQMxDAJydCB5h92NBxIezalTZ98PIOm64vCqKS79xbpmMb9kHJ320MxDmvQ2YETl1QbFLNI="
+
 matrix:
   include:
     - python: "2.7"
