@@ -1,6 +1,9 @@
 environment:
   ANACONDA_TOKEN:
     secure: IHuV8pqZulsweCS/2VLZNkJN3Vv0c23Cr6Yiudf/O8u/5IEU31qKLRbsqbKSj7Ez
+  TWINE_PASSWORD:
+    secure: 20R+TzZ9NRmt9ttc5/Bb8w==
+
   matrix:
     - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6"
