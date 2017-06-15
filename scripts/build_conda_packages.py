@@ -21,16 +21,10 @@ for python_version in python_versions:
                 recipe_path]
     main_build()
 
-with open(os.path.join(recipe_path, 'meta.yaml'), 'r') as f:
-    config = yaml.load(f)
-    name = config['package']['name']
-    version = config['package']['version']
-
 packages_dir = get_or_merge_config(None).bldpkgs_dir
 
-binary_package_glob = os.path.join(packages_dir,
-                                   '{name}-{version}*.tar.bz2'.format(name=name,
-                                                                      version=version))
+binary_package_glob = os.path.join(packages_dir, 'brian2genn-*.tar.bz2')
 binary_packages = glob.glob(binary_package_glob)
+
 for binary_package in binary_packages:
     shutil.move(binary_package, '.')
