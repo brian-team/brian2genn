@@ -1,0 +1,6 @@
+prune benchmark_results
+prune scripts
+prune conda_recipe
+global-exclude .git*
+exclude .travis.yml
+exclude appveyor.yml
