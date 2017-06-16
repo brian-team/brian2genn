@@ -50,7 +50,7 @@ except ValueError:
     data_files = []
 
 setup(name='Brian2GeNN',
-      version='0.9rc5',
+      version='1.0rc0',
       packages=['brian2genn', 'brian2genn.sphinxext'], #find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
