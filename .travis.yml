@@ -114,7 +114,6 @@ after_success:
       python scripts/build_conda_packages.py;
       conda install --yes --quiet anaconda-client;
       python scripts/conda-server-push.py $TRAVIS_TAG;
-      fi
     fi
 
 notifications:
