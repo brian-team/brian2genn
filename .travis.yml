@@ -101,7 +101,6 @@ script:
 
 after_success:
   # Install minimal CUDA components to build the conda package and upload to anaconda.org if this is a tagged release in the master branch
-  - echo $TRAVIS_OS_NAME $TRAVIS_PULL_REQUEST $TRAVIS_REPO_SLUG $TRAVIS_TAG
   - if [[ "$TRAVIS_OS_NAME" == "linux" && $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_REPO_SLUG == 'brian-team/brian2genn' && ! -z $TRAVIS_TAG && $ANACONDA_UPLOAD == 'yes' ]]; then
       CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb;
       CUDA_FILE=/tmp/cuda_install.deb;
