@@ -4,8 +4,8 @@ sudo: required
 
 env:
   global:
-    secure: "fYNzSW9BZeANbLCX+fluHs9DHQ4IX5mSu/8d3sqJbvkjSMhU7ZEh/AW00i4smfQWcja+3KRyBjjSvTfvYIW3wNlF4AcR63mf1t+D/Wax2OvwGgomvyad1xghD1p0b18UB+ADSxwOaeuhvTUez0tth6QQWLP+gvZJ2D0LmdezMEY="
-    secure: "jtMm9VW67fThl/3GCwEapG5atUTIKAI9KYro/xYUjw9nWU28+vV/mNVwqza4G01jPmNeNK9T+hBBH7IOAumU/Sgkw8V0PJHROsBiAUHm3p9IIuQkEUuHwlOUUKYBL9SO74xyabrekf+celG00qnp5XI1qiIR/X5SFWd34HIFnyU="
+    - secure: "fYNzSW9BZeANbLCX+fluHs9DHQ4IX5mSu/8d3sqJbvkjSMhU7ZEh/AW00i4smfQWcja+3KRyBjjSvTfvYIW3wNlF4AcR63mf1t+D/Wax2OvwGgomvyad1xghD1p0b18UB+ADSxwOaeuhvTUez0tth6QQWLP+gvZJ2D0LmdezMEY="
+    - secure: "jtMm9VW67fThl/3GCwEapG5atUTIKAI9KYro/xYUjw9nWU28+vV/mNVwqza4G01jPmNeNK9T+hBBH7IOAumU/Sgkw8V0PJHROsBiAUHm3p9IIuQkEUuHwlOUUKYBL9SO74xyabrekf+celG00qnp5XI1qiIR/X5SFWd34HIFnyU="
 
 matrix:
   include:
