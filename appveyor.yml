@@ -81,7 +81,7 @@ after_test:
      conda install --yes --quiet -c conda-forge twine &&
      python scripts\conda-server-push.py %APPVEYOR_REPO_TAG_NAME%
      )'
-  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%PYPI_UPLOAD_SOURCE%" == "yes" (python setup.py sdist --formats=bztar && conda install --yes --quiet -c conda-forge twine && twine upload -u marcelstimberg --skip-existing dist/*.tar.bz2)'
+  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%PYPI_UPLOAD_SOURCE%" == "yes" (python setup.py sdist --formats=bztar && pip install --quiet twine && twine upload -u marcelstimberg --skip-existing dist/*.tar.bz2)'
 
 artifacts:
   - path: '*.tar.bz2'
