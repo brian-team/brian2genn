@@ -76,7 +76,7 @@ setup(name='Brian2GeNN',
       description='An interface to use the GeNN framework as a device in Brian 2',
       long_description=long_description,
       author='Thomas Nowotny, Marcel Stimberg, Dan Goodman',
-      author_email='t.nowotny at sussex.ac.uk',
+      author_email='t.nowotny@sussex.ac.uk',
       classifiers=[
           'Development Status :: 4 - Beta',
           'Intended Audience :: Science/Research',
