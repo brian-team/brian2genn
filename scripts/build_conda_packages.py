@@ -11,14 +11,16 @@ except ImportError:
     raise ImportError('Missing conda-build -- make sure "conda-build" is '
                       'installed and that you are running this script from the '
                       'conda root environment.')
-
 recipe_path = os.path.join(os.path.dirname(__file__), '..', 'conda_recipe')
 
 python_versions = ['2.7', '3.5', '3.6']
+additional_args = sys.argv[1:]
+
 for python_version in python_versions:
     sys.argv = ['conda-build', '-c', 'brian-team', '--quiet',
-                '--python={}'.format(python_version),
-                recipe_path]
+                '--python={}'.format(python_version)]
+    sys.argv.extend(additional_args)
+    sys.argv.append(recipe_path)
     main_build()
 
 packages_dir = get_or_merge_config(None).bldpkgs_dir
