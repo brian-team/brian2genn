@@ -6,7 +6,7 @@ source:
   path: ..
 
 build:
-  number: 0
+  number: 1
   script_env:
     - CUDA_PATH
     - PROCESSOR_ARCHITEW6432
@@ -17,11 +17,9 @@ requirements:
   build:
     - python
     - setuptools
-    - gcc # [not win]
   run:
     - brian2
     - python
-    - gcc # [not win]
 
 test:
   imports:
