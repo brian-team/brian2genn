@@ -868,6 +868,8 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             raise RuntimeError('Set the GENN_PATH environment variable or '
                                'the devices.genn.path preference.')
+        env = os.environ.copy()
+        env['GENN_PATH'] = genn_path
         with std_silent(debug):
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
@@ -896,19 +898,19 @@ class GeNNDevice(CPPStandaloneDevice):
                     vcvars_loc=vcvars_loc, arch_name=arch_name)
                 buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin',
                                               'genn-buildmodel.bat')
-                cmd = vcvars_cmd + " && " + buildmodel_cmd + " " + self.model_name + ".cpp"
+                cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " " + self.model_name + ".cpp"
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += ' && nmake /f WINmakefile clean "GENN_PATH={genn_path}" && nmake /f WINmakefile "GENN_PATH={genn_path}"'.format(genn_path=genn_path)
-                check_call(cmd, cwd=directory)
+                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
+                check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd, self.model_name + '.cpp']
                 if not use_GPU:
                     args += ['-c']
-                check_call(args, cwd=directory)
-                call(["make", "clean", "GENN_PATH=%s" % genn_path], cwd=directory)
-                check_call(["make", "GENN_PATH=%s" % genn_path], cwd=directory)
+                check_call(args, cwd=directory, env=env)
+                call(["make", "clean"], cwd=directory, env=env)
+                check_call(["make"], cwd=directory, env=env)
 
     def add_parameter(self, model, varname, variable):
         model.parameters.append(varname)
