@@ -24,6 +24,8 @@ requirements:
 test:
   imports:
     - brian2genn
+  commands:
+    - python -c 'import brian2genn; brian2genn.example_run(use_GPU=False)'
 
 about:
   home: http://github.com/brian-team/brian2genn
