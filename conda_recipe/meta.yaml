@@ -9,17 +9,19 @@ build:
   number: 1
   script_env:
     - CUDA_PATH
-    - PROCESSOR_ARCHITEW6432
-    - PROCESSOR_ARCHITECTURE
-    - PROCESSOR_IDENTIFIER
+    - PROCESSOR_ARCHITEW6432  # [win]
+    - PROCESSOR_ARCHITECTURE  # [win]
+    - PROCESSOR_IDENTIFIER  # [win]
 
 requirements:
   build:
     - python
     - setuptools
+    - gcc  # [linux]
   run:
     - brian2
     - python
+    - gcc  # [linux]
 
 test:
   imports:
