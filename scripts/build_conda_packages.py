@@ -17,6 +17,7 @@ python_versions = ['2.7', '3.5', '3.6']
 additional_args = sys.argv[1:]
 
 for python_version in python_versions:
+    shutil.rmtree(os.path.join(recipe_path, '..', 'build'), ignore_errors=True)
     sys.argv = ['conda-build', '-c', 'brian-team', '--quiet',
                 '--python={}'.format(python_version)]
     sys.argv.extend(additional_args)
