@@ -44,7 +44,7 @@ def example_run(debug=False, **build_options):
     import shutil
     with std_silent(debug):
         test_dir = mkdtemp(prefix='brian2genn_test')
-        set_device('genn', directory=test_dir, **build_options)
+        set_device('genn', directory=test_dir, debug=debug, **build_options)
         N = 100
         tau = 10*ms
         eqs = '''
