@@ -1,10 +1,12 @@
 import os
 import warnings
 
-from .codeobject import GeNNCodeObject
-from .device import genn_device
-import binomial
-import preferences
+from brian2genn.codeobject import GeNNCodeObject
+from brian2genn.device import genn_device
+# Register preferences and the binomial implementation:
+import brian2genn.preferences
+import brian2genn.binomial
+
 
 from pkg_resources import get_distribution, DistributionNotFound
 try:

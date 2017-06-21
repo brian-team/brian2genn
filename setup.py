@@ -8,7 +8,7 @@ import glob
 if sys.version_info < (2, 7):
     raise RuntimeError('Only Python versions >= 2.7 are supported')
 
-from setuptools import setup
+from setuptools import setup, find_packages
 
 long_description = '''
 Brian2GeNN is an interface between Brian 2 and GeNN. Brian2 is a simulator for spiking neural networks available on a variety of platforms. It is the successor of Brian1 and shares its approach of being highly flexible and easily extensible. It is based on a code generation framework that allows to execute simulations using other programming languages and/or on different
@@ -51,7 +51,7 @@ except ValueError:
 
 setup(name='Brian2GeNN',
       version='1.0rc4',
-      packages=['brian2genn', 'brian2genn.sphinxext'], #find_packages(),
+      packages=find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
                                    'templates/*.h',
