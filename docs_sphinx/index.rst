@@ -11,6 +11,7 @@ Contents:
    introduction/exclusions
    introduction/preferences
    technical/how_it_works
+   technical/release
    
 .. toctree::
    :maxdepth: 1
