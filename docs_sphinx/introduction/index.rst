@@ -48,6 +48,13 @@ and either the ``GENN_PATH`` environment variable of the `devices.genn.path`
 preference have to point to its directory. In addition, the CUDA libraries have
 to be installed (see above).
 
+.. note::
+    The above commands install the necessary packages to run simulations with
+    Brian2/GeNN, but most users would install additional packages, e.g.
+    `matplotlib <http://matplotlib.org/>`_ for plotting. This can be done with
+    the same package management tools mentioned above, e.g. use
+    ``conda install matplotlib`` or ``pip install matplotlib``.
+
 Using the Brian2GeNN interface
 ------------------------------
 
