@@ -23,5 +23,10 @@ prefs.register_preferences(
         docs='''The path to the GeNN installation (if not set, the GENN_PATH environment variable will be used instead)''',
         default=None,
         validator=lambda value: value is None or os.path.isdir(value)
+    ),
+    cuda_path=BrianPreference(
+        docs='''The path to the CUDA installation (if not set, the CUDA_PATH environment variable will be used instead)''',
+        default=None,
+        validator=lambda value: value is None or os.path.isdir(value)
     )
 )

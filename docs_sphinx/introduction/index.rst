@@ -27,7 +27,8 @@ graphics card. These will have to be installed manually, e.g. from `NVIDIA's
 web site <https://developer.nvidia.com/cuda-downloads>`_ (you can always run
 simulations in the "CPU-only" mode, but that of course defeats the main
 purpose of Brian2GeNN...). Depending on the installation method, you might
-also have to manually set the ``CUDA_PATH`` environment variable to point to
+also have to manually set the ``CUDA_PATH`` environment variable (or
+alternatively the `devices.genn.cuda_path` preference) to point to
 CUDA's installation directory.
 
 To install Brian2GeNN via conda use::

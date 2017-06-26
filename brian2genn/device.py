@@ -870,6 +870,19 @@ class GeNNDevice(CPPStandaloneDevice):
                                'the devices.genn.path preference.')
         env = os.environ.copy()
         env['GENN_PATH'] = genn_path
+        if use_GPU:
+            if prefs.devices.genn.cuda_path is not None:
+                cuda_path = prefs.devices.genn.cuda_path
+                env['CUDA_PATH'] = cuda_path
+                logger.debug('Using CUDA path from preference: '
+                             '"{}"'.format(cuda_path))
+            elif 'CUDA_PATH' in env:
+                cuda_path = env['CUDA_PATH']
+                logger.debug('Using CUDA path from environment variable: '
+                             '"{}"'.format(cuda_path))
+            else:
+                raise RuntimeError('Set the CUDA_PATH environment variable or '
+                                   'the devices.genn.cuda_path preference.')
         with std_silent(debug):
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
