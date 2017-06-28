@@ -23,7 +23,7 @@ void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32
         assert(source[i] < srcNN);
         assert(target[i] < trgNN);
         // Check for duplicate entries
-        if (! isnan(g[source[i]*trgNN+target[i]])) {
+        if (! std::isnan(g[source[i]*trgNN+target[i]])) {
             std::cerr << "*****" << std::endl;
             std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << target[i] << std::endl;
             std::cerr << "*****" << std::endl;
@@ -33,7 +33,7 @@ void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32
     }
     for (int s= 0; s < srcNN; s++) {
         for (int t= 0; t < trgNN; t++) {
-            if (isnan(g[s*trgNN+t]))
+	  if (std::isnan(g[s*trgNN+t]))
                 g[s*trgNN+t] = 0.0;
         }
     }
