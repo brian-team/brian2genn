@@ -1432,6 +1432,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def generate_makefile(self, directory, use_GPU):
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
+        linker_flags = ' '.join(prefs.codegen.cpp.extra_link_args)
         if os.sys.platform == 'win32':
             makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
@@ -1441,6 +1442,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 source_files=self.source_files,
                                                                 use_GPU=use_GPU,
                                                                 compiler_flags=compile_args_msvc,
+                                                                linker_flags=linker_flags,
                                                                 nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'WINmakefile'), 'w').write(
@@ -1454,6 +1456,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 source_files=self.source_files,
                                                                 use_GPU=use_GPU,
                                                                 compiler_flags=compile_args_gcc,
+                                                                linker_flags=linker_flags,
                                                                 nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(makefile_tmp)
