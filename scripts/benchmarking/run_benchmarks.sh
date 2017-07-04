@@ -5,10 +5,10 @@ for spikemon in "true" "false"; do
         for scaling in 1 2 5 10 20 50; do
             for repeat in 1 2; do
                 echo Repeat $repeat
-                python Mbody_example.py $scaling genn $threads $spikemon true
+                python $1 $scaling genn $threads $spikemon true
                 rm -r GeNNworkspace
                 echo Empty run
-                python Mbody_example.py $scaling genn $threads $spikemon false
+                python $1 $scaling genn $threads $spikemon false
                 rm -r GeNNworkspace
             done
         done
@@ -20,10 +20,10 @@ for spikemon in "true" "false"; do
         for scaling in 1 2 5 10 20 50; do
             for repeat in 1 2; do
                 echo Repeat $repeat
-                python Mbody_example.py $scaling cpp_standalone $threads $spikemon true
+                python $1 $scaling cpp_standalone $threads $spikemon true
                 rm -r output
                 echo Empty run
-                python Mbody_example.py $scaling cpp_standalone $threads $spikemon false
+                python $1 $scaling cpp_standalone $threads $spikemon false
                 rm -r output
             done
         done
@@ -35,10 +35,10 @@ for spikemon in "true" "false"; do
     for scaling in 100 200; do
         for repeat in 1 2; do
             echo Repeat $repeat
-            python Mbody_example.py $scaling genn 0 $spikemon true
+            python $1 $scaling genn 0 $spikemon true
             rm -r GeNNworkspace
             echo Empty run
-            python Mbody_example.py $scaling genn 0 $spikemon false
+            python $1 $scaling genn 0 $spikemon false
             rm -r GeNNworkspace
         done
     done
@@ -49,10 +49,10 @@ for spikemon in "true" "false"; do
         for scaling in 100 200; do
             for repeat in 1 2; do
                 echo Repeat $repeat
-                python Mbody_example.py $scaling cpp_standalone $threads $spikemon true
+                python $1 $scaling cpp_standalone $threads $spikemon true
                 rm -r output
                 echo Empty run
-                python Mbody_example.py $scaling cpp_standalone $threads $spikemon false
+                python $1 $scaling cpp_standalone $threads $spikemon false
                 rm -r output
             done
         done
