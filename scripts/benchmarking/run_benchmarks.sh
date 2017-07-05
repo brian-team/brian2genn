@@ -3,7 +3,7 @@
 for spikemon in "true" "false"; do
    for threads in -1 0; do
         for scaling in 1 2 5 10 20 50; do
-            for repeat in 1 2; do
+            for repeat in 1 2 3 4; do
                 echo Repeat $repeat
                 python $1 $scaling genn $threads $spikemon true
                 rm -r GeNNworkspace
