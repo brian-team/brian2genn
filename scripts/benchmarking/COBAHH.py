@@ -102,7 +102,7 @@ if use_spikemon:
 
 import time
 if do_run:
-    runtime = 1*second
+    runtime = 10*second
 else:
     runtime = 0*second
 
@@ -110,7 +110,7 @@ start = time.time()
 run(runtime, report='text')
 took = (time.time()-start)
 print 'took %.1fs' % took
-neurons= 4000*scale
+neurons= 1000*scale
 synapses = len(Ce) + len(Ci)
 
 with open('benchmarks_COBAHH.txt', 'a') as f:
