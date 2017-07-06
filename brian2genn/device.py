@@ -883,6 +883,10 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
                                    'the devices.genn.cuda_path preference.')
+        if prefs['codegen.cpp.extra_link_args']:
+            # declare the link flags as an environment variable so that GeNN's
+            # generateALL can pick it up
+            env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
         with std_silent(debug):
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
