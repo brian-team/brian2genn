@@ -35,6 +35,10 @@ else:
     prefs.devices.cpp_standalone.openmp_threads = threads
 set_device(device, **extra_args)
 
+if device == 'genn':
+    prefs.devices.genn.auto_choose_device = False
+    prefs.devices.genn.default_device = 0
+
 print 'Running with arguments: ', sys.argv
 
 # Parameters
