@@ -80,6 +80,10 @@ void modelDefinition(NNmodel &model)
   GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
   GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
 
+  // GENN_PREFERENCES set in brian2genn
+  GENN_PREFERENCES::autoChooseDevice= {{genn_auto_choose_device}};
+  GENN_PREFERENCES::defaultDevice= {{genn_default_device}};
+
   {{ dtDef }}
   // Define the relevant neuron models
   neuronModel n;

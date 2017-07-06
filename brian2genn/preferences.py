@@ -28,5 +28,15 @@ prefs.register_preferences(
         docs='''The path to the CUDA installation (if not set, the CUDA_PATH environment variable will be used instead)''',
         default=None,
         validator=lambda value: value is None or os.path.isdir(value)
+    ),
+    auto_choose_device=BrianPreference(
+        docs='''The GeNN preference autoChooseDevice that determines whether or not a GPU should be chosen automatically when multiple CUDA enabled devices are present.''',
+        default=True,
+        validator=lambda value: value in [ True, False ]
+    ),
+    default_device=BrianPreference(
+        docs='''The GeNN preference defaultDevice that determines CUDA enabled device should be used if it is not automatically chosen.''',
+        default=0,
+        validator=lambda value: isinstance(value, int) 
     )
 )
