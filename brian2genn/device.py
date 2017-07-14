@@ -1431,6 +1431,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    main_lines=main_lines,
                                                    header_files=self.header_files,
                                                    source_files=self.source_files,
+                                                   benchmark=prefs.devices.genn.benchmarking,
                                                    )
         writer.write('main.*', runner_tmp)
 

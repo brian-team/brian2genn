@@ -38,5 +38,10 @@ prefs.register_preferences(
         docs='''The GeNN preference defaultDevice that determines CUDA enabled device should be used if it is not automatically chosen.''',
         default=0,
         validator=lambda value: isinstance(value, int) 
+    ),
+    benchmarking=BrianPreference(
+        docs='''This preference allows to switch on timing information written by the compiled Brian2GeNN executable at run time into test_output/test.time within the GeNNworkspace.''',
+        default=False,
+        validator=lambda value: value in [ True, False ] 
     )
 )

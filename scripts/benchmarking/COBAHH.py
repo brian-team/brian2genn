@@ -38,6 +38,7 @@ set_device(device, **extra_args)
 if device == 'genn':
     prefs.devices.genn.auto_choose_device = False
     prefs.devices.genn.default_device = 0
+    prefs.devices.genn.benchmarking = True
 
 print 'Running with arguments: ', sys.argv
 
@@ -115,4 +116,9 @@ synapses = len(Ce) + len(Ci)
 
 with open('benchmarks_COBAHH.txt', 'a') as f:
     data = [neurons, synapses, device, threads, use_spikemon, do_run, took]
-    f.write('\t'.join('%s' % d for d in data) + '\n')
+    f.write('\t'.join('%s' % d for d in data)+'\t')
+    with open('GeNNworkspace/test_output/test.time','r') as bf:
+        for line in bf:
+            line= line.strip()
+            line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
+            f.write(line)

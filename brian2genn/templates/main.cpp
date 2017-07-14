@@ -25,6 +25,11 @@ int which;
 
 int main(int argc, char *argv[])
 {
+  {% if benchmark %}
+  unsigned long long bench_start= GetTimeMs64();
+  unsigned long long bench_time;
+  {% endif %}
+
   if (argc != 4)
   {
     fprintf(stderr, "usage: main <basename> <time (s)> <CPU=0, GPU=1> \n");
@@ -32,14 +37,16 @@ int main(int argc, char *argv[])
   }
   double totalTime= atof(argv[2]);
   which= atoi(argv[3]);
+
+  {% if benchmark %}
   string OutDir = toString(argv[1]) +"_output";
   string cmd= toString("mkdir ") +OutDir;
   system(cmd.c_str());
   string name;
   name= OutDir+ "/"+ toString(argv[1]) + toString(".time");
-  FILE *timef= fopen(name.c_str(),"a");  
+  FILE *timef= fopen(name.c_str(),"w");  
+  {% endif %}
 
-  timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
   
@@ -56,6 +63,11 @@ int main(int argc, char *argv[])
 	  using namespace brian;
 	  {{ main_lines | autoindent }}
   }
+
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
 
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
@@ -121,6 +133,11 @@ int main(int argc, char *argv[])
 
   //-----------------------------------------------------------------
   
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
+  
   eng.init(which);         // this includes copying g's for the GPU version
 #ifndef CPU_ONLY
   copyStateToDevice();
@@ -132,10 +149,18 @@ int main(int argc, char *argv[])
 
   t= -DT;
   void *devPtr;
+
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
+
   eng.run(totalTime, which); // run for the full duration
-  timer.stopTimer();
-  cerr << t << " done ..." << endl;
-  fprintf(timef,"%f \n", timer.getElapsedTime());
+
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
 
   // get the final results from the GPU 
 #ifndef CPU_ONLY
@@ -144,6 +169,12 @@ int main(int argc, char *argv[])
     eng.getSpikesFromGPU();
   }
 #endif
+
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
+
   // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
   {% if synapses.connectivity == 'DENSE' %}
@@ -187,8 +218,20 @@ int main(int argc, char *argv[])
   {% endfor %}
   {% endfor %}
 
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f ",(double) (bench_time-bench_start)/1000.0);
+  {%endif%}
+
   _write_arrays();
   _dealloc_arrays();
+
+  {% if benchmark %}
+  bench_time= GetTimeMs64();
+  fprintf(timef,"%f \n",(double) (bench_time-bench_start)/1000.0);
+  fclose(timef);
+  {%endif%}
+
   cerr << "everything finished." << endl;
   return 0;
 }
