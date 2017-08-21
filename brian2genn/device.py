@@ -363,7 +363,7 @@ class GeNNDevice(CPPStandaloneDevice):
             prefs._backup()
         super(GeNNDevice, self).activate(build_on_run, **kwargs)
 
-    def code_object_class(self, codeobj_class=None):
+    def code_object_class(self, codeobj_class=None, *args, **kwds):
         if codeobj_class is GeNNCodeObject:
             return codeobj_class
         else:
