@@ -69,6 +69,7 @@ int main(int argc, char *argv[])
   {% else %} {# for sparse matrix representations #}
   allocate{{synapses.name}}(brian::_dynamic_array_{{synapses.name}}__synaptic_pre.size());
    {% set _first_var = true %}
+   vector<vector<int32_t> > _{{synapses.name}}_bypre;
    {% for var in synapses.variables %}
    {% if synapses.variablescope[var] == 'brian' %}
       {% if _first_var %}
@@ -77,7 +78,9 @@ int main(int argc, char *argv[])
       {% else %}
       {% set _mode = 'b2g::COPY_ONLY' %}
       {% endif %}
-      convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, C{{synapses.name}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, {{_mode}});
+      convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
+                                               brian::_dynamic_array_{{synapses.name}}_{{var}}, C{{synapses.name}}, {{var}}{{synapses.name}},
+                                               {{synapses.srcN}}, {{synapses.trgN}}, _{{synapses.name}}_bypre, {{_mode}});
   {% endif %}
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
