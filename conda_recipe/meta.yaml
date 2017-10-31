@@ -19,7 +19,7 @@ requirements:
     - setuptools
     - gcc  # [linux]
   run:
-    - brian2=2.1*
+    - brian2 2.1*
     - python
     - gcc  # [linux]
 
