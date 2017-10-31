@@ -6,7 +6,7 @@ source:
   path: ..
 
 build:
-  number: 1
+  number: 0
   script_env:
     - CUDA_PATH
     - PROCESSOR_ARCHITEW6432  # [win]
@@ -19,7 +19,7 @@ requirements:
     - setuptools
     - gcc  # [linux]
   run:
-    - brian2 >=2.0
+    - brian2=2.1*
     - python
     - gcc  # [linux]
 
