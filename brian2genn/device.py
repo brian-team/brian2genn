@@ -825,6 +825,16 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             where = 'on CPU'
         print 'executing genn binary %s ...' % where
+
+        pref_vars = prefs['devices.cpp_standalone.run_environment_variables']
+        for key, value in itertools.chain(pref_vars.iteritems(),
+                                          self.run_environment_variables.iteritems()):
+            if key in os.environ and os.environ[key] != value:
+                logger.info('Overwriting environment variable '
+                            '"{key}"'.format(key=key),
+                            name_suffix='overwritten_env_var', once=True)
+            os.environ[key] = value
+
         with std_silent(with_output):
             if os.sys.platform == 'win32':
                 cmd = directory + "\\main.exe test " + str(
