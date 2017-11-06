@@ -16,12 +16,12 @@ build:
 requirements:
   build:
     - python {{PY_VER}}*
+    - {{compiler('cxx')}}
     - setuptools
-    - gcc  # [linux]
   run:
-    - brian2 2.1*
     - python {{PY_VER}}*
-    - gcc  # [linux]
+    - brian2 2.1*
+    - {{pin_compatible(compiler('cxx'))}}
 
 about:
   home: http://github.com/brian-team/brian2genn
