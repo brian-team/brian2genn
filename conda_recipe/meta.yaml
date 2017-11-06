@@ -15,11 +15,11 @@ build:
 
 requirements:
   build:
-    - python {{PY_VER}}*
+    - python
     - {{compiler('cxx')}}
     - setuptools
   run:
-    - python {{PY_VER}}*
+    - python
     - brian2 2.1*
     - {{pin_compatible(compiler('cxx'))}}
 

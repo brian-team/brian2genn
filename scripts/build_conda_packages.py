@@ -25,6 +25,7 @@ for python_version in python_versions:
     shutil.rmtree(os.path.join(recipe_path, '..', 'build'), ignore_errors=True)
     sys.argv = ['conda-build', '-c', 'brian-team', '--quiet',
                 '--python={}'.format(python_version),
+                '--no-activate'  # seems to make the build more robust on Windows
                 ]
     sys.argv.extend(additional_args)
     sys.argv.append(recipe_path)
