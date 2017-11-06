@@ -15,12 +15,12 @@ build:
 
 requirements:
   build:
-    - python
+    - python {{PY_VER}}*
     - setuptools
     - gcc  # [linux]
   run:
     - brian2 2.1*
-    - python
+    - python {{PY_VER}}*
     - gcc  # [linux]
 
 about:
