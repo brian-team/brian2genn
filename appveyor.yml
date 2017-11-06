@@ -57,6 +57,7 @@ install:
   # Install Brian 2
   - 'conda install --yes --quiet -c brian-team py-cpuinfo nose'
   - 'if "%DEPENDENCIES%" == "stable" (set BRIAN_CHANNEL="brian-team") else (set BRIAN_CHANNEL="brian-team/label/dev")'
+  - 'conda install --yes --quiet tqdm'
   - 'conda install --yes --quiet -c conda-forge -c %BRIAN_CHANNEL% brian2'
   # Install GeNN
   - # Clone the GeNN submodule
