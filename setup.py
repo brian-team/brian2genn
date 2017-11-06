@@ -50,7 +50,7 @@ except ValueError:
     data_files = []
 
 setup(name='Brian2GeNN',
-      version='1.1.3',
+      version='1.1.4',
       packages=find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
