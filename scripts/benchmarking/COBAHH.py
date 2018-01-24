@@ -22,13 +22,15 @@ from brian2 import *
 import brian2genn
 import sys
 
-scale= int(sys.argv[1])
+scale= float(sys.argv[1])
 
 extra_args = {}
 device = sys.argv[2]
 threads = int(sys.argv[3])
 use_spikemon = sys.argv[4] == 'true'
 do_run = sys.argv[5] == 'true'
+run_it_for= double(sys.argv[6])
+
 if threads == -1:
     extra_args = {'use_GPU': False}
 else:
@@ -83,10 +85,10 @@ alpha_n = 0.032*(mV**-1)*(15*mV-v+VT)/
 beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 ''')
 
-P = NeuronGroup(4000*scale, model=eqs, threshold='v>-20*mV', refractory=3*ms,
+P = NeuronGroup(int(4000*scale), model=eqs, threshold='v>-20*mV', refractory=3*ms,
                 method='exponential_euler')
-Pe = P[:3200*scale]
-Pi = P[3200*scale:]
+Pe = P[:int(3200*scale)]
+Pi = P[int(3200*scale):]
 Ce = Synapses(Pe, P, on_pre='ge+=we')
 Ci = Synapses(Pi, P, on_pre='gi+=wi')
 Ce.connect(p=0.02)
@@ -103,7 +105,7 @@ if use_spikemon:
 
 import time
 if do_run:
-    runtime = 10*second
+    runtime = run_it_for*second
 else:
     runtime = 0*second
 
@@ -111,14 +113,24 @@ start = time.time()
 run(runtime, report='text')
 took = (time.time()-start)
 print 'took %.1fs' % took
-neurons= 1000*scale
+neurons= int(1000*scale)
 synapses = len(Ce) + len(Ci)
-
-with open('benchmarks_COBAHH.txt', 'a') as f:
-    data = [neurons, synapses, device, threads, use_spikemon, do_run, took]
-    f.write('\t'.join('%s' % d for d in data)+'\t')
-    with open('GeNNworkspace/test_output/test.time','r') as bf:
-        for line in bf:
-            line= line.strip()
-            line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
-            f.write(line)
+devNo= {"genn" : 0, "cpp_standalone" : 1 }
+intfrombool= { False : 0, True : 1}
+dev= devNo[device]
+uSpkmon= intfrombool[use_spikemon]
+run= intfrombool[do_run]
+if dev == 0:
+    with open('benchmarks_COBAHH.txt', 'a') as f:
+        data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
+        f.write('\t'.join('%s' % d for d in data)+'\t')
+        with open('GeNNworkspace/test_output/test.time','r') as bf:
+            for line in bf:
+                line= line.strip()
+                line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
+                f.write(line)
+else:
+    with open('benchmarks_COBAHH.txt', 'a') as f:
+        data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
+        f.write('\t'.join('%s' % d for d in data)+'\n')
+        

@@ -4,17 +4,25 @@ from brian2 import *
 import brian2genn
 import sys
 MB_scaling = float(sys.argv[1])
+prefs.devices.genn.connectivity = 'DENSE'
 
 extra_args = {}
 device = sys.argv[2]
 threads = int(sys.argv[3])
 use_spikemon = sys.argv[4] == 'true'
 do_run = sys.argv[5] == 'true'
+run_it_for= int(sys.argv[6])
+
 if threads == -1:
     extra_args = {'use_GPU': False}
 else:
     prefs.devices.cpp_standalone.openmp_threads = threads
 set_device(device, **extra_args)
+
+if device == 'genn':
+    prefs.devices.genn.auto_choose_device = False
+    prefs.devices.genn.default_device = 0
+    prefs.devices.genn.benchmarking = True
 
 print 'Running with arguments: ', sys.argv
 
@@ -77,7 +85,7 @@ beta_n = 0.5*exp((-55 - V/mV)/40)/ms : Hz
 
 # Principal neurons (Antennal Lobe)
 n_patterns = 10
-n_repeats = 10
+n_repeats = run_it_for*10
 p_perturb = 0.1
 patterns = np.repeat(np.array([np.random.choice(N_AL, int(0.2*N_AL), replace=False) for _ in range(n_patterns)]), n_repeats, axis=0)
 # Make variants of the patterns
@@ -191,7 +199,21 @@ took = (time.time()-start)
 print 'took %.1fs' % took
 neurons = N_AL + N_MB + N_LB
 synapses = len(PN_iKC) + len(iKC_eKC) + len(eKC_eKC)
-
-with open('benchmarks.txt', 'a') as f:
-    data = [neurons, synapses, device, threads, use_spikemon, do_run, took]
-    f.write('\t'.join('%s' % d for d in data) + '\n')
+devNo= {"genn" : 0, "cpp_standalone" : 1 }
+intfrombool= { False : 0, True : 1}
+dev= devNo[device]
+uSpkmon= intfrombool[use_spikemon]
+run= intfrombool[do_run]
+if dev == 0:
+    with open('benchmarks_Mbody.txt', 'a') as f:
+        data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
+        f.write('\t'.join('%s' % d for d in data)+'\t')
+        with open('GeNNworkspace/test_output/test.time','r') as bf:
+            for line in bf:
+                line= line.strip()
+                line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
+                f.write(line)
+else:
+    with open('benchmarks_Mbody.txt', 'a') as f:
+        data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
+        f.write('\t'.join('%s' % d for d in data)+'\n')
