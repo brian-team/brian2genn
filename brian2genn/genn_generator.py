@@ -89,15 +89,13 @@ class GeNNCodeGenerator(CodeGenerator):
 
     class_name = 'genn'
 
-    universal_support_code = ('#include <limits.h>\n' +
-                              _mod_support_code() +
-                              deindent('''
+    universal_support_code = _mod_support_code() + deindent('''
     #ifdef _MSC_VER
     #define _brian_pow(x, y) (pow((double)(x), (y)))
     #else
     #define _brian_pow(x, y) (pow((x), (y)))
     #endif
-    '''))
+    ''')
 
     def __init__(self, *args, **kwds):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
@@ -289,7 +287,7 @@ class GeNNCodeGenerator(CodeGenerator):
             if func_namespace is not None:
                 self.variables.update(func_namespace)
 
-        support_code.insert(0, self.universal_support_code)
+        support_code.append(self.universal_support_code)
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
@@ -448,7 +446,7 @@ int _timestep(double t, double dt)
 __host__ __device__ int _timestep(double t, double dt)
 #endif
 {
-    const int _infinity_int = INT_MAX/2;
+    const int _infinity_int  = 1073741823;  // maximum 32bit integer divided by 2
     if (std::isinf (t))
     {
         if (t < 0)
