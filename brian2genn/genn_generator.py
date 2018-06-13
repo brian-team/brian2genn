@@ -89,13 +89,15 @@ class GeNNCodeGenerator(CodeGenerator):
 
     class_name = 'genn'
 
-    universal_support_code = _mod_support_code() + deindent('''
+    universal_support_code = ('#include <limits.h>\n' +
+                              _mod_support_code() +
+                              deindent('''
     #ifdef _MSC_VER
     #define _brian_pow(x, y) (pow((double)(x), (y)))
     #else
     #define _brian_pow(x, y) (pow((x), (y)))
     #endif
-    ''')
+    '''))
 
     def __init__(self, *args, **kwds):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
@@ -287,7 +289,7 @@ class GeNNCodeGenerator(CodeGenerator):
             if func_namespace is not None:
                 self.variables.update(func_namespace)
 
-        support_code.append(self.universal_support_code)
+        support_code.insert(0, self.universal_support_code)
 
         keywords = {'pointers_lines': stripped_deindented_lines('\n'.join(pointers)),
                     'support_code_lines': stripped_deindented_lines('\n'.join(support_code)),
@@ -325,9 +327,9 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 # Functions that need to be implemented specifically
 randn_code = '''
 #ifdef CPU_ONLY
-inline double _ranf(uint64_t &seed)
+double _ranf(uint64_t &seed)
 #else
-__host__ __device__ inline double _ranf(uint64_t &seed)
+__host__ __device__ double _ranf(uint64_t &seed)
 #endif
 {
     uint64_t x;
@@ -395,9 +397,9 @@ DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
 
 int_code = '''
 #ifdef CPU_ONLY
-inline int int_(const bool value)
+int int_(const bool value)
 #else
-__host__ __device__ inline int int_(const bool value)
+__host__ __device__ int int_(const bool value)
 #endif
 {
     return value ? 1 : 0;
@@ -420,3 +422,41 @@ template <typename T> __host__ __device__ int sign_(T val)
 DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=sign_code,
                                                              name='sign_')
+
+# Add support for the `timestep` function added in Brian 2.3.1
+if 'timestep' in DEFAULT_FUNCTIONS:
+    timestep_code = '''
+// Adapted from npy_math.h and https://www.christophlassner.de/collection-of-msvc-gcc-compatibility-tricks.html
+#ifndef _BRIAN_REPLACE_ISINF_MSVC
+#define _BRIAN_REPLACE_ISINF_MSVC
+#if defined(_MSC_VER)
+#if _MSC_VER < 1900
+namespace std {
+  template <typename T>
+  #ifdef CPU_ONLY
+  bool isinf (const T &x) { return (!_finite(x))&&(!_isnan(x)); }
+  #else
+  __host__ __device__ bool isinf (const T &x) { return (!_finite(x))&&(!_isnan(x)); }
+  #endif
+}
+#endif
+#endif
+#endif
+#ifdef CPU_ONLY
+int _timestep(double t, double dt)
+#else
+__host__ __device__ int _timestep(double t, double dt)
+#endif
+{
+    const int _infinity_int = INT_MAX/2;
+    if (std::isinf (t))
+    {
+        if (t < 0)
+            return -_infinity_int;
+        else
+            return _infinity_int;
+    }
+    return (int)((t + 1e-3*dt)/dt); 
+}'''
+    DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(
+        GeNNCodeGenerator, code=timestep_code, name='_timestep')
