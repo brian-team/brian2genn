@@ -89,7 +89,7 @@ install:
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
   - cd ../..
   - if [ "$DEPENDENCIES" == "latest" ]; then
-       (cd brian-team/brian2genn/genn; git checkout development)
+       (cd brian-team/brian2genn/genn; git checkout master)
     fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
   - cd brian-team/brian2genn
