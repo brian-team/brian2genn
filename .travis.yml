@@ -84,12 +84,12 @@ install:
         BRIAN_CHANNEL="brian-team/label/dev";
     fi
   - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose python=$PYTHON
-  - travis_retry conda install --yes --quiet -c $BRIAN_CHANNEL brian2
+  - travis_retry conda install --yes --quiet -c conda-forge -c $BRIAN_CHANNEL brian2
   # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
   - cd ../..
   - if [ "$DEPENDENCIES" == "latest" ]; then
-       (cd brian-team/brian2genn/genn; git checkout development)
+       (cd brian-team/brian2genn/genn; git checkout master)
     fi
   - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
   - cd brian-team/brian2genn
@@ -101,7 +101,7 @@ script:
 
 after_success:
   # Install minimal CUDA components to build the conda package and upload to anaconda.org if this is a tagged release in the master branch
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_REPO_SLUG == 'brian-team/brian2genn' && ! -z $TRAVIS_TAG && $ANACONDA_UPLOAD == 'yes' ]]; then
+  - if [[ "$TRAVIS_OS_NAME" == "linux" && $ANACONDA_UPLOAD == 'yes' ]]; then
       CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb;
       CUDA_FILE=/tmp/cuda_install.deb;
       travis_retry curl $CUDA_URL -o $CUDA_FILE &&
@@ -112,8 +112,10 @@ after_success:
       export CUDA_PATH=/usr/local/cuda-8.0/;
       travis_retry conda install --yes --quiet conda-build &&
       python scripts/build_conda_packages.py;
-      conda install --yes --quiet anaconda-client;
-      python scripts/conda-server-push.py $TRAVIS_TAG;
+      if [[ $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_REPO_SLUG == 'brian-team/brian2genn' && ! -z $TRAVIS_TAG ]]; then
+        conda install --yes --quiet anaconda-client;
+        python scripts/conda-server-push.py $TRAVIS_TAG;
+      fi;
     fi
 
 notifications:

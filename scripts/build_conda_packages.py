@@ -29,6 +29,9 @@ for python_version in python_versions:
                 ]
     sys.argv.extend(additional_args)
     sys.argv.append(recipe_path)
+    print('Calling: {}'.format(' '.join(sys.argv)))
+    # Set CONDA_PY variable as well -- should not change anything, but...
+    os.environ['CONDA_PY'] = python_version.replace('.', '')
     main_build()
 
 packages_dir = get_or_merge_config(None).bldpkgs_dir

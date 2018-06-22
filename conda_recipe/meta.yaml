@@ -6,7 +6,7 @@ source:
   path: ..
 
 build:
-  number: 1
+  number: 0
   script_env:
     - CUDA_PATH
     - PROCESSOR_ARCHITEW6432  # [win]
@@ -16,12 +16,12 @@ build:
 requirements:
   build:
     - python
+    - {{compiler('cxx')}}
     - setuptools
-    - gcc  # [linux]
   run:
-    - brian2 >=2.0
     - python
-    - gcc  # [linux]
+    - brian2 2.1*
+    - {{pin_compatible(compiler('cxx'))}}
 
 about:
   home: http://github.com/brian-team/brian2genn

@@ -363,7 +363,7 @@ class GeNNDevice(CPPStandaloneDevice):
             prefs._backup()
         super(GeNNDevice, self).activate(build_on_run, **kwargs)
 
-    def code_object_class(self, codeobj_class=None):
+    def code_object_class(self, codeobj_class=None, *args, **kwds):
         if codeobj_class is GeNNCodeObject:
             return codeobj_class
         else:
@@ -825,6 +825,16 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             where = 'on CPU'
         print 'executing genn binary %s ...' % where
+
+        pref_vars = prefs['devices.cpp_standalone.run_environment_variables']
+        for key, value in itertools.chain(pref_vars.iteritems(),
+                                          self.run_environment_variables.iteritems()):
+            if key in os.environ and os.environ[key] != value:
+                logger.info('Overwriting environment variable '
+                            '"{key}"'.format(key=key),
+                            name_suffix='overwritten_env_var', once=True)
+            os.environ[key] = value
+
         with std_silent(with_output):
             if os.sys.platform == 'win32':
                 cmd = directory + "\\main.exe test " + str(
@@ -876,7 +886,6 @@ class GeNNDevice(CPPStandaloneDevice):
             if 'GENN_PATH' in os.environ:
                 logger.debug('Unsetting the GENN_PATH environment variable to '
                              'avoid conflicts with the installed GeNN version.')
-                os.unsetenv('GENN_PATH')
                 del os.environ['GENN_PATH']
         elif 'GENN_PATH' in os.environ:
             genn_path = os.environ['GENN_PATH']
@@ -900,6 +909,10 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
                                    'the devices.genn.cuda_path preference.')
+        if prefs['codegen.cpp.extra_link_args']:
+            # declare the link flags as an environment variable so that GeNN's
+            # generateALL can pick it up
+            env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
         with std_silent(debug):
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
@@ -1453,6 +1466,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def generate_makefile(self, directory, use_GPU):
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
+        linker_flags = ' '.join(prefs.codegen.cpp.extra_link_args)
         if os.sys.platform == 'win32':
             makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
@@ -1462,6 +1476,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 source_files=self.source_files,
                                                                 use_GPU=use_GPU,
                                                                 compiler_flags=compile_args_msvc,
+                                                                linker_flags=linker_flags,
                                                                 nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'WINmakefile'), 'w').write(
@@ -1475,6 +1490,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 source_files=self.source_files,
                                                                 use_GPU=use_GPU,
                                                                 compiler_flags=compile_args_gcc,
+                                                                linker_flags=linker_flags,
                                                                 nvcc_compiler_flags=compile_args_nvcc
                                                                 )
             open(os.path.join(directory, 'GNUmakefile'), 'w').write(makefile_tmp)

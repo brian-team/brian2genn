@@ -45,16 +45,14 @@ namespace b2g {
 };
 
 template<class scalar>
-void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, Conductance &c, scalar *gv, int srcNN, int trgNN, unsigned int mode)
+void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, Conductance &c, scalar *gv, int srcNN, int trgNN,
+                                              vector<vector<int32_t> > &bypre, unsigned int mode)
 {
-//    static int convertCnt= 0;
-//    string name= "debug_other";
-//    name= name+to_string(convertCnt)+".dat";
-//    ofstream os(name.c_str());
-    // create a list of the postsynaptic targets ordered by presynaptic sources
-    static vector<vector<int32_t> > bypre;
-    static vector<vector<scalar> > bypreG;
-    static unsigned int size;
+    // create a list of the postsynaptic targets ordered by presynaptic sources (the bypre variable is defined externally,
+    // so that it can be shared among several function calls for different variables (first uses "full monty" mode,
+    // following use "copy only")
+    vector<vector<scalar> > bypreG;
+    unsigned int size;
     if (mode == b2g::FULL_MONTY) {
     assert(source.size() == target.size());
     assert(source.size() == gvector.size());
