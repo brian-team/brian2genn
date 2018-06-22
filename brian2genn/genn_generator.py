@@ -447,7 +447,11 @@ __host__ __device__ int _timestep(double t, double dt)
 #endif
 {
     const int _infinity_int  = 1073741823;  // maximum 32bit integer divided by 2
+#ifdef __CUDA_ARCH__
+    if (isinf (t))
+#else
     if (std::isinf (t))
+#endif
     {
         if (t < 0)
             return -_infinity_int;
