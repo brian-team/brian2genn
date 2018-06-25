@@ -199,6 +199,8 @@ took = (time.time()-start)
 print 'took %.1fs' % took
 neurons = N_AL + N_MB + N_LB
 synapses = len(PN_iKC) + len(iKC_eKC) + len(eKC_eKC)
+devNo= {'genn' : 0, 'cpp_standalone' : 1}
+dev= devNo[device]
 intfrombool= { False : 0, True : 1}
 uSpkmon= intfrombool[use_spikemon]
 run= intfrombool[do_run]
