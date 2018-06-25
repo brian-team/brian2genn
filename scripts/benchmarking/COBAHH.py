@@ -115,12 +115,10 @@ took = (time.time()-start)
 print 'took %.1fs' % took
 neurons= int(1000*scale)
 synapses = len(Ce) + len(Ci)
-devNo= {"genn" : 0, "cpp_standalone" : 1 }
 intfrombool= { False : 0, True : 1}
-dev= devNo[device]
 uSpkmon= intfrombool[use_spikemon]
 run= intfrombool[do_run]
-if dev == 0:
+if device == 'genn':
     with open('benchmarks_COBAHH.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
         f.write('\t'.join('%s' % d for d in data)+'\t')
@@ -130,7 +128,7 @@ if dev == 0:
                 line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
                 f.write(line)
 else:
-    with open('benchmarks_COBAHH.txt', 'a') as f:
+    with open('benchmarks_COBAHH_cpp.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
         f.write('\t'.join('%s' % d for d in data)+'\n')
         
