@@ -104,8 +104,8 @@ Pe = P[:int(3200 * scale)]
 Pi = P[int(3200 * scale):]
 Ce = Synapses(Pe, P, on_pre='ge+=we')
 Ci = Synapses(Pi, P, on_pre='gi+=wi')
-Ce.connect(p=0.02)
-Ci.connect(p=0.02)
+Ce.connect(p=80./len(P))
+Ci.connect(p=80./len(P))
 
 # Initialization
 P.v = 'El + (randn() * 5 - 5)*mV'

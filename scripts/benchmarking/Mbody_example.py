@@ -3,15 +3,28 @@ import random as py_random
 from brian2 import *
 import brian2genn
 import sys
-MB_scaling = float(sys.argv[1])
 prefs.devices.genn.connectivity = 'DENSE'
 
 extra_args = {}
-device = sys.argv[2]
-threads = int(sys.argv[3])
-use_spikemon = sys.argv[4] == 'true'
-do_run = sys.argv[5] == 'true'
-run_it_for= int(sys.argv[6])
+if len(sys.argv)<=2:
+    if len(sys.argv)==1:
+        MB_scaling = 1.0
+    else:
+        MB_scaling = float(sys.argv[1])
+    device = 'cpp_standalone'
+    threads = 1
+    use_spikemon = True
+    do_run = True
+    run_it_for = 1
+    debugmode = True
+else:
+    MB_scaling = float(sys.argv[1])
+    device = sys.argv[2]
+    threads = int(sys.argv[3])
+    use_spikemon = sys.argv[4] == 'true'
+    do_run = sys.argv[5] == 'true'
+    run_it_for = int(sys.argv[6])
+    debugmode = False
 
 if threads == -1:
     extra_args = {'use_GPU': False}
@@ -238,7 +251,13 @@ if device == 'genn':
                 line= line.strip()
                 line= '\t'.join('%s' % item for item in line.split(' '))+'\n'
                 f.write(line)
-else:
+elif not debugmode:
     with open('benchmarks_Mbody_cpp.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
         f.write('\t'.join('%s' % d for d in data)+'\n')
+else:
+    for p, M in enumerate([PN_spikes, iKC_spikes, eKC_spikes]):
+        subplot(2, 2, p+1)
+        plot(M.t/ms, M.i, ',k')
+        print 'SpikeMon %d, average rate %.1f sp/s' % (p, M.num_spikes/(runtime*len(M.source)))
+    show()

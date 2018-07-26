@@ -100,12 +100,6 @@ beta_n = .5*exp((10*mV-v+VT)/(40*mV))/ms : Hz
 
 P = NeuronGroup(int(4000 * scale), model=eqs, threshold='v>-20*mV', refractory=3 * ms,
                 method='exponential_euler')
-Pe = P[:int(3200 * scale)]
-Pi = P[int(3200 * scale):]
-Ce = Synapses(Pe, P, on_pre='ge+=we')
-Ci = Synapses(Pi, P, on_pre='gi+=wi')
-Ce.connect(p=0.02)
-Ci.connect(p=0.02)
 
 # Initialization
 P.v = 'El + (randn() * 5 - 5)*mV'
@@ -131,7 +125,7 @@ run(runtime, report='text')
 took = (time.time() - start)
 print 'took %.1fs' % took
 neurons = int(4000 * scale)
-synapses = len(Ce) + len(Ci)
+synapses = 0
 devNo = {'genn': 0, 'cpp_standalone': 1}
 dev = devNo[device]
 intfrombool = {False: 0, True: 1}
