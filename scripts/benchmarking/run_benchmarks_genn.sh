@@ -15,7 +15,7 @@ done
 		   
 # The really long runs (don't run with GeNN CPU-only, etc.)
 for spikemon in "true"; do
-    for scaling in 64 128 256; do
+    for scaling in 64 128 256 512; do
 	time=1;
 	    for repeat in 1 2 3; do
 		echo Repeat $repeat
