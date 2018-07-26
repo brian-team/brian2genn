@@ -26,7 +26,11 @@ if device == 'genn':
 
 print 'Running with arguments: ', sys.argv
 
-# defaultclock.dt = 0.025*ms
+#defaultclock.dt = 0.1*ms
+# Number of neurons
+N_AL = 100
+N_MB = int(2500*MB_scaling)
+N_LB = 100
 # Constants
 g_Na = 7.15*uS
 E_Na = 50*mV
@@ -35,11 +39,19 @@ E_K = -95*mV
 g_leak = 0.0267*uS
 E_leak = -63.56*mV
 C = 0.3*nF
+VT = -63*mV
 # Those two constants are dummy constants, only used when populations only have
 # either inhibitory or excitatory inputs
 E_e = 0*mV
 E_i = -92*mV
 # Actual constants used for synapses
+NKCKC= N_MB
+if (NKCKC > 10000):
+    NKCKC= 10000
+g_scaling = NKCKC/2500
+print(g_scaling)
+if (g_scaling < 1):
+    g_scaling= 1
 tau_PN_LHI = 1*ms
 tau_LHI_iKC = 3*ms
 tau_PN_iKC = 2*ms
@@ -48,11 +60,11 @@ tau_eKC_eKC = 5*ms
 w_LHI_iKC = 8.75*nS
 w_eKC_eKC = 75*nS
 tau_pre = tau_post = 10*ms
-dApre = 0.1*nS/MB_scaling
+dApre = 0.1*nS/g_scaling
 dApost = -dApre
 # tau_STDP = 10*ms
 # g_0 = 0.125*nS
-g_max = 3.75*nS/MB_scaling
+g_max = 3.75*nS/g_scaling
 # g_mid = g_max/2
 # g_slope = g_mid
 # tau_decay = 10e5*ms
@@ -60,11 +72,6 @@ g_max = 3.75*nS/MB_scaling
 # offset = 0.01*A
 
 scale = .675
-
-# Number of neurons
-N_AL = 100
-N_MB = int(2500*MB_scaling)
-N_LB = 100
 
 traub_miles = '''
 dV/dt = -(1/C)*(g_Na*m**3*h*(V - E_Na) +
@@ -74,14 +81,23 @@ dV/dt = -(1/C)*(g_Na*m**3*h*(V - E_Na) +
 dm/dt = alpha_m*(1 - m) - beta_m*m : 1
 dn/dt = alpha_n*(1 - n) - beta_n*n : 1
 dh/dt = alpha_h*(1 - h) - beta_h*h : 1
-
-alpha_m = 0.32*(-52 - V/mV)/(exp((-52 - V/mV)/4) - 1)/ms: Hz
-beta_m = 0.28*(25 + V/mV)/(exp((25 + V/mV)/5) - 1)/ms: Hz
-alpha_h = 0.128*exp((-48 - V/mV)/18)/ms: Hz
-beta_h = 4/(exp((-25 - V/mV)/5) + 1)/ms : Hz
-alpha_n = 0.032*(-50 - V/mV)/(exp((-50 - V/mV)/5) - 1)/ms: Hz
-beta_n = 0.5*exp((-55 - V/mV)/40)/ms : Hz
+alpha_m = 0.32*(mV**-1)*(13*mV-V+VT)/
+         (exp((13*mV-V+VT)/(4*mV))-1.)/ms : Hz
+beta_m = 0.28*(mV**-1)*(V-VT-40*mV)/
+        (exp((V-VT-40*mV)/(5*mV))-1)/ms : Hz
+alpha_h = 0.128*exp((17*mV-V+VT)/(18*mV))/ms : Hz
+beta_h = 4./(1+exp((40*mV-V+VT)/(5*mV)))/ms : Hz
+alpha_n = 0.032*(mV**-1)*(15*mV-V+VT)/
+         (exp((15*mV-V+VT)/(5*mV))-1.)/ms : Hz
+beta_n = .5*exp((10*mV-V+VT)/(40*mV))/ms : Hz
 '''
+
+#alpha_m = 0.32*(-52 - V/mV)/(exp((-52 - V/mV)/4) - 1)/ms: Hz
+#beta_m = 0.28*(25 + V/mV)/(exp((25 + V/mV)/5) - 1)/ms: Hz
+#alpha_h = 0.128*exp((-48 - V/mV)/18)/ms: Hz
+#beta_h = 4/(exp((-25 - V/mV)/5) + 1)/ms : Hz
+#alpha_n = 0.032*(-50 - V/mV)/(exp((-50 - V/mV)/5) - 1)/ms: Hz
+#beta_n = 0.5*exp((-55 - V/mV)/40)/ms : Hz
 
 # Principal neurons (Antennal Lobe)
 n_patterns = 10
@@ -146,7 +162,7 @@ eKC.n = .5
 # Synapses
 PN_iKC = Synapses(PN, iKC, 'weight : siemens', on_pre='g_PN_iKC += scale*weight')
 PN_iKC.connect(p=0.15)
-PN_iKC.weight = '4.545*nS + 1.25*nS*randn()'
+PN_iKC.weight = '10*nS + 1.25*nS*randn()'
 
 # iKC_eKC = Synapses(iKC, eKC,
 #              '''
@@ -175,10 +191,13 @@ iKC_eKC = Synapses(iKC, eKC,
                               Apost += dApost
                               g_raw = clip(g_raw + Apre, 0, g_max)''',
                    )
-iKC_eKC.connect()
+if (N_MB > 10000):
+    iKC_eKC.connect(p=float(10000)/N_MB)
+else:
+    iKC_eKC.connect()
 # First set all synapses as "inactive", then set 20% to active
-iKC_eKC.g_raw = 'rand()*g_max/10'
-iKC_eKC.g_raw['rand() < 0.2'] = '1.25*nS + 0.25*nS*randn()'
+iKC_eKC.g_raw = 'rand()*g_max/10/g_scaling'
+iKC_eKC.g_raw['rand() < 0.2'] = '(2.5*nS + 0.5*nS*randn())/g_scaling'
 
 eKC_eKC = Synapses(eKC, eKC, on_pre='g_eKC_eKC += scale*w_eKC_eKC')
 eKC_eKC.connect()
@@ -197,6 +216,9 @@ start = time.time()
 run(runtime, report='text')
 took = (time.time()-start)
 print 'took %.1fs' % took
+PN_spikeN= len(PN_spikes.i)
+iKC_spikeN= len(iKC_spikes.i)
+eKC_spikeN= len(eKC_spikes.i)
 neurons = N_AL + N_MB + N_LB
 synapses = len(PN_iKC) + len(iKC_eKC) + len(eKC_eKC)
 devNo= {'genn' : 0, 'cpp_standalone' : 1}
@@ -204,6 +226,9 @@ dev= devNo[device]
 intfrombool= { False : 0, True : 1}
 uSpkmon= intfrombool[use_spikemon]
 run= intfrombool[do_run]
+with open('spikeN_Mbody.txt','a') as f:
+    f.write(' '.join('%s' % d for d in [neurons, synapses, dev, PN_spikeN, iKC_spikeN, eKC_spikeN])+'\n')
+    f.close()
 if device == 'genn':
     with open('benchmarks_Mbody.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
