@@ -138,7 +138,7 @@ intfrombool = {False: 0, True: 1}
 uSpkmon = intfrombool[use_spikemon]
 run = intfrombool[do_run]
 if device == 'genn':
-    with open('benchmarks_COBAHH.txt', 'a') as f:
+    with open('benchmarks_COBAHH_linearscaling.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
         f.write('\t'.join('%s' % d for d in data) + '\t')
         with open('GeNNworkspace/test_output/test.time', 'r') as bf:
@@ -147,7 +147,7 @@ if device == 'genn':
                 line = '\t'.join('%s' % item for item in line.split(' ')) + '\n'
                 f.write(line)
 elif not debugmode:
-    with open('benchmarks_COBAHH_cpp.txt', 'a') as f:
+    with open('benchmarks_COBAHH_linearscaling_cpp.txt', 'a') as f:
         data = [neurons, synapses, dev, threads, uSpkmon, run, run_it_for, took]
         f.write('\t'.join('%s' % d for d in data) + '\n')
 else:
