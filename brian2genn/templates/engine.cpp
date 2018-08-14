@@ -201,9 +201,9 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% for rateMon in rate_monitor_models %}
       _run_{{rateMon.name}}_codeobject();
       {% endfor %}
-      {% if maximum_run_time is not none %}
       current= std::clock();
       elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
+      {% if maximum_run_time is not none %}
       if (elapsed_realtime > {{maximum_run_time}}) {
 	  break;
       }
