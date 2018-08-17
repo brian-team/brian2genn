@@ -336,7 +336,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.rate_monitor_models = []
         self.state_monitor_models = []
         self.run_duration = None
-
+        self.net = None
         self.simple_code_objects = {}
         self.report_func = ''
 
@@ -649,37 +649,30 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append(
                 (name, c_data_type(arr.dtype), arr.size, name))
 
-        networks = [net() for net in Network.__instances__() if
-                    net().name != '_fake_network']
-
-        if len(networks) != 1:
-            raise NotImplementedError("GeNN only supports a single network")
-        net = networks[0]
-
         synapses = []
-        synapses.extend(s for s in net.objects if isinstance(s, Synapses))
+        synapses.extend(s for s in self.net.objects if isinstance(s, Synapses))
 
         main_lines = self.make_main_lines()
 
         # assemble the model descriptions:
-        objects = dict((obj.name, obj) for obj in net.objects)
-        neuron_groups = [obj for obj in net.objects if
+        objects = dict((obj.name, obj) for obj in self.net.objects)
+        neuron_groups = [obj for obj in self.net.objects if
                          isinstance(obj, NeuronGroup)]
-        poisson_groups = [obj for obj in net.objects if
+        poisson_groups = [obj for obj in self.net.objects if
                           isinstance(obj, PoissonGroup)]
-        spikegenerator_groups = [obj for obj in net.objects if
+        spikegenerator_groups = [obj for obj in self.net.objects if
                                  isinstance(obj, SpikeGeneratorGroup)]
 
-        synapse_groups = [obj for obj in net.objects if
+        synapse_groups = [obj for obj in self.net.objects if
                           isinstance(obj, Synapses)]
 
-        spike_monitors = [obj for obj in net.objects if
+        spike_monitors = [obj for obj in self.net.objects if
                           isinstance(obj, SpikeMonitor)]
-        rate_monitors = [obj for obj in net.objects if
+        rate_monitors = [obj for obj in self.net.objects if
                          isinstance(obj, PopulationRateMonitor)]
-        state_monitors = [obj for obj in net.objects if
+        state_monitors = [obj for obj in self.net.objects if
                           isinstance(obj, StateMonitor)]
-        for obj in net.objects:
+        for obj in self.net.objects:
             if isinstance(obj, (SpatialNeuron, SpatialStateUpdater)):
                 raise NotImplementedError(
                     'Brian2GeNN does not support multicompartmental neurons')
@@ -708,7 +701,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     'NeuronGroup (not for objects of type '
                     '"%s").' % obj.group.__class__.__name__
                 )
-        self.model_name = net.name + '_model'
+
         self.dtDef = 'model.setDT(' + repr(float(defaultclock.dt)) + ');'
 
         # Process groups
@@ -728,7 +721,7 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('network.*', GeNNUserCodeObject.templater.network(None, None))
         self.header_files.append('network.h')
 
-        self.generate_objects_source(arange_arrays, net,
+        self.generate_objects_source(arange_arrays, self.net,
                                      static_array_specs,
                                      synapses, writer)
         self.copy_source_files(writer, directory)
@@ -945,14 +938,14 @@ class GeNNDevice(CPPStandaloneDevice):
                     vcvars_loc=vcvars_loc, arch_name=arch_name)
                 buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin',
                                               'genn-buildmodel.bat')
-                cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " " + self.model_name + ".cpp"
+                cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " Brian2GeNN_model.cpp"
                 if not use_GPU:
                     cmd += ' -c'
                 cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
                 check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin', 'genn-buildmodel.sh')
-                args = [buildmodel_cmd, self.model_name + '.cpp']
+                args = [buildmodel_cmd, 'Brian2GeNN_model.cpp']
                 if not use_GPU:
                     args += ['-c']
                 check_call(args, cwd=directory, env=env)
@@ -1435,20 +1428,18 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
                                                    dtDef=self.dtDef,
-                                                   model_name=self.model_name,
                                                    compile_args_gcc=compile_args_gcc,
                                                    compile_args_msvc=compile_args_msvc,
                                                    compile_args_nvcc=compile_args_nvcc,
                                                    genn_auto_choose_device=genn_auto_choose_device, 
                                                    genn_default_device=genn_default_device
                                                    )
-        writer.write(self.model_name + '.cpp', model_tmp)
+        writer.write('Brian2GeNN_model.cpp', model_tmp)
 
     def generate_main_source(self, writer, main_lines):
         runner_tmp = GeNNCodeObject.templater.main(None, None,
                                                    neuron_models=self.neuron_models,
                                                    synapse_models=self.synapse_models,
-                                                   model_name=self.model_name,
                                                    main_lines=main_lines,
                                                    header_files=self.header_files,
                                                    source_files=self.source_files,
@@ -1466,7 +1457,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      spike_monitor_models=self.spike_monitor_models,
                                                      rate_monitor_models=self.rate_monitor_models,
                                                      state_monitor_models=self.state_monitor_models,
-                                                     model_name=self.model_name,
                                                      maximum_run_time=maximum_run_time
                                                      )
         writer.write('engine.*', engine_tmp)
@@ -1477,7 +1467,6 @@ class GeNNDevice(CPPStandaloneDevice):
         if os.sys.platform == 'win32':
             makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
-                                                                model_name=self.model_name,
                                                                 ROOTDIR=os.path.abspath(
                                                                     directory),
                                                                 source_files=self.source_files,
@@ -1491,7 +1480,6 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             makefile_tmp = GeNNCodeObject.templater.GNUmakefile(None, None,
                                                                 neuron_models=self.neuron_models,
-                                                                model_name=self.model_name,
                                                                 ROOTDIR=os.path.abspath(
                                                                     directory),
                                                                 source_files=self.source_files,
@@ -1573,6 +1561,9 @@ class GeNNDevice(CPPStandaloneDevice):
                         'The function of %s is not yet supported in GeNN.' % obj.template)
 
         print 'running brian code generation ...'
+
+        self.net = net
+
         super(GeNNDevice, self).network_run(net=net, duration=duration,
                                             report=report,
                                             report_period=report_period,

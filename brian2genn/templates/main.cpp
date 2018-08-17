@@ -7,8 +7,8 @@
 //--------------------------------------------------------------------------
 
 #include "main.h"
-#include "{{model_name}}.cpp"
-#include "{{model_name}}_CODE/definitions.h"
+#include "Brian2GeNN_model.cpp"
+#include "Brian2GeNN_model_CODE/definitions.h"
 
 {% for header in header_files %}
 #include "{{header}}"
@@ -88,7 +88,7 @@ int main(int argc, char *argv[])
   copy_brian_to_genn(brian::_array_{{synapses.name}}_{{var}}, &{{var}}{{synapses.name}}, 1);
   {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
-  initmagicnetwork_model();
+  initBrian2GeNN_model();
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
