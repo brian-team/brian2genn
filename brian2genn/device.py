@@ -1544,8 +1544,9 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def network_run(self, net, duration, report=None, report_period=10 * second,
                     namespace=None, profile=False, level=0, **kwds):
-        # We quietly ignore the profile argument instead of raising a warning
-        # every time...
+        if profile is True:
+            raise NotImplementedError('Brian2GeNN does not yet support '
+                                      'detailed profiling.')
 
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
