@@ -161,6 +161,10 @@ def extract_source_variables(variables, varname, smvariables):
     '''
     identifiers = get_identifiers(variables[varname].expr)
     for vnm, var in variables.items():
+        if var in defaultclock.variables.values():
+            raise NotImplementedError('Recording an expression that depends on '
+                                      'the time t or the timestep dt is '
+                                      'currently not supported in Brian2GeNN')
         if vnm in identifiers:
             if isinstance(var, ArrayVariable):
                 smvariables.append(vnm)
@@ -1401,6 +1405,10 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.isSynaptic = False
                 sm.N = src.variables['N'].get_value()
             for varname in obj.record_variables:
+                if src.variables[varname] in defaultclock.variables.values():
+                    raise NotImplementedError('Recording the time t or the '
+                                              'timestep dt is currently not '
+                                              'supported in Brian2GeNN')
                 if isinstance(src.variables[varname], Subexpression):
                     extract_source_variables(src.variables, varname,
                                              sm.variables)
