@@ -48,32 +48,50 @@ def get_var_ndim(v, default_value=None):
                 raise ex
 
 
+_typestrs = ['int', 'long', 'float', 'double']
+_hightype_support_code = 'template < typename T1, typename T2 > struct _higher_type;\n'
+for ix, xtype in enumerate(_typestrs):
+    for iy, ytype in enumerate(_typestrs):
+        hightype = _typestrs[max(ix, iy)]
+        _hightype_support_code += '''
+template < > struct _higher_type<{xtype},{ytype}> {{ typedef {hightype} type; }};
+        '''.format(hightype=hightype, xtype=xtype, ytype=ytype)
 
-def _mod_support_code():
-    code = ''
-    typestrs = ['int', 'float', 'double']
-    floattypestrs = ['float', 'double']
-    for ix, xtype in enumerate(typestrs):
-        for iy, ytype in enumerate(typestrs):
-            hightype = typestrs[max(ix, iy)]
-            if xtype in floattypestrs or ytype in floattypestrs:
-                expr = 'fmod(fmod(x, y)+y, y)'
-            else:
-                expr = '((x%y)+y)%y'
-            code += '''
-            #ifdef CPU_ONLY
-            inline {hightype} _brian_mod({xtype} ux, {ytype} uy)
-            #else
-            __host__ __device__ inline {hightype} _brian_mod({xtype} ux, {ytype} uy)
-            #endif
-            {{
-                const {hightype} x = ({hightype})ux;
-                const {hightype} y = ({hightype})uy;
-                return {expr};
-            }}
-            '''.format(hightype=hightype, xtype=xtype, ytype=ytype, expr=expr)
-    return deindent(code)
+_mod_support_code = '''
 
+template < typename T1, typename T2 >
+#ifdef CPU_ONLY
+static inline typename _higher_type<T1,T2>::type
+#else
+__host__ __device__ static inline typename _higher_type<T1,T2>::type 
+#endif
+_brian_mod(T1 x, T2 y)
+{{
+    return x-y*floor(1.0*x/y);
+}}
+'''
+
+_floordiv_support_code = '''
+template < typename T1, typename T2 >
+#ifdef CPU_ONLY
+static inline typename _higher_type<T1,T2>::type
+#else
+__host__ __device__ static inline typename _higher_type<T1,T2>::type
+#endif
+_brian_floordiv(T1 x, T2 y)
+{{
+    return floor(1.0*x/y);
+}}
+'''
+
+_pow_support_code = '''
+
+#ifdef _MSC_VER
+#define _brian_pow(x, y) (pow((double)(x), (y)))
+#else
+#define _brian_pow(x, y) (pow((x), (y)))
+#endif
+'''
 
 class GeNNCodeGenerator(CodeGenerator):
     '''
@@ -89,13 +107,8 @@ class GeNNCodeGenerator(CodeGenerator):
 
     class_name = 'genn'
 
-    universal_support_code = _mod_support_code() + deindent('''
-    #ifdef _MSC_VER
-    #define _brian_pow(x, y) (pow((double)(x), (y)))
-    #else
-    #define _brian_pow(x, y) (pow((x), (y)))
-    #endif
-    ''')
+    universal_support_code = (_hightype_support_code + _mod_support_code +
+                              _floordiv_support_code + _pow_support_code)
 
     def __init__(self, *args, **kwds):
         super(GeNNCodeGenerator, self).__init__(*args, **kwds)
@@ -424,41 +437,13 @@ DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
 # Add support for the `timestep` function added in Brian 2.3.1
 if 'timestep' in DEFAULT_FUNCTIONS:
     timestep_code = '''
-// Adapted from npy_math.h and https://www.christophlassner.de/collection-of-msvc-gcc-compatibility-tricks.html
-#ifndef _BRIAN_REPLACE_ISINF_MSVC
-#define _BRIAN_REPLACE_ISINF_MSVC
-#if defined(_MSC_VER)
-#if _MSC_VER < 1900
-namespace std {
-  template <typename T>
-  #ifdef CPU_ONLY
-  bool isinf (const T &x) { return (!_finite(x))&&(!_isnan(x)); }
-  #else
-  __host__ __device__ bool isinf (const T &x) { return (!_finite(x))&&(!_isnan(x)); }
-  #endif
-}
-#endif
-#endif
-#endif
 #ifdef CPU_ONLY
-int _timestep(double t, double dt)
+static inline int64_t _timestep(double t, double dt)
 #else
-__host__ __device__ int _timestep(double t, double dt)
+__host__ __device__ static inline int64_t _timestep(double t, double dt)
 #endif
 {
-    const int _infinity_int  = 1073741823;  // maximum 32bit integer divided by 2
-#ifdef __CUDA_ARCH__
-    if (isinf (t))
-#else
-    if (std::isinf (t))
-#endif
-    {
-        if (t < 0)
-            return -_infinity_int;
-        else
-            return _infinity_int;
-    }
-    return (int)((t + 1e-3*dt)/dt); 
+    return (int64_t)((t + 1e-3*dt)/dt); 
 }'''
     DEFAULT_FUNCTIONS['timestep'].implementations.add_implementation(
         GeNNCodeGenerator, code=timestep_code, name='_timestep')
