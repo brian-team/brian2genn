@@ -178,7 +178,7 @@ void modelDefinition(NNmodel &model)
   {% endfor %}
 
   model.setName("magicnetwork_model");
-  model.setPrecision(GENN_DOUBLE);
+  model.setPrecision({{precision}});
   {% for neuron_model in neuron_models %} 
   model.addNeuronPopulation("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}NEURON, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
   {% endfor %}

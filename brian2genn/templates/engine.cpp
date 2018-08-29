@@ -99,7 +99,7 @@ void engine::run(double duration, //!< Duration of time to run the model for
 		  )
 {
   std::clock_t start, current; 
-  const double t_start = t;
+  const {{c_data_type(prefs.core.default_float_dtype)}} t_start = t;
   unsigned int pno;
   unsigned int offset= 0;
 

@@ -7,7 +7,7 @@
 
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}};
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpk').replace('__spikespace','')}};
-extern double t;
+extern {{c_data_type(prefs.core.default_float_dtype)}} t;
 {% endblock %}
 
 {% block maincode %}

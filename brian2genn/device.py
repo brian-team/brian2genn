@@ -1442,6 +1442,14 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('synapses_classes.*', synapses_classes_tmp)
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         genn_auto_choose_device, genn_default_device = get_genn_prefs()
+        default_dtype = prefs.core.default_float_dtype
+        if default_dtype == numpy.float32:
+            precision = 'GENN_FLOAT'
+        elif default_dtype == numpy.float64:
+            precision = 'GENN_DOUBLE'
+        else:
+            raise NotImplementedError("GeNN does not support default dtype "
+                                      "'{}'".format(default_dtype.__name__))
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
@@ -1451,7 +1459,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    compile_args_msvc=compile_args_msvc,
                                                    compile_args_nvcc=compile_args_nvcc,
                                                    genn_auto_choose_device=genn_auto_choose_device, 
-                                                   genn_default_device=genn_default_device
+                                                   genn_default_device=genn_default_device,
+                                                   precision=precision
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
 
@@ -1478,7 +1487,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      spike_monitor_models=self.spike_monitor_models,
                                                      rate_monitor_models=self.rate_monitor_models,
                                                      state_monitor_models=self.state_monitor_models,
-                                                     maximum_run_time=maximum_run_time
+                                                     maximum_run_time=maximum_run_time,
+                                                     prefs=prefs
                                                      )
         writer.write('engine.*', engine_tmp)
 
