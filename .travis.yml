@@ -31,14 +31,32 @@ matrix:
       os: osx
       osx_image: xcode8.3
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
       os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
     - python: "3.5"
-      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
       os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
     - python: "3.6"
-      env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+      env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"  CC=gcc-5 CXX=g++-5
       os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-5
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
