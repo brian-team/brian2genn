@@ -37,12 +37,14 @@ int main(int argc, char *argv[])
   system(cmd.c_str());
   string name;
   name= OutDir+ "/"+ toString(argv[1]) + toString(".time");
-  FILE *timef= fopen(name.c_str(),"a");  
+  FILE *timef= fopen(name.c_str(),"a");
 
   timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
-  
+
+  {{'\n'.join(code_lines['before_start'])|autoindent}}
+
   //-----------------------------------------------------------------
   // build the neuronal circuitery
   engine eng;
@@ -52,6 +54,7 @@ int main(int argc, char *argv[])
   _init_arrays();
   _load_arrays();
   rk_randomseed(brian::_mersenne_twister_states[0]);
+  {{'\n'.join(code_lines['after_start'])|autoindent}}
   {
 	  using namespace brian;
 	  {{ main_lines | autoindent }}
@@ -130,7 +133,9 @@ int main(int argc, char *argv[])
 
   t= -DT;
   void *devPtr;
+  {{'\n'.join(code_lines['before_run'])|autoindent}}
   eng.run(totalTime, which); // run for the full duration
+  {{'\n'.join(code_lines['after_run'])|autoindent}}
   timer.stopTimer();
   cerr << t << " done ..." << endl;
   fprintf(timef,"%f \n", timer.getElapsedTime());
@@ -185,8 +190,10 @@ int main(int argc, char *argv[])
   {% endfor %}
   {% endfor %}
 
+  {{'\n'.join(code_lines['before_end'])|autoindent}}
   _write_arrays();
   _dealloc_arrays();
+  {{'\n'.join(code_lines['after_end'])|autoindent}}
   cerr << "everything finished." << endl;
   return 0;
 }
