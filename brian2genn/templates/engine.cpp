@@ -209,6 +209,10 @@ void engine::run(double duration, //!< Duration of time to run the model for
       }
       {% endif %}
   }  
+  {% if maximum_run_time is none %}
+  current= std::clock();
+  elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
+  {% endif %}
   Network::_last_run_time = elapsed_realtime;
   if (duration > 0.0)
   {
