@@ -16,7 +16,7 @@
 //--------------------------------------------------------------------------
 
 #include <ctime>
-#include "Brian2GeNN_model_CODE/definitions.h"
+#include "magicnetwork_model_CODE/definitions.h"
 #include "network.h"
 
 double Network::_last_run_time = 0.0;

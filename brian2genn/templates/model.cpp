@@ -177,7 +177,7 @@ void modelDefinition(NNmodel &model)
   {{synapse_model.name}}POSTSYN= postSynModels.size()-1;  
   {% endfor %}
 
-  model.setName("Brian2GeNN_model");
+  model.setName("magicnetwork_model");
   model.setPrecision(GENN_DOUBLE);
   {% for neuron_model in neuron_models %} 
   model.addNeuronPopulation("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}NEURON, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);

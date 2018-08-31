@@ -4,7 +4,7 @@
 {% block extra_headers %}
 extern double t;
 #include "sparseProjection.h"
-#include "Brian2GeNN_model_CODE/definitions.h"
+#include "magicnetwork_model_CODE/definitions.h"
 {% endblock%}
 
 {% block maincode %}

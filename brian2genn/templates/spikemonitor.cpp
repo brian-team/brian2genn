@@ -6,7 +6,7 @@
 extern double t;
 extern int which;
 #include "sparseProjection.h"
-#include "Brian2GeNN_model_CODE/definitions.h"
+#include "magicnetwork_model_CODE/definitions.h"
 {% for varname, var in record_variables.items() %}
 {% if varname != 't' %}
 {% if varname == 'i' %}

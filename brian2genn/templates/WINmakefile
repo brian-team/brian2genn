@@ -9,6 +9,6 @@ INCLUDE_FLAGS	= /I %CD% /I brianlib/randomkit
 LINK_FLAGS = advapi32.lib {{linker_flags}}
 OPTIMIZATIONFLAGS = {{compiler_flags}}
 NVCC_OPTIMIZATIONFLAGS = {{nvcc_compiler_flags}}
-SIM_CODE = Brian2GeNN_model_CODE
+SIM_CODE = magicnetwork_model_CODE
 
 !include $(GENN_PATH)\userproject\include\makefile_common_win.mk

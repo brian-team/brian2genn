@@ -3,7 +3,7 @@
 
 {% block extra_headers %}
 #include "sparseProjection.h"
-#include "Brian2GeNN_model_CODE/definitions.h"
+#include "magicnetwork_model_CODE/definitions.h"
 
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpkCnt').replace('__spikespace','')}};
 extern unsigned int *{{_spikespace.replace('_ptr_array_','glbSpk').replace('__spikespace','')}};
