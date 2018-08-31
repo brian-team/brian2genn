@@ -102,7 +102,7 @@ install:
         BRIAN_CHANNEL="brian-team/label/dev";
     fi
   - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose python=$PYTHON
-  - travis_retry conda install --yes --quiet -c conda-forge -c $BRIAN_CHANNEL brian2 sympy=1.1
+  - travis_retry conda install --yes --quiet -c $BRIAN_CHANNEL -c conda-forge  brian2 sympy=1.1
   # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
   - cd ../..
