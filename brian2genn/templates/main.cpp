@@ -7,8 +7,8 @@
 //--------------------------------------------------------------------------
 
 #include "main.h"
-#include "{{model_name}}.cpp"
-#include "{{model_name}}_CODE/definitions.h"
+#include "magicnetwork_model.cpp"
+#include "magicnetwork_model_CODE/definitions.h"
 
 {% for header in header_files %}
 #include "{{header}}"

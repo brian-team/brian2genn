@@ -9,6 +9,6 @@ INCLUDE_FLAGS   := -I. -Ibrianlib/randomkit -Lbrianlib/randomkit
 LINK_FLAGS := {{linker_flags}}
 OPTIMIZATIONFLAGS := {{compiler_flags}}
 NVCC_OPTIMIZATIONFLAGS := {{nvcc_compiler_flags}}
-SIM_CODE := {{model_name}}_CODE
+SIM_CODE := magicnetwork_model_CODE
 
 include $(GENN_PATH)/userproject/include/makefile_common_gnu.mk
