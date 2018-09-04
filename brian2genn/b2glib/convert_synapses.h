@@ -44,61 +44,32 @@ namespace b2g {
     unsigned int COPY_ONLY= 1;
 };
 
-template<class scalar>
-void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, Conductance &c, scalar *gv, int srcNN, int trgNN,
-                                              vector<vector<int32_t> > &bypre, unsigned int mode)
+void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target, Conductance &c, int srcNN, int trgNN, vector<vector<int32_t> > &bypre)
 {
-    // create a list of the postsynaptic targets ordered by presynaptic sources (the bypre variable is defined externally,
-    // so that it can be shared among several function calls for different variables (first uses "full monty" mode,
-    // following use "copy only")
-    vector<vector<scalar> > bypreG;
     unsigned int size;
-    if (mode == b2g::FULL_MONTY) {
+    // create a list of the postsynaptic targets ordered by presynaptic sources
     assert(source.size() == target.size());
-    assert(source.size() == gvector.size());
     bypre.clear();
     bypre.resize(srcNN);
-    bypreG.clear();
-    bypreG.resize(srcNN);
-    size= source.size();
+    size = source.size();
     for (int i= 0; i < size; i++) {
         assert(source[i] < srcNN);
         assert(target[i] < trgNN);
         bypre[source[i]].push_back(target[i]);
-        bypreG[source[i]].push_back(gvector[i]);
     }
+
     // convert this intermediate representation into the sparse synapses struct
     // assume it has been allocated properly
-    unsigned int cnt= 0;
-    for (int i= 0; i < srcNN; i++) {
-        size= bypre[i].size();
-        c.indInG[i]= cnt;
-        for (int j= 0; j < size; j++) {
-        c.ind[cnt]= bypre[i][j];
-        gv[cnt]= bypreG[i][j];
-//		os << i << " " << c.ind[cnt] << " " << gv[cnt] << endl;
-        cnt++;
+    unsigned int cnt = 0;
+    for (int i = 0; i < srcNN; i++) {
+            size = bypre[i].size();
+            c.indInG[i] = cnt;
+            for (int j = 0; j < size; j++) {
+            c.ind[cnt] = bypre[i][j];
+            cnt++;
         }
     }
-    c.indInG[srcNN]= cnt;
-    }
-    else { // COPY_ONLY
-    bypreG.clear();
-    bypreG.resize(srcNN);
-    size= source.size();
-    for (int i= 0; i < size; i++) {
-        bypreG[source[i]].push_back(gvector[i]);
-    }
-    unsigned int cnt= 0;
-    for (int i= 0; i < srcNN; i++) {
-        size= bypre[i].size();
-        for (int j= 0; j < size; j++) {
-        gv[cnt]= bypreG[i][j];
-//		os << i << " " << c.ind[cnt] << " " << gv[cnt] << endl;
-        cnt++;
-        }
-    }
-    }
+    c.indInG[srcNN] = cnt;
 
     // Check for duplicate entries
     for (int i=0; i<srcNN; i++) {
@@ -113,6 +84,33 @@ void convert_dynamic_arrays_2_sparse_synapses(vector<int32_t> &source, vector<in
         }
     }
 }
+
+template<class scalar>
+void convert_dynamic_arrays_2_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target, vector<scalar> &gvector, scalar *gv, int srcNN, int trgNN,
+                                              const vector<vector<int32_t> > &bypre)
+{
+    // create a list of the postsynaptic targets ordered by presynaptic sources
+    vector<vector<scalar> > bypreG;
+    unsigned int size;
+    assert(source.size() == target.size());
+    assert(source.size() == gvector.size());
+
+    bypreG.clear();
+    bypreG.resize(srcNN);
+    size = source.size();
+    for (int i= 0; i < size; i++) {
+        bypreG[source[i]].push_back(gvector[i]);
+    }
+    unsigned int cnt = 0;
+    for (int i = 0; i < srcNN; i++) {
+        size = bypre[i].size();
+        for (int j = 0; j < size; j++) {
+            gv[cnt] = bypreG[i][j];
+            cnt++;
+        }
+    }
+}
+
 
 template<class scalar>
 void convert_dense_matrix_2_dynamic_arrays(scalar *g, int srcNN, int trgNN, vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector)
