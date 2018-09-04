@@ -11,7 +11,11 @@
 #include "magicnetwork_model_CODE/definitions.h"
 
 {% for header in header_files %}
+{% if header.startswith('"') or header.startswith('<') %}
+#include {{header}}
+{% else %}
 #include "{{header}}"
+{% endif %}
 {% endfor %}
 
 #include "engine.cpp"

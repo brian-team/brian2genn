@@ -1445,12 +1445,13 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('magicnetwork_model.cpp', model_tmp)
 
     def generate_main_source(self, writer, main_lines):
+        header_files = self.header_files + prefs['codegen.cpp.headers']
         runner_tmp = GeNNCodeObject.templater.main(None, None,
                                                    code_lines=self.code_lines,
                                                    neuron_models=self.neuron_models,
                                                    synapse_models=self.synapse_models,
                                                    main_lines=main_lines,
-                                                   header_files=self.header_files,
+                                                   header_files=header_files,
                                                    source_files=self.source_files,
                                                    )
         writer.write('main.*', runner_tmp)
