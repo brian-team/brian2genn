@@ -1474,7 +1474,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def generate_makefile(self, directory, use_GPU):
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
-        extra_link_args = prefs.codegen.cpp.extra_link_args
+        extra_link_args = list(prefs.codegen.cpp.extra_link_args)
         if os.sys.platform == 'linux2':
             extra_link_args += ['-no-pie']
         linker_flags = ' '.join(extra_link_args)
