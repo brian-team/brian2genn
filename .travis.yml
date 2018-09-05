@@ -52,7 +52,7 @@ matrix:
       os: osx
       osx_image: xcode8.3
   allow_failures:
-      env: DEPENDENCIES="stable"
+    - env: DEPENDENCIES="stable"
   fast_finish: true
 
 # Use miniconda to install binary versions of numpy etc. from continuum
@@ -84,8 +84,9 @@ install:
         COMPILER_PACKAGE=clangxx_osx-64;
     fi
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
+  # we deinstall Brian 2 for the latest version, but keep the dependencies
   - if [ "$DEPENDENCIES" == "latest" ]; then
-        conda uninstall --yes --quiet brian2;  # we keep the dependencies, though
+        conda uninstall --yes --quiet brian2;
         pip install git+https://github.com/brian-team/brian2.git;
     fi
   - cd ../..
