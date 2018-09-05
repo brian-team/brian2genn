@@ -31,13 +31,13 @@ matrix:
       os: osx
       osx_image: xcode8.3
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
+      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: linux
     - python: "3.5"
-      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
+      env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: linux
     - python: "3.6"
-      env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"  CC=gcc-5 CXX=g++-5
+      env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: linux
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
@@ -74,16 +74,19 @@ before_install:
   fi
 - chmod +x miniconda.sh
 - ./miniconda.sh -b -p ~/miniconda
-- export PATH=~/miniconda/bin:$PATH
 
 # command to install dependencies
 install:
+  - source ~/miniconda/etc/profile.d/conda.sh
+  - conda activate
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
         COMPILER_PACKAGE=gxx_linux-64;
     else
         COMPILER_PACKAGE=clangxx_osx-64;
     fi
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
+  - echo CC=$CC
+  - echo CXX=$CXX
   # we deinstall Brian 2 for the latest version, but keep the dependencies
   - if [ "$DEPENDENCIES" == "latest" ]; then
         conda uninstall --yes --quiet brian2;
