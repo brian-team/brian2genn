@@ -84,6 +84,11 @@ install:
         COMPILER_PACKAGE=clangxx_osx-64;
     fi
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
+  - echo CC=$CC
+  - echo CXX=$CXX
+  - conda activate
+  - echo CC=$CC
+  - echo CXX=$CXX
   # we deinstall Brian 2 for the latest version, but keep the dependencies
   - if [ "$DEPENDENCIES" == "latest" ]; then
         conda uninstall --yes --quiet brian2;
