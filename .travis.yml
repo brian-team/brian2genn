@@ -77,7 +77,7 @@ before_install:
 
 # command to install dependencies
 install:
-  - source /home/travis/miniconda/etc/profile.d/conda.sh
+  - source ~/miniconda/etc/profile.d/conda.sh
   - conda activate
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
         COMPILER_PACKAGE=gxx_linux-64;
