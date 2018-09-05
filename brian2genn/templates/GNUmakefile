@@ -6,7 +6,7 @@ CPU_ONLY	    = 1
 SOURCES         := main.cpp {% for source in source_files %} {{source}} {% endfor %} brianlib/randomkit/randomkit.cc
 
 INCLUDE_FLAGS   := -I. -Ibrianlib/randomkit -Lbrianlib/randomkit
-LINK_FLAGS := {{linker_flags}}
+LINK_FLAGS := {{linker_flags}} -no-pie
 OPTIMIZATIONFLAGS := {{compiler_flags}}
 NVCC_OPTIMIZATIONFLAGS := {{nvcc_compiler_flags}}
 SIM_CODE := magicnetwork_model_CODE
