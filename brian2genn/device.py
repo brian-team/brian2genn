@@ -433,6 +433,17 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 # We store the delay so that we can later access it
                 self.delays[var.owner.name] = numpy.asarray(arr).item()
+        elif isinstance(var.owner, NeuronGroup) and var.name == 'lastspike':
+            # Workaround for versions of Brian 2 <= 2.1.3.1 which initialize
+            # a NeuronGroup's lastspike variable to -inf, no longer supported
+            # by the new implementation of the timestep function
+            if arr == -numpy.inf:
+                logger.warn('Initializing the lastspike variable with -10000s '
+                            'instead of -inf to copy the behaviour of Brian 2 '
+                            'for versions >= 2.2 -- upgrade Brian 2 to remove '
+                            'this warning',
+                            name_suffix='lastspike_inf', once=True)
+                arr = numpy.array(-1e4)
         super(GeNNDevice, self).fill_with_array(var, arr)
 
     def variableview_set_with_index_array(self, variableview, item,
