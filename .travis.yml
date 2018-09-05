@@ -33,30 +33,12 @@ matrix:
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
       os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
     - python: "3.5"
       env: PYTHON="3.5" CONDA_PY="35" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no" CC=gcc-5 CXX=g++-5
       os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
     - python: "3.6"
       env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"  CC=gcc-5 CXX=g++-5
       os: linux
-      addons:
-        apt:
-          sources:
-            - ubuntu-toolchain-r-test
-          packages:
-            - g++-5
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
@@ -70,7 +52,7 @@ matrix:
       os: osx
       osx_image: xcode8.3
   allow_failures:
-    env: DEPENDENCIES="latest"
+      env: DEPENDENCIES="stable"
   fast_finish: true
 
 # Use miniconda to install binary versions of numpy etc. from continuum
@@ -96,15 +78,16 @@ before_install:
 
 # command to install dependencies
 install:
-  - if [ "$DEPENDENCIES" == "stable" ]; then
-        BRIAN_CHANNEL="brian-team";
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+        COMPILER_PACKAGE=gxx_linux-64;
     else
-        BRIAN_CHANNEL="brian-team/label/dev";
+        COMPILER_PACKAGE=clangxx_osx-64;
     fi
-  - travis_retry conda install --yes --quiet -c brian-team py-cpuinfo nose python=$PYTHON
-  - travis_retry conda install --yes --quiet -c $BRIAN_CHANNEL -c conda-forge  brian2 sympy=1.1
-  # Install gcc via conda -- the version provided by Ubuntu in this container image is too old
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then conda install --yes --quiet gcc; fi
+  - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
+  - if [ "$DEPENDENCIES" == "latest" ]; then
+        conda uninstall --yes --quiet brian2;  # we keep the dependencies, though
+        pip install git+https://github.com/brian-team/brian2.git;
+    fi
   - cd ../..
   - if [ "$DEPENDENCIES" == "latest" ]; then
        (cd brian-team/brian2genn/genn; git checkout master)
