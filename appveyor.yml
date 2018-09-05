@@ -49,16 +49,17 @@ environment:
       PYPI_UPLOAD_SOURCE: "no"
 matrix:
   allow_failures:
-    - DEPENDENCIES: "latest"
+    - DEPENDENCIES: "stable"
 
 install:
   # Add the paths for anaconda
   - 'set PATH=%PYTHON%;%PYTHON%\Library\bin;%PYTHON%\Scripts;%PATH%'
-  # Install Brian 2
-  - 'conda install --yes --quiet -c brian-team py-cpuinfo nose'
-  - 'if "%DEPENDENCIES%" == "stable" (set BRIAN_CHANNEL="brian-team") else (set BRIAN_CHANNEL="brian-team/label/dev")'
-  - 'conda install --yes --quiet tqdm'
-  - 'conda install --yes --quiet -c %BRIAN_CHANNEL% -c conda-forge brian2 sympy=1.1'
+  # Install Brian 2 and dependencies
+  - 'conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose'
+  # For "latest" dependencies, install Brian 2 from github
+  - 'if  "$DEPENDENCIES" == "latest" (
+      conda uninstall --yes --quiet brian2 &&
+      pip install git+https://github.com/brian-team/brian2.git)'
   # Install GeNN
   - # Clone the GeNN submodule
   - 'git submodule update --init --recursive'
