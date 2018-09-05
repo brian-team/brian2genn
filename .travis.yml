@@ -74,19 +74,17 @@ before_install:
   fi
 - chmod +x miniconda.sh
 - ./miniconda.sh -b -p ~/miniconda
-- export PATH=~/miniconda/bin:$PATH
 
 # command to install dependencies
 install:
+  - source /home/travis/miniconda/etc/profile.d/conda.sh
+  - conda activate
   - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
         COMPILER_PACKAGE=gxx_linux-64;
     else
         COMPILER_PACKAGE=clangxx_osx-64;
     fi
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
-  - echo CC=$CC
-  - echo CXX=$CXX
-  - conda activate
   - echo CC=$CC
   - echo CXX=$CXX
   # we deinstall Brian 2 for the latest version, but keep the dependencies
