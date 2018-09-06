@@ -57,7 +57,7 @@ install:
   # Update conda itself
   - 'conda update --yes --quiet conda'
   # Activate the conda environment
-  - 'conda activate'
+  - 'if "$PYTHON_VERSION" == "3.5" (activate) else (conda activate)'
   # Install Brian 2 and dependencies
   - 'conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose'
   # For "latest" dependencies, install Brian 2 from github
