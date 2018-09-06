@@ -12,13 +12,6 @@ environment:
       DEPENDENCIES: "stable"
       PYPI_UPLOAD_SOURCE: "no"
       ANACONDA_UPLOAD: "yes"
-    - PYTHON: "C:\\Miniconda35-x64"
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "64"
-      platform: x64
-      DEPENDENCIES: "stable"
-      ANACONDA_UPLOAD: "no"
-      PYPI_UPLOAD_SOURCE: "no"
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
@@ -33,13 +26,6 @@ environment:
       DEPENDENCIES: "latest"
       ANACONDA_UPLOAD: "no"
       PYPI_UPLOAD_SOURCE: "no"
-    - PYTHON: "C:\\Miniconda35-x64"
-      PYTHON_VERSION: "3.5"
-      PYTHON_ARCH: "64"
-      platform: x64
-      DEPENDENCIES: "latest"
-      ANACONDA_UPLOAD: "no"
-      PYPI_UPLOAD_SOURCE: "no"
     - PYTHON: "C:\\Miniconda-x64"
       PYTHON_VERSION: "2.7"
       PYTHON_ARCH: "64"
@@ -49,16 +35,16 @@ environment:
       PYPI_UPLOAD_SOURCE: "no"
 matrix:
   allow_failures:
-    - DEPENDENCIES: "stable"
+    - DEPENDENCIES: "latest"
 
 install:
   # Add the paths for anaconda
-  - 'set PATH=%PYTHON%;%PYTHON%\\Library\\bin;%PYTHON%\\Scripts;%PATH%'
+  - 'set PATH=%PYTHON%;%PYTHON%\Library\bin;%PYTHON%\Scripts;%PATH%'
   - 'echo %PATH%'
   # Update conda itself
   - 'conda update --yes --quiet conda'
   # Activate the conda environment
-  - 'if "$PYTHON_VERSION" == "3.5" (activate) else (conda activate)'
+  - 'conda activate'
   # Install Brian 2 and dependencies
   - 'conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose'
   # For "latest" dependencies, install Brian 2 from github
