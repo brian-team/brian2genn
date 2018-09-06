@@ -53,7 +53,8 @@ matrix:
 
 install:
   # Add the paths for anaconda
-  - 'set PATH=%PYTHON%;%PYTHON%\Library\bin;%PYTHON%\Scripts;%PATH%'
+  - 'set PATH=%PYTHON%;%PYTHON%\\Library\\bin;%PYTHON%\\Scripts;%PATH%'
+  - 'echo %PATH%'
   # Update conda itself
   - 'conda update --yes --quiet conda'
   # Activate the conda environment
