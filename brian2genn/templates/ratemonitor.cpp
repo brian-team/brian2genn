@@ -2,7 +2,7 @@
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
-extern {{c_data_type(prefs.core.default_float_dtype)}} t;
+extern double t;
 #include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
 {% endblock%}

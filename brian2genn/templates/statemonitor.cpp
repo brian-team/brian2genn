@@ -1,7 +1,7 @@
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
-extern {{c_data_type(prefs.core.default_float_dtype)}} t;
+extern double t;
 {% endblock %}
 
 {% block maincode %}

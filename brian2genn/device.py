@@ -1487,8 +1487,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      spike_monitor_models=self.spike_monitor_models,
                                                      rate_monitor_models=self.rate_monitor_models,
                                                      state_monitor_models=self.state_monitor_models,
-                                                     maximum_run_time=maximum_run_time,
-                                                     prefs=prefs
+                                                     maximum_run_time=maximum_run_time
                                                      )
         writer.write('engine.*', engine_tmp)
 

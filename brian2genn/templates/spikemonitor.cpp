@@ -3,7 +3,7 @@
 
 {% block extra_headers %}
 {% set sourcename= eventspace_variable.owner.name %}
-extern {{c_data_type(prefs.core.default_float_dtype)}} t;
+extern double t;
 extern int which;
 #include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
