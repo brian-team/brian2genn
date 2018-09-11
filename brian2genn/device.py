@@ -927,7 +927,7 @@ class GeNNDevice(CPPStandaloneDevice):
             if genn_version is None or not genn_version >= version_parse('3.2'):
                 logger.warn('Support for single-precision floats requires GeNN '
                             '3.2 or later. Upgrade GeNN if the compilation '
-                            'fails.')
+                            'fails.', once=True)
 
         env = os.environ.copy()
         env['GENN_PATH'] = genn_path
