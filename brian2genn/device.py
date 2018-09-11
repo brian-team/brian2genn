@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 import platform
+from packaging.version import parse as version_parse
 from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
@@ -635,7 +636,6 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print 'building genn executable ...'
-        # Check for GeNN compatibility
 
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
@@ -910,6 +910,25 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             raise RuntimeError('Set the GENN_PATH environment variable or '
                                'the devices.genn.path preference.')
+
+        # Check for GeNN compatibility
+        genn_version = None
+        version_file = os.path.join(genn_path, 'version.txt')
+        if os.path.exists(version_file):
+            try:
+                with open(version_file, 'r') as f:
+                    genn_version = version_parse(f.read().strip())
+                    logger.debug('GeNN version: %s' % genn_version)
+            except (OSError, IOError) as ex:
+                logger.debug('Getting version from $GENN_PATH/version.txt '
+                             'failed: %s' % str(ex))
+
+        if prefs.core.default_float_dtype == numpy.float32:
+            if genn_version is None or not genn_version >= version_parse('3.2'):
+                logger.warn('Support for single-precision floats requires GeNN '
+                            '3.2 or later. Upgrade GeNN if the compilation '
+                            'fails.')
+
         env = os.environ.copy()
         env['GENN_PATH'] = genn_path
         if use_GPU:
