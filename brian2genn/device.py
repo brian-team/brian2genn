@@ -6,7 +6,7 @@ import os
 import shutil
 import sys
 import platform
-from packaging.version import parse as version_parse
+from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
@@ -917,7 +917,7 @@ class GeNNDevice(CPPStandaloneDevice):
         if os.path.exists(version_file):
             try:
                 with open(version_file, 'r') as f:
-                    genn_version = version_parse(f.read().strip())
+                    genn_version = parse_version(f.read().strip())
                     logger.debug('GeNN version: %s' % genn_version)
             except (OSError, IOError) as ex:
                 logger.debug('Getting version from $GENN_PATH/version.txt '
