@@ -33,6 +33,14 @@ environment:
       DEPENDENCIES: "latest"
       ANACONDA_UPLOAD: "no"
       PYPI_UPLOAD_SOURCE: "no"
+    - PYTHON: "C:\\Miniconda-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "latest"
+      ANACONDA_UPLOAD: "no"
+      PYPI_UPLOAD_SOURCE: "no"
+      FLOAT_DTYPE_32: "yes"
 matrix:
   allow_failures:
     - DEPENDENCIES: "latest"
@@ -48,7 +56,7 @@ install:
   # Install Brian 2 and dependencies
   - 'conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose'
   # For "latest" dependencies, install Brian 2 from github
-  - 'if  "$DEPENDENCIES" == "latest" (
+  - 'if  "%DEPENDENCIES%" == "latest" (
       conda uninstall --yes --quiet brian2 &&
       pip install git+https://github.com/brian-team/brian2.git)'
   # Install GeNN
@@ -61,7 +69,7 @@ build: false  # not a C# project
 
 test_script:
   - 'pip install .'
-  - 'python scripts/run_brian_tests_CPU.py'
+  - 'if "%FLOAT_DTYPE_32%" == "yes" (python scripts/run_brian_tests_CPU_32bit.py) else (python scripts/run_brian_tests_CPU.py)'
 
 after_test:
   - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%ANACONDA_UPLOAD%" == "yes" (
