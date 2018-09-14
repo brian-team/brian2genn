@@ -6,6 +6,7 @@ import os
 import shutil
 import sys
 import platform
+from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
@@ -635,7 +636,6 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print 'building genn executable ...'
-        # Check for GeNN compatibility
 
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
@@ -910,6 +910,25 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             raise RuntimeError('Set the GENN_PATH environment variable or '
                                'the devices.genn.path preference.')
+
+        # Check for GeNN compatibility
+        genn_version = None
+        version_file = os.path.join(genn_path, 'version.txt')
+        if os.path.exists(version_file):
+            try:
+                with open(version_file, 'r') as f:
+                    genn_version = parse_version(f.read().strip())
+                    logger.debug('GeNN version: %s' % genn_version)
+            except (OSError, IOError) as ex:
+                logger.debug('Getting version from $GENN_PATH/version.txt '
+                             'failed: %s' % str(ex))
+
+        if prefs.core.default_float_dtype == numpy.float32:
+            if genn_version is None or not genn_version >= parse_version('3.2'):
+                logger.warn('Support for single-precision floats requires GeNN '
+                            '3.2 or later. Upgrade GeNN if the compilation '
+                            'fails.', once=True)
+
         env = os.environ.copy()
         env['GENN_PATH'] = genn_path
         if use_GPU:
@@ -1442,6 +1461,14 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('synapses_classes.*', synapses_classes_tmp)
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         genn_auto_choose_device, genn_default_device = get_genn_prefs()
+        default_dtype = prefs.core.default_float_dtype
+        if default_dtype == numpy.float32:
+            precision = 'GENN_FLOAT'
+        elif default_dtype == numpy.float64:
+            precision = 'GENN_DOUBLE'
+        else:
+            raise NotImplementedError("GeNN does not support default dtype "
+                                      "'{}'".format(default_dtype.__name__))
         model_tmp = GeNNCodeObject.templater.model(None, None,
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
@@ -1451,7 +1478,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    compile_args_msvc=compile_args_msvc,
                                                    compile_args_nvcc=compile_args_nvcc,
                                                    genn_auto_choose_device=genn_auto_choose_device, 
-                                                   genn_default_device=genn_default_device
+                                                   genn_default_device=genn_default_device,
+                                                   precision=precision
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
 
