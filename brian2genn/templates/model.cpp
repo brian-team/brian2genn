@@ -83,7 +83,16 @@ void modelDefinition(NNmodel &model)
   // GENN_PREFERENCES set in brian2genn
   GENN_PREFERENCES::autoChooseDevice= {{genn_auto_choose_device}};
   GENN_PREFERENCES::defaultDevice= {{genn_default_device}};
-
+  GENN_PREFERENCES::optimiseBlockSize= {{genn_optimise_blocksize}};
+  GENN_PREFERENCES::preSynapseResetBlockSize= {{genn_pre_synapse_reset_blocksize}};
+  GENN_PREFERENCES::neuronBlockSize= {{genn_neuron_blocksize}};
+  GENN_PREFERENCES::synapseBlockSize= {{genn_synapse_blocksize}};
+  GENN_PREFERENCES::learningBlockSize= {{genn_learning_blocksize}};
+  GENN_PREFERENCES::synapseDynamicsBlockSize= {{genn_synapse_dynamics_blocksize}};
+  GENN_PREFERENCES::initBlockSize= {{genn_init_blocksize}};
+  GENN_PREFERENCES::initSparseBlockSize= {{genn_init_sparse_blocksize}};
+  
+    
   {{ dtDef }}
   // Define the relevant neuron models
   neuronModel n;
