@@ -122,23 +122,6 @@ def get_compile_args():
 
     return compile_args_gcc, compile_args_msvc, compile_args_nvcc
 
-def get_genn_prefs():
-    '''
-    Get the GeNN preferences that are exposed in brian2genn user preferences. 
-    Uses the Brian2GeNN preferences `devices.genn.auto_choose_device` and 
-    `devices.genn.default_device`
-
-    Returns
-    -------
-    (genn_auto_choose_device, genn_default_device) : (int, int)
-        Tuple with the genn preference settings.
-    '''
-    if prefs.devices.genn.auto_choose_device:
-        genn_auto_choose_device= 1
-    else:
-        genn_auto_choose_device= 0
-    genn_default_device= prefs.devices.genn.default_device
-    return genn_auto_choose_device, genn_default_device
 
 def decorate(code, variables, shared_variables, parameters, do_final=True):
     '''
@@ -1460,7 +1443,6 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
-        genn_auto_choose_device, genn_default_device = get_genn_prefs()
         default_dtype = prefs.core.default_float_dtype
         if default_dtype == numpy.float32:
             precision = 'GENN_FLOAT'
@@ -1477,8 +1459,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    compile_args_gcc=compile_args_gcc,
                                                    compile_args_msvc=compile_args_msvc,
                                                    compile_args_nvcc=compile_args_nvcc,
-                                                   genn_auto_choose_device=genn_auto_choose_device, 
-                                                   genn_default_device=genn_default_device,
+                                                   prefs=prefs,
                                                    precision=precision
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
