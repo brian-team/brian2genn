@@ -81,16 +81,16 @@ void modelDefinition(NNmodel &model)
   GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
 
   // GENN_PREFERENCES set in brian2genn
-  GENN_PREFERENCES::autoChooseDevice= {{genn_auto_choose_device}};
-  GENN_PREFERENCES::defaultDevice= {{genn_default_device}};
-  GENN_PREFERENCES::optimiseBlockSize= {{genn_optimise_blocksize}};
-  GENN_PREFERENCES::preSynapseResetBlockSize= {{genn_pre_synapse_reset_blocksize}};
-  GENN_PREFERENCES::neuronBlockSize= {{genn_neuron_blocksize}};
-  GENN_PREFERENCES::synapseBlockSize= {{genn_synapse_blocksize}};
-  GENN_PREFERENCES::learningBlockSize= {{genn_learning_blocksize}};
-  GENN_PREFERENCES::synapseDynamicsBlockSize= {{genn_synapse_dynamics_blocksize}};
-  GENN_PREFERENCES::initBlockSize= {{genn_init_blocksize}};
-  GENN_PREFERENCES::initSparseBlockSize= {{genn_init_sparse_blocksize}};
+  GENN_PREFERENCES::autoChooseDevice = {{prefs['devices.genn.auto_choose_device']|int}};
+  GENN_PREFERENCES::defaultDevice = {{prefs['devices.genn.default_device']}};
+  GENN_PREFERENCES::optimiseBlockSize = {{prefs['devices.genn.optimise_blocksize']|int}};
+  GENN_PREFERENCES::preSynapseResetBlockSize = {{prefs['devices.genn.pre_synapse_reset_blocksize']}};
+  GENN_PREFERENCES::neuronBlockSize = {{prefs['devices.genn.neuron_blocksize']}};
+  GENN_PREFERENCES::synapseBlockSize = {{prefs['devices.genn.synapse_blocksize']}};
+  GENN_PREFERENCES::learningBlockSize = {{prefs['devices.genn.learning_blocksize']}};
+  GENN_PREFERENCES::synapseDynamicsBlockSize = {{prefs['devices.genn.synapse_dynamics_blocksize']}};
+  GENN_PREFERENCES::initBlockSize = {{prefs['devices.genn.init_blocksize']}};
+  GENN_PREFERENCES::initSparseBlockSize = {{prefs['devices.genn.init_sparse_blocksize']}};
   
     
   {{ dtDef }}

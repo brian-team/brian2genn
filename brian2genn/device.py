@@ -122,40 +122,6 @@ def get_compile_args():
 
     return compile_args_gcc, compile_args_msvc, compile_args_nvcc
 
-def get_genn_prefs():
-    '''
-    Get the GeNN preferences that are exposed in brian2genn user preferences. 
-    Uses the Brian2GeNN preferences `devices.genn.auto_choose_device`,
-    `devices.genn.default_device`, `devices.genn.optimise_blocksize`, 
-    `devices.genn.pre_synapse_reset_blocksize`, `devices.genn.neuron_blocksize`, 
-    `devices.genn.synapse_blocksize`, `devices.genn.learning_blocksize`,
-    `devices.genn.synapse_dynamics_blocksize`, `devices.genn.init_blocksize`,
-    `devices.genn.init_sparse_blocksize` 
-
-    Returns
-    -------
-    (genn_auto_choose_device, genn_default_device, optimise_blocksize, pre_synapse_reset_blocksize,
-    neuron_blocksize, synapse_blocksize, learning_blocksize, synapse_dynamics_blocksize, init_blocksize, 
-    init_sparse_blocksize) : (int, int, int, int, int, int, int, int, int, int)
-        "multuple" with the genn preference settings.
-    '''
-    if prefs.devices.genn.auto_choose_device:
-        genn_auto_choose_device= 1
-    else:
-        genn_auto_choose_device= 0
-    genn_default_device= prefs.devices.genn.default_device
-    if prefs.devices.genn.optimise_blocksize:
-        optimise_blocksize= 1
-    else:
-        optimise_blocksize= 0
-    pre_synapse_reset_blocksize= prefs.devices.genn.pre_synapse_reset_blocksize
-    neuron_blocksize= prefs.devices.genn.neuron_blocksize
-    synapse_blocksize= prefs.devices.genn.synapse_blocksize
-    learning_blocksize= prefs.devices.genn.learning_blocksize
-    synapse_dynamics_blocksize= prefs.devices.genn.synapse_dynamics_blocksize
-    init_blocksize= prefs.devices.genn.init_blocksize
-    init_sparse_blocksize= prefs.devices.genn.init_sparse_blocksize
-    return genn_auto_choose_device, genn_default_device, optimise_blocksize, pre_synapse_reset_blocksize, neuron_blocksize, synapse_blocksize, learning_blocksize, synapse_dynamics_blocksize, init_blocksize, init_sparse_blocksize
 
 def decorate(code, variables, shared_variables, parameters, do_final=True):
     '''
@@ -1477,7 +1443,6 @@ class GeNNDevice(CPPStandaloneDevice):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
         compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
-        genn_auto_choose_device, genn_default_device, genn_optimise_blocksize, genn_pre_synapse_reset_blocksize, genn_neuron_blocksize, genn_synapse_blocksize, genn_learning_blocksize, genn_synapse_dynamics_blocksize, genn_init_blocksize, genn_init_sparse_blocksize = get_genn_prefs()
         default_dtype = prefs.core.default_float_dtype
         if default_dtype == numpy.float32:
             precision = 'GENN_FLOAT'
@@ -1494,16 +1459,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    compile_args_gcc=compile_args_gcc,
                                                    compile_args_msvc=compile_args_msvc,
                                                    compile_args_nvcc=compile_args_nvcc,
-                                                   genn_auto_choose_device=genn_auto_choose_device, 
-                                                   genn_default_device=genn_default_device,
-                                                   genn_optimise_blocksize=genn_optimise_blocksize,
-                                                   genn_pre_synapse_reset_blocksize=genn_pre_synapse_reset_blocksize,
-                                                   genn_neuron_blocksize=genn_neuron_blocksize,
-                                                   genn_synapse_blocksize=genn_synapse_blocksize,
-                                                   genn_learning_blocksize=genn_learning_blocksize,
-                                                   genn_synapse_dynamics_blocksize=genn_synapse_dynamics_blocksize,
-                                                   genn_init_blocksize=genn_init_blocksize,
-                                                   genn_init_sparse_blocksize=genn_init_sparse_blocksize,
+                                                   prefs=prefs,
                                                    precision=precision
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
