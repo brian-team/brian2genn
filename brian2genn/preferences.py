@@ -32,51 +32,41 @@ prefs.register_preferences(
     auto_choose_device=BrianPreference(
         docs='''The GeNN preference autoChooseDevice that determines whether or not a GPU should be chosen automatically when multiple CUDA enabled devices are present.''',
         default=True,
-        validator=lambda value: value in [ True, False ]
     ),
     default_device=BrianPreference(
         docs='''The GeNN preference defaultDevice that determines CUDA enabled device should be used if it is not automatically chosen.''',
         default=0,
-        validator=lambda value: isinstance(value, int) 
     ),
     optimise_blocksize=BrianPreference(
         docs='''The GeNN preference optimiseBlockSize that determines whether GeNN should use its internal algorithms to optimise the different block sizes.''',
         default=True,
-        validator=lambda value: value in [ True, False ]
     ),
     pre_synapse_reset_blocksize=BrianPreference(
         docs='''The GeNN preference preSynapseResetBlockSize that determines the CUDA block size for the pre-synapse reset kernel if not set automatically by GeNN's block size optimisation.''',
-        default=0,
-        validator=lambda value: isinstance(value, int) 
+        default=32,
     ),
     neuron_blocksize=BrianPreference(
         docs='''The GeNN preference neuronBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
         default=32,
-        validator=lambda value: isinstance(value, int) 
     ),
     synapse_blocksize=BrianPreference(
         docs='''The GeNN preference synapseBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
         default=32,
-        validator=lambda value: isinstance(value, int) 
     ),
     learning_blocksize=BrianPreference(
         docs='''The GeNN preference learningBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
-        default=0,
-        validator=lambda value: isinstance(value, int) 
+        default=32,
     ),
     synapse_dynamics_blocksize=BrianPreference(
         docs='''The GeNN preference synapseDynamicsBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
-        default=0,
-        validator=lambda value: isinstance(value, int) 
+        default=32,
     ),
     init_blocksize=BrianPreference(
         docs='''The GeNN preference initBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
-        default=0,
-        validator=lambda value: isinstance(value, int) 
+        default=32,
     ),
     init_sparse_blocksize=BrianPreference(
         docs='''The GeNN preference initSparseBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
-        default=0,
-        validator=lambda value: isinstance(value, int) 
+        default=32,
     )
 )
