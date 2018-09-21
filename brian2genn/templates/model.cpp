@@ -206,6 +206,9 @@ void modelDefinition(NNmodel &model)
   delaySteps = {{synapse_model.delay}};
   {% endif %}
   model.addSynapsePopulation("{{synapse_model.name}}", {{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.connectivity}}, INDIVIDUALG, delaySteps, {{synapse_model.name}}POSTSYN, "{{synapse_model.srcname}}", "{{synapse_model.trgname}}", {{synapse_model.name}}_ini, {{synapse_model.name}}_p, {{synapse_model.name}}_postsyn_ini, {{synapse_model.name}}_postsynp);
+  {% if prefs['devices.genn.synapse_span_type'] == 'PRESYNAPTIC' %}
+  model.setSpanTypeToPre("{{synapse_model.name}}");
+  {% endif %}
   {% endfor %}
   model.finalize();
 }

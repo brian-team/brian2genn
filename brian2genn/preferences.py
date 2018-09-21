@@ -68,5 +68,10 @@ prefs.register_preferences(
     init_sparse_blocksize=BrianPreference(
         docs='''The GeNN preference initSparseBlockSize that determines the CUDA block size for the neuron kernel if not set automatically by GeNN's block size optimisation.''',
         default=32,
+    ),
+    synapse_span_type=BrianPreference(
+        docs='''This preference determines whether the spanType (parallelization mode) for a synapse population should be set to pre-synapstic or post-synaptic.''',
+        default='POSTSYNAPTIC',
+        validator=lambda value: value in ['PRESYNAPTIC', 'POSTSYNAPTIC'],
     )
 )
