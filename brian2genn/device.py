@@ -315,6 +315,11 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.spikegenerator_models = []
         self.synapse_models = []
+        self.ktimer= dict()
+        self.ktimer['neuron_tme']= True
+        self.ktimer['synapse_tme']= False
+        self.ktimer['learning_tme']= False
+        self.ktimer['synDyn_tme']= False
         self.delays = {}
         self.spike_monitor_models = []
         self.rate_monitor_models = []
@@ -711,7 +716,14 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
         self.process_synapses(synapse_groups)
-
+        # need to establish which kernel timers will be created if kernel riming is desired
+        if len(self.synapse_models) > 0:
+            self.ktimer['synapse_tme']= True
+            for synapse_model in self.synapse_models:
+                if len(synapse_model.main_code_lines['post']) > 0:
+                    self.ktimer['learning_tme']= True
+                if len(synapse_model.main_code_lines['dynamics']) > 0:
+                    self.ktimer['dynamics_tme']= True
         # Process monitors
         self.process_spike_monitors(spike_monitors)
         self.process_rate_monitors(rate_monitors)
@@ -1473,6 +1485,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    main_lines=main_lines,
                                                    header_files=header_files,
                                                    source_files=self.source_files,
+                                                   prefs=prefs,
+                                                   ktimer=self.ktimer
                                                    )
         writer.write('main.*', runner_tmp)
 

@@ -142,6 +142,13 @@ int main(int argc, char *argv[])
   {{'\n'.join(code_lines['after_run'])|autoindent}}
   timer.stopTimer();
   cerr << t << " done ..." << endl;
+  {% if prefs['devices.genn.kernel_timing'] %}
+  {% for kt in ('neuron_tme','synapse_tme','learning_tme','synDyn_tme') %}
+  {% if ktimer[kt] %}
+  fprintf(timef,"%f ", {{kt}});
+  {% endif %}
+  {% endfor %}
+  {% endif %} 
   fprintf(timef,"%f \n", timer.getElapsedTime());
 
   // get the final results from the GPU 

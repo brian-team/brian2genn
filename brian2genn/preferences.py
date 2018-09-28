@@ -73,5 +73,9 @@ prefs.register_preferences(
         docs='''This preference determines whether the spanType (parallelization mode) for a synapse population should be set to pre-synapstic or post-synaptic.''',
         default='POSTSYNAPTIC',
         validator=lambda value: value in ['PRESYNAPTIC', 'POSTSYNAPTIC'],
+    ),
+    kernel_timing=BrianPreference(
+        docs='''This preference determines whether GeNN should record kernel runtimes; note that this can affect performance.''',
+        default=False,
     )
 )
