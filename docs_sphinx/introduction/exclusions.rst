@@ -129,8 +129,10 @@ Multiple runs
 -------------
 GeNN is designed for single runs and cannot be used for the Brian style
 multiple runs. However, if this is of use, code can be run repeatedly
-"in multiple runs" that are completely independent. This just needs a
-``reset_device`` command issued after the ``run(runtime)`` command.
+"in multiple runs" that are completely independent. This just needs
+``device.reinit()`` and ``device.activate()`` issued after the ``run(runtime)``
+command.
+
 Note, however, that these multiple runs are completely independent, i.e. for
 the second run the code generation pipeline for Brian2GeNN is repeated in its
 entirety which may incur a measurable delay.
