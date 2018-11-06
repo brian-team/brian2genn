@@ -25,14 +25,35 @@ matrix:
 #      os: osx
 #      osx_image: xcode8.3
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: linux
+      addons:
+        apt:
+          sources:
+          - ubuntu-toolchain-r-test
+          packages:
+          - g++-7
+      env:
+      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
-      env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
       os: linux
+      addons:
+        apt:
+          sources:
+            - ubuntu-toolchain-r-test
+          packages:
+            - g++-7
+      env:
+        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
     - python: "3.6"
-      env: PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: linux
+      addons:
+        apt:
+          sources:
+          - ubuntu-toolchain-r-test
+          packages:
+          - g++-7
+      env:
+      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
@@ -53,6 +74,7 @@ matrix:
 # analytic's repository. Follows an approach described by Dan Blanchard:
 # https://gist.github.com/dan-blanchard/7045057
 before_install:
+- eval "${MATRIX_EVAL}"
 - if [ ${PYTHON:0:1} == "2" ]; then
     if [ "$TRAVIS_OS_NAME" == "linux" ]; then
     travis_retry wget http://repo.continuum.io/miniconda/Miniconda2-latest-Linux-$ARCHITECTURE.sh -O miniconda.sh;
@@ -72,13 +94,8 @@ before_install:
 # command to install dependencies
 install:
   - source ~/miniconda/etc/profile.d/conda.sh
-  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
-        COMPILER_PACKAGE=gxx_linux-64;
-    else
-        COMPILER_PACKAGE=clangxx_osx-64;
-    fi
-  - conda create -n travis_env --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON $COMPILER_PACKAGE
-  - conda activate travis_env
+  - conda activate
+  - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON
   - echo CC=$CC
   - echo CXX=$CXX
   # we deinstall Brian 2 for the latest version, but keep the dependencies
