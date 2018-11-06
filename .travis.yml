@@ -96,8 +96,6 @@ install:
   - conda activate
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON
   - eval "${MATRIX_EVAL}"
-  - echo CC=$CC
-  - echo CXX=$CXX
   # we deinstall Brian 2 for the latest version, but keep the dependencies
   - if [ "$DEPENDENCIES" == "latest" ]; then
         conda uninstall --yes --quiet brian2;
@@ -112,6 +110,8 @@ install:
 
 # command to run tests
 script:
+  - echo CC=$CC
+  - echo CXX=$CXX
   - pip install .
   - if [ "$FLOAT_DTYPE_32" == "yes" ]; then
       python scripts/run_brian_tests_CPU_32bit.py;
