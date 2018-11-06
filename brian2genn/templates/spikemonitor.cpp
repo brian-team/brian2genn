@@ -24,6 +24,7 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
 	//// MAIN CODE ////////////
     {# USES_VARIABLES { N, _clock_t, count,
                         _source_start, _source_stop} #}
+    {# WRITES_TO_READ_ONLY_VARIABLES { N, count } #}
     {#  Get the name of the array that stores these events (i.e. the spikespace array - other cases not (yet?) supported) #}
     {% set _eventspace = 'spike_'+sourcename %}
     {% set _num_events = 'spikeCount_'+sourcename %}

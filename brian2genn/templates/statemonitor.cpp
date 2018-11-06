@@ -6,7 +6,7 @@ extern double t;
 
 {% block maincode %}
     {# USES_VARIABLES { t, _clock_t, _indices, N } #}
-
+    {# WRITES_TO_READ_ONLY_VARIABLES { t, N } #}
     {{ openmp_pragma('single') }}
     {{_dynamic_t}}.push_back(t);
 
