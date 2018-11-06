@@ -95,7 +95,6 @@ install:
   - source ~/miniconda/etc/profile.d/conda.sh
   - conda activate
   - travis_retry conda install --yes --quiet -c conda-forge brian2 sympy=1.1 py-cpuinfo=3 nose python=$PYTHON
-  - eval "${MATRIX_EVAL}"
   # we deinstall Brian 2 for the latest version, but keep the dependencies
   - if [ "$DEPENDENCIES" == "latest" ]; then
         conda uninstall --yes --quiet brian2;
@@ -110,6 +109,7 @@ install:
 
 # command to run tests
 script:
+  - eval "${MATRIX_EVAL}"
   - echo CC=$CC
   - echo CXX=$CXX
   - pip install .
