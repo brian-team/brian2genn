@@ -890,14 +890,6 @@ class GeNNDevice(CPPStandaloneDevice):
             genn_path = prefs.devices.genn.path
             logger.debug('Using GeNN path from preference: '
                          '"{}"'.format(genn_path))
-        elif os.path.isdir(os.path.join(sys.prefix, 'opt', 'genn')):
-            genn_path = os.path.join(sys.prefix, 'opt', 'genn')
-            logger.debug('Using GeNN path from installation: '
-                         '"{}"'.format(genn_path))
-            if 'GENN_PATH' in os.environ:
-                logger.debug('Unsetting the GENN_PATH environment variable to '
-                             'avoid conflicts with the installed GeNN version.')
-                del os.environ['GENN_PATH']
         elif 'GENN_PATH' in os.environ:
             genn_path = os.environ['GENN_PATH']
             logger.debug('Using GeNN path from environment variable: '
