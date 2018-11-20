@@ -103,7 +103,7 @@ install:
   - cd ../..
   - git clone --depth=1 https://github.com/genn-team/genn.git
   - if [ "$DEPENDENCIES" == "stable" ]; then
-      latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+      latestTag=$(git describe --tags `git rev-list --tags --max-count=1`);
       (cd genn; git checkout $latestTag)
     fi
   - export GENN_PATH=$(pwd)/genn
