@@ -33,7 +33,7 @@ matrix:
           packages:
           - g++-7
       env:
-        - MATRIX_EVAL="export CC=gcc-7 && export CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+        - PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       os: linux
       addons:
@@ -43,7 +43,7 @@ matrix:
           packages:
             - g++-7
       env:
-        - MATRIX_EVAL="CC=export gcc-7 && export CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
+        - PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
     - python: "3.6"
       os: linux
       addons:
@@ -53,7 +53,7 @@ matrix:
           packages:
           - g++-7
       env:
-      - MATRIX_EVAL="export CC=gcc-7 && export CXX=g++-7" PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+        - PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
@@ -111,7 +111,10 @@ install:
 
 # command to run tests
 script:
-  - eval "${MATRIX_EVAL}"
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+      export CC=gcc-7;
+      export CXX=g++-7;
+    fi
   - echo CC=$CC
   - echo CXX=$CXX
   - pip install .
