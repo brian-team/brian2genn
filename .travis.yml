@@ -33,7 +33,7 @@ matrix:
           packages:
           - g++-7
       env:
-      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+        - MATRIX_EVAL="export CC=gcc-7 && export CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       os: linux
       addons:
@@ -43,7 +43,7 @@ matrix:
           packages:
             - g++-7
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
+        - MATRIX_EVAL="CC=export gcc-7 && export CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
     - python: "3.6"
       os: linux
       addons:
@@ -53,7 +53,7 @@ matrix:
           packages:
           - g++-7
       env:
-      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+      - MATRIX_EVAL="export CC=gcc-7 && export CXX=g++-7" PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
