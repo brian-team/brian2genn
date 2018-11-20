@@ -5,20 +5,20 @@ environment:
     secure: 20R+TzZ9NRmt9ttc5/Bb8w==
 
   matrix:
-#    - PYTHON: "C:\\Miniconda36-x64"
-#      PYTHON_VERSION: "3.6"
-#      PYTHON_ARCH: "64"
-#      platform: x64
-#      DEPENDENCIES: "stable"
-#      PYPI_UPLOAD_SOURCE: "no"
-#      ANACONDA_UPLOAD: "yes"
-#    - PYTHON: "C:\\Miniconda-x64"
-#      PYTHON_VERSION: "2.7"
-#      PYTHON_ARCH: "64"
-#      platform: x64
-#      DEPENDENCIES: "stable"
-#      ANACONDA_UPLOAD: "no"
-#      PYPI_UPLOAD_SOURCE: "yes"
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "no"
+      ANACONDA_UPLOAD: "yes"
+    - PYTHON: "C:\\Miniconda-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "stable"
+      ANACONDA_UPLOAD: "no"
+      PYPI_UPLOAD_SOURCE: "yes"
     - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
@@ -64,10 +64,10 @@ install:
   - 'git clone --depth=1 https://github.com/genn-team/genn.git'
   - 'if "%DEPENDENCIES%" == "stable" (cd genn && for /f %%a in ("git describe --tags --abbrev^=0 origin/master") do git checkout %%a && cd ..)'
   - 'set GENN_PATH=%CD%\genn'
+  - 'cd brian2genn'
 
 build: false  # not a C# project
 
 test_script:
   - 'pip install .'
   - 'if "%FLOAT_DTYPE_32%" == "yes" (python scripts/run_brian_tests_CPU_32bit.py) else (python scripts/run_brian_tests_CPU.py)'
-
