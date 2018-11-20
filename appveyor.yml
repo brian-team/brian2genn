@@ -62,7 +62,7 @@ install:
   # Install GeNN
   - 'cd ..'
   - 'git clone --depth=1 https://github.com/genn-team/genn.git'
-  - 'if "%DEPENDENCIES%" == "stable" (cd genn && for /f %%a in ("git describe --tags --abbrev^=0 origin/master") do git checkout %%a && cd ..)'
+  - if "%DEPENDENCIES%" == "stable" (cd genn && for /f %%a in ('git describe --tags --abbrev^=0 origin/master') do git checkout %%a && cd ..)
   - 'set GENN_PATH=%CD%\genn'
   - 'cd brian2genn'
 
