@@ -36,5 +36,6 @@ jobs:
     displayName: 'Install GeNN'
 
   - script: |
+      echo GENN_PATH=$GENN_PATH
       python scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
