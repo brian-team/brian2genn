@@ -1,0 +1,34 @@
+steps:
+  - task: CondaEnvironment@1
+    inputs:
+      environmentName: 'test_environment'
+      updateConda: True
+      packageSpecs: 'python=$(python.version) brian2 pip nose'
+      installOptions: '-c conda-forge'
+      createOptions: '-c conda-forge'
+
+  - script: python -m pip install --no-deps --ignore-installed --user .
+    displayName: 'Install Brian2GeNN'
+
+  - bash: |
+      git clone --depth=1 https://github.com/genn-team/genn.git ../genn
+      cd ../genn
+      latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+      git checkout $latestTag
+    displayName: 'Install GeNN'
+
+  # Linux + OS X
+  - bash: |
+      export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
+      cd ..  # move out of the source directory to avoid direct import
+      python -c 'from brian2 import *;import brian2genn;set_device("genn", with_output=True, use_GPU=False, debug=True);group = NeuronGroup(5, "dv/dt = -v/(10*ms) : 1");run(1*ms)'
+    displayName: 'Run tests'
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
+  # Windows
+  - script: |
+      set SOURCE_DIR=%CD%
+      cd ..
+      set GENN_PATH=%CD%\genn
+      python %SOURCE_DIR%\simple_test.py
+    displayName: 'Run tests'
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
