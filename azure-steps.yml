@@ -25,7 +25,7 @@ steps:
     displayName: 'Run tests'
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
   # Windows
-  - powershell: |
+  - script: |
       setx GENN_PATH %~dp0\..\genn
       set SOURCE_DIR %CD%
       cd ..  # move out of the source directory to avoid direct import
