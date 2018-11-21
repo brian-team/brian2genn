@@ -16,5 +16,5 @@ steps:
 
   - bash: |
       export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
-      python scripts/run_brian_tests_CPU.py
+      python -c 'from brian2 import *;import brian2genn;set_device("genn", with_output=True, debug=True);group = NeuronGroup(5, "dv/dt = -v/(10*ms) : 1");run(1*ms)'
     displayName: 'Run tests'
