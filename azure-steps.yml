@@ -23,7 +23,7 @@ steps:
       cd ..  # move out of the source directory to avoid direct import
       python -c 'from brian2 import *;import brian2genn;set_device("genn", with_output=True, use_GPU=False, debug=True);group = NeuronGroup(5, "dv/dt = -v/(10*ms) : 1");run(1*ms)'
     displayName: 'Run tests'
-    condition: ne( variables.Agent.OS, 'Windows_NT' )
+    condition: ne( variables['Agent.OS'], 'Windows_NT' )
   # Windows
   - powershell: |
       setx GENN_PATH %~dp0\..\genn
@@ -31,4 +31,4 @@ steps:
       cd ..  # move out of the source directory to avoid direct import
       python -c 'from brian2 import *;import brian2genn;set_device("genn", with_output=True, use_GPU=False, debug=True);group = NeuronGroup(5, "dv/dt = -v/(10*ms) : 1");run(1*ms)'
     displayName: 'Run tests'
-    condition: eq( variables.Agent.OS, 'Windows_NT' )
+    condition: eq( variables['Agent.OS'], 'Windows_NT' )
