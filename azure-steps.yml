@@ -27,7 +27,8 @@ steps:
   # Windows
   - powershell: |
       setx GENN_PATH %~dp0\..\genn
+      set SOURCE_DIR %CD%
       cd ..  # move out of the source directory to avoid direct import
-      python brian2genn\spike_test.py
+      python %SOURCE_DIR%\spike_test.py
     displayName: 'Run tests'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
