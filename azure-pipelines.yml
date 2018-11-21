@@ -18,7 +18,7 @@ jobs:
   steps:
   - template: azure-steps.yml
 
-- job: 'OS X'
+- job: 'OSX'
   pool:
     vmImage: 'macOS-10.13'
   strategy:
