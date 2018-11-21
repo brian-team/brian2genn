@@ -27,7 +27,7 @@ jobs:
       installOptions: '-c conda-forge'
       createOptions: '-c conda-forge'
 
-  - script: python -m pip install --no-deps --ignore-installed .
+  - script: python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
 
   - script: |
