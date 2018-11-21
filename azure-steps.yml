@@ -27,7 +27,7 @@ steps:
   # Windows
   - script: |
       setx GENN_PATH %~dp0\..\genn
-      set SOURCE_DIR %CD%
+      set SOURCE_DIR=%CD%
       cd ..  # move out of the source directory to avoid direct import
       python %SOURCE_DIR%\spike_test.py
     displayName: 'Run tests'
