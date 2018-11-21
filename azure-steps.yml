@@ -1,0 +1,20 @@
+steps:
+  - task: CondaEnvironment@1
+    inputs:
+      environmentName: 'test_environment'
+      updateConda: True
+      packageSpecs: 'python=$(python.version) brian2 pip nose'
+      installOptions: '-c conda-forge'
+      createOptions: '-c conda-forge'
+
+  - script: python -m pip install --no-deps --ignore-installed --user .
+    displayName: 'Install Brian2GeNN'
+
+  - script: |
+      git clone --depth=1 https://github.com/genn-team/genn.git ../genn
+    displayName: 'Install GeNN'
+
+  - script: |
+      export GENN_PATH=$(realpath ../genn)
+      python scripts/run_brian_tests_CPU.py
+    displayName: 'Run tests'
