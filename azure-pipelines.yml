@@ -31,7 +31,7 @@ jobs:
     displayName: 'Install Brian2GeNN'
 
   - script: |
-      git clone https://github.com/genn-team/genn.git ../genn
+      git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       export GENN_PATH=$(realpath ../genn)
     displayName: 'Install GeNN'
 
