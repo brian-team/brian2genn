@@ -31,6 +31,6 @@ jobs:
     displayName: 'Install Brian2GeNN'
 
   - script: |
-      conda install -c conda-forge nose
+      conda install -c conda-forge --quiet --yes nose
       python scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
