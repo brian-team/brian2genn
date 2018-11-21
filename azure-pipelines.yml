@@ -23,7 +23,7 @@ jobs:
     inputs:
       environmentName: 'test_environment'
       updateConda: True
-      packageSpecs: 'python=$(python.version) brian2 pip'
+      packageSpecs: 'python=$(python.version) brian2 pip nose'
       installOptions: '-c conda-forge'
       createOptions: '-c conda-forge'
 
@@ -31,6 +31,5 @@ jobs:
     displayName: 'Install Brian2GeNN'
 
   - script: |
-      conda install -c conda-forge --quiet --yes nose
       python scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
