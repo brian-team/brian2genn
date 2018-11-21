@@ -14,7 +14,7 @@ steps:
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
     displayName: 'Install GeNN'
 
-  - script: |
+  - bash: |
       export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
       python scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
