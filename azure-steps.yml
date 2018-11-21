@@ -28,11 +28,7 @@ steps:
   - script: |
       setx GENN_PATH %~dp0\..\genn
       set SOURCE_DIR=%CD%
-      echo current dir: %CD%
       cd ..
-      echo SOURCE_DIR: %SOURCE_DIR%
-      echo dir
-      dir
-      python %SOURCE_DIR%\spike_test.py
+      python %SOURCE_DIR%\simple_test.py
     displayName: 'Run tests'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
