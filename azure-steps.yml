@@ -26,9 +26,9 @@ steps:
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
   # Windows
   - script: |
-      setx GENN_PATH %CD%\..\genn
       set SOURCE_DIR=%CD%
       cd ..
+      set GENN_PATH=%CD%\genn
       python %SOURCE_DIR%\simple_test.py
     displayName: 'Run tests'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
