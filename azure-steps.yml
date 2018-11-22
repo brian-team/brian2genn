@@ -8,7 +8,7 @@ steps:
 
   - script: |
       python -c "import sys; print(sys.version)"
-      python -c "from urllib.request import urlopen; u = urlopen('https://bootstrap.pypa.io/get-pip.py');open('get-pip.py', 'w').write(u.read().decode('utf-8'))"
+      python -c "from urllib2 import urlopen; u = urlopen('https://bootstrap.pypa.io/get-pip.py');open('get-pip.py', 'w').write(u.read().decode('utf-8'))"
       python get-pip.py
     displayName: 'Install pip (on Windows)'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )

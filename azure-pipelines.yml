@@ -37,7 +37,7 @@ jobs:
   strategy:
     matrix:
       Python36:
-        python.version: '3.6'
+        python.version: '2.7'
 
   steps:
   - template: azure-steps.yml
