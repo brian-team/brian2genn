@@ -7,9 +7,9 @@ steps:
     condition: ne( variables['Agent.OS'], 'Windows_NT' )
 
   - script: |
-      python -c "import sys; print(sys.version)"
-      python -c "from urllib2 import urlopen; u = urlopen('https://bootstrap.pypa.io/get-pip.py');open('get-pip.py', 'w').write(u.read().decode('utf-8'))"
-      python get-pip.py
+      python3 -c "import sys; print(sys.version)"
+      python3 -c "from urllib.requests import urlopen; u = urlopen('https://bootstrap.pypa.io/get-pip.py');open('get-pip.py', 'w').write(u.read().decode('utf-8'))"
+      python3 get-pip.py
     displayName: 'Install pip (on Windows)'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
 
