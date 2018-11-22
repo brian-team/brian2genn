@@ -5,6 +5,11 @@ steps:
       addToPath: true
       architecture: 'x64'
 
+  - script: |
+      python -m pip install --upgrade pip setuptools wheel
+      python -m pip install numpy cython --user
+    displayName: 'Install basic Python tools'
+
   - script: python -m pip install brian2 nose matplotlib ipython --user
     displayName: 'Install Brian2 and dependencies'
 
