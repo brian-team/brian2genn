@@ -35,7 +35,6 @@ steps:
       set SOURCE_DIR=%CD%
       cd ..
       set GENN_PATH=%CD%\genn
-      set "VCTargetsPath=C:\Program Files (x86)\Microsoft Visual Studio\2017\Enterprise\Common7\IDE\VC\VCTargets"
       python %SOURCE_DIR%\simple_test.py
     displayName: 'Run tests'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
