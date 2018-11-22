@@ -29,6 +29,7 @@ steps:
       set SOURCE_DIR=%CD%
       cd ..
       set GENN_PATH=%CD%\genn
+      set "VCTargetsPath=C:\Program Files (x86)\MSBuild\Microsoft.Cpp\v4.0\v140"
       python %SOURCE_DIR%\simple_test.py
     displayName: 'Run tests'
     condition: eq( variables['Agent.OS'], 'Windows_NT' )
