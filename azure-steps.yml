@@ -1,11 +1,12 @@
 steps:
-  - task: CondaEnvironment@1
+  - task: UsePythonVersion@0
     inputs:
-      environmentName: 'test_environment'
-      updateConda: True
-      packageSpecs: 'python=$(python.version) brian2 pip nose'
-      installOptions: '-c conda-forge'
-      createOptions: '-c conda-forge'
+      versionSpec: $(python.version)
+      addToPath: true
+      architecture: 'x64'
+
+  - script: python -m pip install brian2 nose matplotlib ipython --user
+    displayName: 'Install Brian2 and dependencies'
 
   - script: python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
