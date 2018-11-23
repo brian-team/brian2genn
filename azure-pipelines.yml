@@ -11,8 +11,12 @@ jobs:
     vmImage: 'Ubuntu 16.04'
   strategy:
     matrix:
-      Python27:
+      Python27_single:
         python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+      Python27_double:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
       Python36:
         python.version: '3.6'
 
@@ -26,8 +30,12 @@ jobs:
     vmImage: 'macOS-10.13'
   strategy:
     matrix:
-      Python27:
+      Python27_single:
         python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+      Python27_double:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
       Python36:
         python.version: '3.6'
 
@@ -40,8 +48,12 @@ jobs:
     vmImage: 'vs2017-win2016'
   strategy:
     matrix:
-      Python27:
+      Python27_single:
         python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+      Python27_double:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
       Python36:
         python.version: '3.6'
 
