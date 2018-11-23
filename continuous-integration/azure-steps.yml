@@ -19,6 +19,7 @@ steps:
 
   - task: CopyFiles@2
     inputs:
+      sourceFolder: $(Build.SourcesDirectory)/continuous-integration/
       contents: 'brian_preferences'
       targetFolder: $(Build.SourcesDirectory)/..
 
