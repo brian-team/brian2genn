@@ -13,8 +13,10 @@ steps:
   - bash: |
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       cd ../genn
-      latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
-      git checkout $latestTag
+      if [ $(use_genn_master) == 'false' ]; then
+        latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+        git checkout $latestTag
+      fi
     displayName: 'Install GeNN'
 
   - task: CopyFiles@2
