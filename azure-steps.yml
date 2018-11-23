@@ -17,19 +17,13 @@ steps:
       git checkout $latestTag
     displayName: 'Install GeNN'
 
-  # Linux + OS X
+  - task: CopyFiles@2
+    inputs:
+      contents: 'brian_preferences'
+      targetFolder: $(Build.SourcesDirectory)/..
+
   - bash: |
       export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
       cd ..  # move out of the source directory to avoid direct import
-      python -c 'from brian2 import *;import brian2genn;set_device("genn", with_output=True, use_GPU=False, debug=True);group = NeuronGroup(5, "dv/dt = -v/(10*ms) : 1");run(1*ms)'
+      python $(Build.SourcesDirectory)/scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
-    condition: ne( variables['Agent.OS'], 'Windows_NT' )
-  # Windows
-  - script: |
-      set SOURCE_DIR=%CD%
-      cd ..
-      copy %SOURCE_DIR%\brian_preferences .
-      set GENN_PATH=%CD%\genn
-      python %SOURCE_DIR%\simple_test.py
-    displayName: 'Run tests'
-    condition: eq( variables['Agent.OS'], 'Windows_NT' )
