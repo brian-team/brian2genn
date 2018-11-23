@@ -10,6 +10,7 @@ if __name__ == '__main__':
                           test_standalone='genn',
                           build_options={'use_GPU': False},
                           fail_for_not_implemented=False,
-                          float_dtype=np.float32)
+                          float_dtype=np.float32,
+                          reset_preferences=False)
     if not success:
         sys.exit(1)
