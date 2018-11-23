@@ -24,6 +24,7 @@ steps:
 
   - bash: |
       export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
+      SOURCE_PATH=$(pwd)
       cd ..  # move out of the source directory to avoid direct import
-      python $(Build.SourcesDirectory)/scripts/run_brian_tests_CPU.py
+      python $SOURCE_PATH/scripts/run_brian_tests_CPU.py
     displayName: 'Run tests'
