@@ -5,20 +5,20 @@ environment:
     secure: 20R+TzZ9NRmt9ttc5/Bb8w==
 
   matrix:
-#    - PYTHON: "C:\\Miniconda36-x64"
-#      PYTHON_VERSION: "3.6"
-#      PYTHON_ARCH: "64"
-#      platform: x64
-#      DEPENDENCIES: "stable"
-#      PYPI_UPLOAD_SOURCE: "no"
-#      ANACONDA_UPLOAD: "yes"
-#    - PYTHON: "C:\\Miniconda-x64"
-#      PYTHON_VERSION: "2.7"
-#      PYTHON_ARCH: "64"
-#      platform: x64
-#      DEPENDENCIES: "stable"
-#      ANACONDA_UPLOAD: "no"
-#      PYPI_UPLOAD_SOURCE: "yes"
+    - PYTHON: "C:\\Miniconda36-x64"
+      PYTHON_VERSION: "3.6"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "stable"
+      PYPI_UPLOAD_SOURCE: "no"
+      ANACONDA_UPLOAD: "yes"
+    - PYTHON: "C:\\Miniconda-x64"
+      PYTHON_VERSION: "2.7"
+      PYTHON_ARCH: "64"
+      platform: x64
+      DEPENDENCIES: "stable"
+      ANACONDA_UPLOAD: "no"
+      PYPI_UPLOAD_SOURCE: "yes"
     - PYTHON: "C:\\Miniconda36-x64"
       PYTHON_VERSION: "3.6"
       PYTHON_ARCH: "64"
@@ -60,30 +60,14 @@ install:
       conda uninstall --yes --quiet brian2 &&
       pip install git+https://github.com/brian-team/brian2.git)'
   # Install GeNN
-  - # Clone the GeNN submodule
-  - 'git submodule update --init --recursive'
-  - 'if "%DEPENDENCIES%" == "latest" (cd genn && git checkout master && cd ..)'
+  - 'cd ..'
+  - 'git clone --depth=1 https://github.com/genn-team/genn.git'
+  - if "%DEPENDENCIES%" == "stable" (cd genn && for /f %%a in ('git describe --tags --abbrev^=0 origin/master') do git checkout %%a && cd ..)
   - 'set GENN_PATH=%CD%\genn'
+  - 'cd brian2genn'
 
 build: false  # not a C# project
 
 test_script:
   - 'pip install .'
   - 'if "%FLOAT_DTYPE_32%" == "yes" (python scripts/run_brian_tests_CPU_32bit.py) else (python scripts/run_brian_tests_CPU.py)'
-
-after_test:
-  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%ANACONDA_UPLOAD%" == "yes" (
-     powershell.exe -Command "Invoke-WebRequest https://developer.nvidia.com/compute/cuda/8.0/Prod2/network_installers/cuda_8.0.61_windows_network-exe -OutFile cuda-installer.exe" &&
-     cuda-installer.exe -s compiler_8.0 cudart_8.0 &&
-     set "CUDA_PATH=C:\Program Files\NVIDIA GPU Computing Toolkit\CUDA\v8.0" &&
-     conda install --yes --quiet conda-build &&
-     python scripts/build_conda_packages.py &&
-     conda install --yes --quiet anaconda-client &&
-     conda install --yes --quiet -c conda-forge twine &&
-     python scripts\conda-server-push.py %APPVEYOR_REPO_TAG_NAME%
-     )'
-  - 'if "%APPVEYOR_PULL_REQUEST_NUMBER%" == "" if "%APPVEYOR_REPO_NAME%" == "brian-team/brian2genn" if "%APPVEYOR_REPO_TAG%" == "true" if "%PYPI_UPLOAD_SOURCE%" == "yes" (python setup.py sdist --formats=zip && pip install --quiet twine && twine upload -u marcelstimberg --skip-existing dist/*.zip)'
-
-artifacts:
-  - path: '*.tar.bz2'
-    name: conda package

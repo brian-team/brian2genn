@@ -33,7 +33,7 @@ matrix:
           packages:
           - g++-7
       env:
-      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+        - PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       os: linux
       addons:
@@ -43,7 +43,7 @@ matrix:
           packages:
             - g++-7
       env:
-        - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
+        - PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="yes" FLOAT_DTYPE_32=yes
     - python: "3.6"
       os: linux
       addons:
@@ -53,7 +53,7 @@ matrix:
           packages:
           - g++-7
       env:
-      - MATRIX_EVAL="CC=gcc-7 && CXX=g++-7" PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
+        - PYTHON="3.6" CONDA_PY="36" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
     - python: "2.7"
       env: PYTHON="2.7" CONDA_PY="27" ARCHITECTURE="x86_64" DEPENDENCIES="latest" ANACONDA_UPLOAD="no"
       os: osx
@@ -101,15 +101,20 @@ install:
         pip install git+https://github.com/brian-team/brian2.git;
     fi
   - cd ../..
-  - if [ "$DEPENDENCIES" == "latest" ]; then
-       (cd brian-team/brian2genn/genn; git checkout master)
+  - git clone --depth=1 https://github.com/genn-team/genn.git
+  - if [ "$DEPENDENCIES" == "stable" ]; then
+      latestTag=$(git describe --tags `git rev-list --tags --max-count=1`);
+      (cd genn; git checkout $latestTag)
     fi
-  - export GENN_PATH=$(pwd)/brian-team/brian2genn/genn
+  - export GENN_PATH=$(pwd)/genn
   - cd brian-team/brian2genn
 
 # command to run tests
 script:
-  - eval "${MATRIX_EVAL}"
+  - if [ "$TRAVIS_OS_NAME" == "linux" ]; then
+      export CC=gcc-7;
+      export CXX=g++-7;
+    fi
   - echo CC=$CC
   - echo CXX=$CXX
   - pip install .
@@ -117,25 +122,6 @@ script:
       python scripts/run_brian_tests_CPU_32bit.py;
     else
       python scripts/run_brian_tests_CPU.py;
-    fi
-
-after_success:
-  # Install minimal CUDA components to build the conda package and upload to anaconda.org if this is a tagged release in the master branch
-  - if [[ "$TRAVIS_OS_NAME" == "linux" && $ANACONDA_UPLOAD == 'yes' ]]; then
-      CUDA_URL=http://developer.download.nvidia.com/compute/cuda/repos/ubuntu1404/x86_64/cuda-repo-ubuntu1404_8.0.61-1_amd64.deb;
-      CUDA_FILE=/tmp/cuda_install.deb;
-      travis_retry curl $CUDA_URL -o $CUDA_FILE &&
-      sudo dpkg -i $CUDA_FILE &&
-      rm -f $CUDA_FILE;
-      sudo apt-get update -qq -y &&
-      sudo apt-get install -q -y cuda-core-8-0 cuda-misc-headers-8-0 cuda-cudart-dev-8-0 &&
-      export CUDA_PATH=/usr/local/cuda-8.0/;
-      travis_retry conda install --yes --quiet conda-build &&
-      python scripts/build_conda_packages.py;
-      if [[ $TRAVIS_PULL_REQUEST == 'false' && $TRAVIS_REPO_SLUG == 'brian-team/brian2genn' && ! -z $TRAVIS_TAG ]]; then
-        conda install --yes --quiet anaconda-client;
-        python scripts/conda-server-push.py $TRAVIS_TAG;
-      fi;
     fi
 
 notifications:
