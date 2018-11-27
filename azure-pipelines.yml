@@ -1,0 +1,97 @@
+# Python package
+# Create and test a Python package on multiple Python versions.
+# Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
+# https://docs.microsoft.com/azure/devops/pipelines/languages/python
+
+jobs:
+
+- job: 'Linux'
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'Ubuntu 16.04'
+  strategy:
+    matrix:
+      Python27_single_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: false
+      Python27_single_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: true
+      Python27_double_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+      Python27_double_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: true
+      Python36:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+
+
+  steps:
+  - template: continuous-integration/azure-steps.yml
+
+- job: 'OSX'
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'macOS-10.13'
+  strategy:
+    matrix:
+      Python27_single_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: false
+      Python27_single_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: true
+      Python27_double_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+      Python27_double_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: true
+      Python36:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+
+  steps:
+  - template: continuous-integration/azure-steps.yml
+
+- job: 'Windows'
+  timeoutInMinutes: 0
+  pool:
+    vmImage: 'vs2017-win2016'
+  strategy:
+    matrix:
+      Python27_single_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: false
+      Python27_single_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU_32bit.py
+        use_genn_master: true
+      Python27_double_stable:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+      Python27_double_latest:
+        python.version: '2.7'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: true
+      Python36:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_genn_master: false
+
+  steps:
+  - template: continuous-integration/azure-steps.yml

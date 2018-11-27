@@ -1,0 +1,34 @@
+steps:
+  - task: CondaEnvironment@1
+    inputs:
+      environmentName: 'test_environment'
+      updateConda: True
+      packageSpecs: 'python=$(python.version) brian2 pip nose'
+      installOptions: '-c conda-forge'
+      createOptions: '-c conda-forge'
+
+  - script: python -m pip install --no-deps --ignore-installed --user .
+    displayName: 'Install Brian2GeNN'
+
+  - bash: |
+      git clone --depth=1 https://github.com/genn-team/genn.git ../genn
+      cd ../genn
+      if [ $(use_genn_master) == 'false' ]; then
+        git fetch --tags
+        latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+        git checkout $latestTag
+      fi
+    displayName: 'Install GeNN'
+
+  - task: CopyFiles@2
+    inputs:
+      sourceFolder: $(Build.SourcesDirectory)/continuous-integration/
+      contents: 'brian_preferences'
+      targetFolder: $(Build.SourcesDirectory)/..
+
+  - bash: |
+      export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
+      SOURCE_PATH=$(pwd)
+      cd ..  # move out of the source directory to avoid direct import
+      python $SOURCE_PATH/scripts/$(script_name)
+    displayName: 'Run tests'
