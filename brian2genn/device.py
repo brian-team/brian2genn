@@ -344,6 +344,30 @@ class GeNNDevice(CPPStandaloneDevice):
                            'before_end': [],
                            'after_end': []}
 
+    def insert_code(self, slot, code):
+        '''
+        Insert custom C++ code directly into ``main.cpp``. The available slots
+        are:
+
+        ``before_start`` / ``after_start``
+            Before/after allocating memory for the arrays and loading arrays from
+            disk.
+        ``before_run`` / ``after_run``
+            Before/after calling GeNN's ``run`` function.
+        ``before_end`` / ``after_end``
+            Before/after writing results to disk and deallocating memory.
+
+        Parameters
+        ----------
+        slot : str
+            The name of the slot where the code will be placed (see above for
+            list of available slots).
+        code : str
+            The C++ code that should be inserted.
+        '''
+        # Only overwritten so that we can have custom documentation
+        super(GeNNDevice, self).insert_code(slot, code)
+
     def activate(self, build_on_run=True, **kwargs):
         new_prefs = {'codegen.generators.cpp.restrict_keyword': '__restrict',
                      'codegen.loop_invariant_optimisations': False,
