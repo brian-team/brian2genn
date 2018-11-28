@@ -18,7 +18,7 @@ Installing the Brian2GeNN interface
 In order to use the Brian2GeNN interface, all three Brian 2, GeNN and
 Brian2GeNN need to be fully installed.
 To install GeNN and Brian 2, refer to their respective documentation:
-* `Brian 2 installation instructions <https://brian2.readthedocs.io/en/stable/introduction/install.html`>`_
+* `Brian 2 installation instructions <https://brian2.readthedocs.io/en/stable/introduction/install.html>`_
 * `GeNN installation instructions <http://genn-team.github.io/genn/documentation/3/html/Installation.html>`_
 
 Note that you will have to also install the CUDA toolkit and driver necessary
