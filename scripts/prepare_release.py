@@ -22,9 +22,6 @@ open('../setup.py', 'w').write(setup_py)
 # commit
 os.system('git commit -a -v -m "***** Release brian2genn %s *****"' % version)
 
-# add tag
-os.system('git tag -a -m "Release brian2genn %s" %s' % (version, version))
-
 # Create universal wheels and source distribution
 os.chdir('..')
 if os.path.exists('dist'):
