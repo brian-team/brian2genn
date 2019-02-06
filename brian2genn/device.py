@@ -396,7 +396,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def code_object(self, owner, name, abstract_code, variables, template_name,
                     variable_indices, codeobj_class=None, template_kwds=None,
-                    override_conditional_write=None):
+                    override_conditional_write=None, **kwds):
         '''
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
