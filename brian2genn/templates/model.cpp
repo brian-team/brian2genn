@@ -2,7 +2,6 @@
 
 #include <stdint.h>
 #include "modelSpec.h"
-#include "global.h"
 
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
@@ -100,42 +99,50 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 // parameter values
 // neurons
 {% for neuron_model in neuron_models %}
-{{neuron_model.name}}NEURON::ParamValues {{neuron_model.name}}_p(
+{{neuron_model.name}}NEURON::ParamValues {{neuron_model.name}}_p
+{% if neuron_model.pvalue.__len__() > 0 %}
+(
 {% for k in neuron_model.pvalue %}
     {{k}}{% if not loop.last %},{% endif %}
 {% endfor %}
-);
+){% endif %};
 {% endfor %}
 
 // synapses
 {% for synapse_model in synapse_models %}
-{{synapse_model.name}}WEIGHTUPDATE::ParamValues {{synapse_model.name}}_p(
+{{synapse_model.name}}WEIGHTUPDATE::ParamValues {{synapse_model.name}}_p
+{% if synapse_model.pvalue.__len__() > 0 %}
+(
 {% for k in synapse_model.pvalue %}
     {{k}}{% if not loop.last %},{% endif %}
 {% endfor %}
-);
+){% endif %};
 {% endfor %}
 
 // initial variables (neurons)
 {% for neuron_model in neuron_models %}
-{{neuron_model.name}}NEURON::VarValues {{neuron_model.name}}_ini(
+{{neuron_model.name}}NEURON::VarValues {{neuron_model.name}}_ini
+{% if neuron_model.variables.__len__() > 0 %}
+(
     {% for k in neuron_model.variables %}
     uninitialisedVar(){% if not loop.last %},{% endif %}
     {% endfor %}
-);
+){% endif %};
 {% endfor %}
  
 // initial variables (synapses)
 // one additional initial variable for hidden_weightmatrix
 {% for synapse_model in synapse_models %}
-{{synapse_model.name}}WEIGHTUPDATE::VarValues {{synapse_model.name}}_ini(
+{{synapse_model.name}}WEIGHTUPDATE::VarValues {{synapse_model.name}}_ini
+{% if synapse_model.variables.__len__() > 0 or synapse_model.connectivity == 'DENSE' %}
+(
     {% for k in synapse_model.variables %}
     uninitialisedVar(){% if not loop.last %},{% endif %}
     {% endfor %}
     {% if synapse_model.connectivity == 'DENSE' %}
     ,uninitialisedVar()
     {% endif %}
-);
+){% endif %};
 {% endfor %}
  
 
