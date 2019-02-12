@@ -26,17 +26,17 @@ public:
 
     SET_PARAM_NAMES({
     {% for par in neuron_model.parameters %}
-        "{{par}}",
+        "{{par}}"{% if not loop.last %},{% endif %}
     {% endfor %}
     });
     SET_VARS({
     {% for var, type in zip(neuron_model.variables, neuron_model.variabletypes) %}
-        {"{{var}}", "{{type}}"},
+        {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     });
     SET_EXTRA_GLOBAL_PARAMS({
     {% for var,type in zip(neuron_model.shared_variables, neuron_model.shared_variabletypes) %}
-        {"{{var}}", "{{type}}"},
+        {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     });
 };
@@ -61,22 +61,22 @@ public:
 
     SET_PARAM_NAMES({
     {% for par in synapse_model.parameters %}
-        "{{par}}",
+        "{{par}}"{% if not loop.last %},{% endif %}
     {% endfor %}
     });
 
     SET_VARS({
     {% for var, type in zip(synapse_model.variables, synapse_model.variabletypes) %}
-        {"{{var}}", "{{type}}"},
+        {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     {% if synapse_model.connectivity == 'DENSE' %}
-        {"_hidden_weightmatrix", "char"},
+        ,{"_hidden_weightmatrix", "char"}
     {% endif %}
     });
 
     SET_EXTRA_GLOBAL_PARAMS({
     {% for var, type in zip(synapse_model.shared_variables, synapse_model.shared_variabletypes) %}
-        {"{{var}}", "{{type}}"},
+        {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     });
 
@@ -102,7 +102,7 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% for neuron_model in neuron_models %}
 {{neuron_model.name}}NEURON::ParamValues {{neuron_model.name}}_p(
 {% for k in neuron_model.pvalue %}
-    {{k}},
+    {{k}}{% if not loop.last %},{% endif %}
 {% endfor %}
 );
 {% endfor %}
@@ -111,7 +111,7 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% for synapse_model in synapse_models %}
 {{synapse_model.name}}WEIGHTUPDATE::ParamValues {{synapse_model.name}}_p(
 {% for k in synapse_model.pvalue %}
-    {{k}},
+    {{k}}{% if not loop.last %},{% endif %}
 {% endfor %}
 );
 {% endfor %}
@@ -120,7 +120,7 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% for neuron_model in neuron_models %}
 {{neuron_model.name}}NEURON::VarValues {{neuron_model.name}}_ini(
     {% for k in neuron_model.variables %}
-    uninitialisedVar(),
+    uninitialisedVar(){% if not loop.last %},{% endif %}
     {% endfor %}
 );
 {% endfor %}
@@ -130,10 +130,10 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% for synapse_model in synapse_models %}
 {{synapse_model.name}}WEIGHTUPDATE::VarValues {{synapse_model.name}}_ini(
     {% for k in synapse_model.variables %}
-    uninitialisedVar(),
+    uninitialisedVar(){% if not loop.last %},{% endif %}
     {% endfor %}
     {% if synapse_model.connectivity == 'DENSE' %}
-    uninitialisedVar()
+    ,uninitialisedVar()
     {% endif %}
 );
 {% endfor %}
@@ -172,7 +172,7 @@ void modelDefinition(NNmodel &model)
     model.setTiming(true);
     {% endif %}
     {% for neuron_model in neuron_models %}
-    model.addNeuronPopulation<{{neuron_model.name}}NEURON>("{{neuron_model.name}}", {{neuron_model.N}}, , {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
+    model.addNeuronPopulation<{{neuron_model.name}}NEURON>("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
     {% endfor %}
     {% for spikeGen_model in spikegenerator_models %}
     model.addNeuronPopulation<NeuronModels::SpikeSource>("{{spikeGen_model.name}}", {{spikeGen_model.N}}, {}, {});
