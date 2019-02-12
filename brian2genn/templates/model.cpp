@@ -31,16 +31,16 @@ public:
     });
     SET_VARS({
     {% for var, type in zip(neuron_model.variables, neuron_model.variabletypes) %}
-        {{"{{var}}", "{{type}}"}},
+        {"{{var}}", "{{type}}"},
     {% endfor %}
     });
     SET_EXTRA_GLOBAL_PARAMS({
     {% for var,type in zip(neuron_model.shared_variables, neuron_model.shared_variabletypes) %}
-        {{"{{var}}", "{{type}}"}},
+        {"{{var}}", "{{type}}"},
     {% endfor %}
     });
 };
-IMPLEMENT_MODEL({neuron_model.name}}NEURON);
+IMPLEMENT_MODEL({{neuron_model.name}}NEURON);
 {% endfor %}
 
 //
@@ -65,18 +65,18 @@ public:
     {% endfor %}
     });
 
-    SET_VARS({{
+    SET_VARS({
     {% for var, type in zip(synapse_model.variables, synapse_model.variabletypes) %}
-        {{"{{var}}", "{{type}}"}},
+        {"{{var}}", "{{type}}"},
     {% endfor %}
     {% if synapse_model.connectivity == 'DENSE' %}
-        {{"_hidden_weightmatrix", "char"}},
+        {"_hidden_weightmatrix", "char"},
     {% endif %}
-    }});
+    });
 
     SET_EXTRA_GLOBAL_PARAMS({
     {% for var, type in zip(synapse_model.shared_variables, synapse_model.shared_variabletypes) %}
-        {{"{{var}}", "{{type}}"}},
+        {"{{var}}", "{{type}}"},
     {% endfor %}
     });
 
