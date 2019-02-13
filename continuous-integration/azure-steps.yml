@@ -2,7 +2,7 @@ steps:
   - task: CondaEnvironment@1
     inputs:
       environmentName: 'test_environment'
-      updateConda: true
+      updateConda: false
       packageSpecs: 'python=$(python.version) brian2 pip nose'
       installOptions: '-c conda-forge'
       createOptions: '-c conda-forge'
