@@ -21,7 +21,8 @@ class GeNNCodeObject(CodeObject):
     templater = Templater('brian2genn', '.cpp',
                           env_globals={'c_data_type': c_data_type,
                                        'openmp_pragma': openmp_pragma,
-                                       'constant_or_scalar': constant_or_scalar})
+                                       'constant_or_scalar': constant_or_scalar,
+                                       'zip': zip})
     generator_class = GeNNCodeGenerator
 
 class GeNNUserCodeObject(CPPStandaloneCodeObject):
