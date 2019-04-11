@@ -5,7 +5,8 @@
 
 {% if has_run_regularly %}
 // Run regular operations on a slower clock
-if (iT % (int)_run_regularly_steps == 0) {  {# we need a type cast because GeNN parameters are double values #}
+int _timesteps = (int)(t/dt + 0.5);
+if (_timesteps % (int)_run_regularly_steps == 0) {  {# we need a type cast because GeNN parameters are double values #}
     {{vector_code['run_regularly']|autoindent}}  {# Note that the scalar code (if any) is in a separate code object #}
 }
 {% endif %}

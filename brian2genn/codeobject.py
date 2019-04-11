@@ -1,7 +1,7 @@
 '''
 Brian2GeNN defines two different types of code objects, `GeNNCodeObject` and `GeNNUserCodeObject`.
 `GeNNCodeObject` is the class of code objects that produce code snippets for GeNN neuron or synapse models.
-`GeNNUserCodeObject` is the class of code objects that produce C++ code which is used as "user-side" code in GeNN. The class derives directly from Brian 2's `CPPStandaloneCodeObject`, using the `CPPCodeGenerator`.
+`GeNNUserCodeObject` is the class of code objects that produce C++ code which is used as "user-side" code in GeNN. The class derives directly from Brian 2's `CPPStandaloneCodeObject`, using teh `CPPCodeGenerator`.
 '''
 
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject, openmp_pragma, constant_or_scalar
