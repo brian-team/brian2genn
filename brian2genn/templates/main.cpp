@@ -135,7 +135,7 @@ int main(int argc, char *argv[])
   // output general parameters to output file and start the simulation
   fprintf(stderr, "# We are running with fixed time step %f \n", DT);
 
-  t= -DT;
+  t= 0.;
   void *devPtr;
   {{'\n'.join(code_lines['before_run'])|autoindent}}
   eng.run(totalTime, which); // run for the full duration

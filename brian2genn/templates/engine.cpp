@@ -109,7 +109,6 @@ void engine::run(double duration, //!< Duration of time to run the model for
 
   for (int i= 0; i < riT; i++) {
       // report state
-      t+= DT;
       {% for sm in state_monitor_models %}
       {% if sm.when == 'start' %}
       {% for var in sm.variables %}
@@ -149,33 +148,37 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% endfor %}
 #ifndef CPU_ONLY
       if (which == GPU) {
-	  stepTimeGPU();
-	  t= t-DT;
-	  {% for spkGen in spikegenerator_models %}
-	  _run_{{spkGen.name}}_codeobject();
-	  push{{spkGen.name}}SpikesToDevice();
-	  {% endfor %}
-	  {% for spkMon in spike_monitor_models %}
-	  {% if (spkMon.notSpikeGeneratorGroup) %}
-	  pull{{spkMon.neuronGroup}}SpikesFromDevice();
-	  {% endif %}
-	  {% endfor %}
-	  {% for rateMon in rate_monitor_models %}
-	  {% if (rateMon.notSpikeGeneratorGroup) %}
-	  pull{{rateMon.neuronGroup}}SpikesFromDevice();
-	  {% endif %}
-	  {% endfor %}
-	  {% for sm in state_monitor_models %}
-	  pull{{sm.monitored}}StateFromDevice();
-	  {% endfor %}
+          stepTimeGPU();
+          // The stepTimeGPU function already updated everything for the next time step
+          iT--;
+          t = iT*DT;
+          {% for spkGen in spikegenerator_models %}
+          _run_{{spkGen.name}}_codeobject();
+          push{{spkGen.name}}SpikesToDevice();
+          {% endfor %}
+          {% for spkMon in spike_monitor_models %}
+          {% if (spkMon.notSpikeGeneratorGroup) %}
+          pull{{spkMon.neuronGroup}}SpikesFromDevice();
+          {% endif %}
+          {% endfor %}
+          {% for rateMon in rate_monitor_models %}
+          {% if (rateMon.notSpikeGeneratorGroup) %}
+          pull{{rateMon.neuronGroup}}SpikesFromDevice();
+          {% endif %}
+          {% endfor %}
+          {% for sm in state_monitor_models %}
+          pull{{sm.monitored}}StateFromDevice();
+          {% endfor %}
       }
 #endif
       if (which == CPU) {
-	  stepTimeCPU();
-	  t= t-DT;
-	  {% for spkGen in spikegenerator_models %}
-	  _run_{{spkGen.name}}_codeobject();
-	  {% endfor %}
+          stepTimeCPU();
+          // The stepTimeGPU function already updated everything for the next time step
+          iT--;
+          t = iT*DT;
+          {% for spkGen in spikegenerator_models %}
+          _run_{{spkGen.name}}_codeobject();
+          {% endfor %}
       }
       // report state 
       {% for sm in state_monitor_models %}
@@ -201,11 +204,14 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% for rateMon in rate_monitor_models %}
       _run_{{rateMon.name}}_codeobject();
       {% endfor %}
+      // Bring the time step back to the value for the next loop iteration
+      iT++;
+      t = iT*DT;
       {% if maximum_run_time is not none %}
       current= std::clock();
       elapsed_realtime= (double) (current - start)/CLOCKS_PER_SEC;
       if (elapsed_realtime > {{maximum_run_time}}) {
-	  break;
+        break;
       }
       {% endif %}
   }  

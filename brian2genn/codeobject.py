@@ -12,7 +12,7 @@ from brian2.codegen.templates import Templater
 from .genn_generator import *
 
 __all__ = ['GeNNCodeObject',
-           'GeNNUserCodeObject']    
+           'GeNNUserCodeObject']
 
 class GeNNCodeObject(CodeObject):
     '''

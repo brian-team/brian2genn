@@ -135,7 +135,12 @@ class GeNNCodeGenerator(CodeGenerator):
     def translate_expression(self, expr):
         for varname, var in self.variables.iteritems():
             if isinstance(var, Function):
-                impl_name = var.implementations[self.codeobj_class].name
+                try:
+                    impl_name = var.implementations[self.codeobj_class].name
+                except KeyError:
+                    raise NotImplementedError('Function {} is not available '
+                                              'for use with '
+                                              'GeNN.'.format(var.name))
                 if impl_name is not None:
                     expr = word_substitute(expr, {varname: impl_name})
         return CPPNodeRenderer().render_expr(expr).strip()
