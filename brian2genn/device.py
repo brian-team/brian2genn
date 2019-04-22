@@ -985,7 +985,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
                 vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
                     vcvars_loc=vcvars_loc, arch_name=arch_name)
-                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin',
+                buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
                 cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " magicnetwork_model.cpp"
                 if not use_GPU:
@@ -993,7 +993,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
                 check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
             else:
-                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin', 'genn-buildmodel.sh')
+                buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd, 'magicnetwork_model.cpp']
                 if not use_GPU:
                     args += ['-c']
