@@ -32,11 +32,11 @@ int main(int argc, char *argv[])
     return 1;
   }
   double totalTime= atof(argv[2]);
-  string OutDir = toString(argv[1]) +"_output";
-  string cmd= toString("mkdir ") +OutDir;
+  string OutDir = std::string(argv[1]) +"_output";
+  string cmd= std::string("mkdir ") +OutDir;
   system(cmd.c_str());
   string name;
-  name= OutDir+ "/"+ toString(argv[1]) + toString(".time");
+  name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
 
   //timer.startTimer();
@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
   {{'\n'.join(code_lines['before_start'])|autoindent}}
 
   //-----------------------------------------------------------------
-  // build the neuronal circuitery
+  // build the neuronal circuiteryinitializeSparse (calls initialize and allocateMem)
   engine eng;
 
   //-----------------------------------------------------------------
@@ -70,15 +70,14 @@ int main(int argc, char *argv[])
   {% endfor %} {# all synapse variables #}
   create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
   {% else %} {# for sparse matrix representations #}
-  allocate{{synapses.name}}(brian::_dynamic_array_{{synapses.name}}__synaptic_pre.size());
-  vector<vector<int32_t> > _{{synapses.name}}_bypre;
   initialize_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
-                             C{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, _{{synapses.name}}_bypre);
+                             rowLength{{synapses.name}}, ind{{synapses.name}}, maxRowLength{{synapses.name}},
+                             {{synapses.srcN}}, {{synapses.trgN}});
   {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
   convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
                                            brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}},
-                                           {{synapses.srcN}}, {{synapses.trgN}}, _{{synapses.name}}_bypre);
+                                           {{synapses.srcN}}, {{synapses.trgN}});
   {% endif %}
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
@@ -119,10 +118,6 @@ int main(int argc, char *argv[])
   }
   {% endif %}
   {% endfor %}
-
-  //-----------------------------------------------------------------
-  
-  eng.init();         // this includes copying g's for the GPU version
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation

@@ -1,11 +1,9 @@
+#pragma once
 
 // scalar can be any scalar type such as float, double
 #include <stdint.h>
 #include <string>
 #include <fstream>
-
-#ifndef CONVERT_SYNAPSES
-#define CONVERT_SYNAPSES
 
 template<class scalar>
 void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, scalar *g, int srcNN, int trgNN)
@@ -44,36 +42,37 @@ namespace b2g {
     unsigned int COPY_ONLY= 1;
 };
 
-void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target, Conductance &c, int srcNN, int trgNN, vector<vector<int32_t> > &bypre)
+void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target,
+                                unsigned int *rowLength, unsigned int *ind, unsigned int maxRowLength,
+                                int srcNN, int trgNN)
 {
-    unsigned int size;
-    // create a list of the postsynaptic targets ordered by presynaptic sources
-    assert(source.size() == target.size());
-    bypre.clear();
-    bypre.resize(srcNN);
-    size = source.size();
-    for (int i= 0; i < size; i++) {
+    // Initially zero row lengths
+    std::fill_n(rowLength, srcNN, 0);
+
+    const size_t size = source.size();
+    for (size_t i= 0; i < size; i++) {
         assert(source[i] < srcNN);
         assert(target[i] < trgNN);
-        bypre[source[i]].push_back(target[i]);
+
+        // Insert postsynaptic index in correct location
+        ind[(source[i] * maxRowLength) + rowLength[source[i]]] = target[i];
+
+        // Increment row length
+        rowLength[source[i]]++;
     }
 
-    // convert this intermediate representation into the sparse synapses struct
-    // assume it has been allocated properly
-    unsigned int cnt = 0;
-    for (int i = 0; i < srcNN; i++) {
-            size = bypre[i].size();
-            c.indInG[i] = cnt;
-            for (int j = 0; j < size; j++) {
-            c.ind[cnt] = bypre[i][j];
-            cnt++;
-        }
-    }
-    c.indInG[srcNN] = cnt;
+
+    // Reserve temporary vector
+    vector<int32_t> targets;
+    targets.reserve(trgNN);
 
     // Check for duplicate entries
     for (int i=0; i<srcNN; i++) {
-        vector<int32_t> targets = bypre[i];
+        // Copy row indices into temporary vector
+        targets.clear();
+        std::copy_n(&ind[i * maxRowLength], rowLength[i], std::back_inserter(targets));
+
+        // Sort and check for duplicates
         std::sort(targets.begin(), targets.end());
         auto duplicate_pos = std::adjacent_find(targets.begin(), targets.end());
         if (duplicate_pos != targets.end()) {
@@ -172,4 +171,3 @@ void create_hidden_weightmatrix(vector<int32_t> &source, vector<int32_t> &target
     hwm[source[i]*trgNN+target[i]]= 1;
     }
 }
-#endif
