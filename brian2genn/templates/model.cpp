@@ -38,6 +38,7 @@ public:
         {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     });
+    SET_NEEDS_AUTO_REFRACTORY(false);
 };
 IMPLEMENT_MODEL({{neuron_model.name}}NEURON);
 {% endfor %}
@@ -148,24 +149,22 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 
 void modelDefinition(NNmodel &model)
 {
-    initGeNN();
-    GENN_PREFERENCES::autoRefractory = 0;
     // Compiler optimization flags
-    GENN_PREFERENCES::userCxxFlagsWIN = "{{compile_args_msvc}}";
-    GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
-    GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
+    //GENN_PREFERENCES::userCxxFlagsWIN = "{{compile_args_msvc}}";
+    //GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
+    //GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
 
     // GENN_PREFERENCES set in brian2genn
-    GENN_PREFERENCES::autoChooseDevice = {{prefs['devices.genn.auto_choose_device']|int}};
-    GENN_PREFERENCES::defaultDevice = {{prefs['devices.genn.default_device']}};
-    GENN_PREFERENCES::optimiseBlockSize = {{prefs['devices.genn.optimise_blocksize']|int}};
-    GENN_PREFERENCES::preSynapseResetBlockSize = {{prefs['devices.genn.pre_synapse_reset_blocksize']}};
-    GENN_PREFERENCES::neuronBlockSize = {{prefs['devices.genn.neuron_blocksize']}};
-    GENN_PREFERENCES::synapseBlockSize = {{prefs['devices.genn.synapse_blocksize']}};
-    GENN_PREFERENCES::learningBlockSize = {{prefs['devices.genn.learning_blocksize']}};
-    GENN_PREFERENCES::synapseDynamicsBlockSize = {{prefs['devices.genn.synapse_dynamics_blocksize']}};
-    GENN_PREFERENCES::initBlockSize = {{prefs['devices.genn.init_blocksize']}};
-    GENN_PREFERENCES::initSparseBlockSize = {{prefs['devices.genn.init_sparse_blocksize']}};
+    //GENN_PREFERENCES::autoChooseDevice = {{prefs['devices.genn.auto_choose_device']|int}};
+    //GENN_PREFERENCES::defaultDevice = {{prefs['devices.genn.default_device']}};
+    //GENN_PREFERENCES::optimiseBlockSize = {{prefs['devices.genn.optimise_blocksize']|int}};
+    //GENN_PREFERENCES::preSynapseResetBlockSize = {{prefs['devices.genn.pre_synapse_reset_blocksize']}};
+    //GENN_PREFERENCES::neuronBlockSize = {{prefs['devices.genn.neuron_blocksize']}};
+    //GENN_PREFERENCES::synapseBlockSize = {{prefs['devices.genn.synapse_blocksize']}};
+    //GENN_PREFERENCES::learningBlockSize = {{prefs['devices.genn.learning_blocksize']}};
+    //GENN_PREFERENCES::synapseDynamicsBlockSize = {{prefs['devices.genn.synapse_dynamics_blocksize']}};
+    //GENN_PREFERENCES::initBlockSize = {{prefs['devices.genn.init_blocksize']}};
+    //GENN_PREFERENCES::initSparseBlockSize = {{prefs['devices.genn.init_sparse_blocksize']}};
 
 
     {{ dtDef }}
@@ -192,15 +191,14 @@ void modelDefinition(NNmodel &model)
     {% else %}
     delaySteps = {{synapse_model.delay}};
     {% endif %}
-    model.addSynapsePopulation<{{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.name}}POSTSYN>(
+    {
+    auto *syn = model.addSynapsePopulation<{{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.name}}POSTSYN>(
         "{{synapse_model.name}}", SynapseMatrixType::{{synapse_model.connectivity}}_INDIVIDUALG, delaySteps,
         "{{synapse_model.srcname}}", "{{synapse_model.trgname}}",
         {{synapse_model.name}}_p, {{synapse_model.name}}_ini,
         {}, {});
-    {% if prefs['devices.genn.synapse_span_type'] == 'PRESYNAPTIC' %}
-    model.setSpanTypeToPre("{{synapse_model.name}}");
-    {% endif %}
+    syn->setSpanType(SynapseGroup::SpanType::"{{devices.genn.synapse_span_type}}");
+    }
     {% endfor %}
-    model.finalize();
 }
 
