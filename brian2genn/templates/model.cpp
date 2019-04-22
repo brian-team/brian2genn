@@ -198,6 +198,7 @@ void modelDefinition(NNmodel &model)
         {{synapse_model.name}}_p, {{synapse_model.name}}_ini,
         {}, {});
     syn->setSpanType(SynapseGroup::SpanType::"{{devices.genn.synapse_span_type}}");
+    // **TODO** maxRowLength and maxColLength
     }
     {% endfor %}
 }
