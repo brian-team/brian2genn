@@ -161,7 +161,8 @@ int main(int argc, char *argv[])
       {% else %}
       {% set _mode = 'b2g::COPY_ONLY' %}
       {% endif %}
-      convert_sparse_synapses_2_dynamic_arrays(C{{synapses.name}}, {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{_mode}});
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{synapses.name}}, ind{{synapses.name}}, maxRowLength{{synapses.name}},
+                                               {{var}}{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, brian::_dynamic_array_{{synapses.name}}_{{var}}, {{_mode}});
   {% endif %}
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}

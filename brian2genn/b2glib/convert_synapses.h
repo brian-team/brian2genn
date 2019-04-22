@@ -125,7 +125,8 @@ void convert_dense_matrix_2_dynamic_arrays(scalar *g, int srcNN, int trgNN, vect
 }
 
 template<class scalar>
-void convert_sparse_synapses_2_dynamic_arrays(Conductance &c, scalar *gv, int srcNN, int trgNN, vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, unsigned int mode)
+void convert_sparse_synapses_2_dynamic_arrays(unsigned int *rowLength, unsigned int *ind, unsigned int maxRowLength,
+                                              scalar *gv, int srcNN, int trgNN, vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, unsigned int mode)
 {
 //    static int convertCnt= 0;
 //    string name= "debug_convert";
@@ -133,28 +134,26 @@ void convert_sparse_synapses_2_dynamic_arrays(Conductance &c, scalar *gv, int sr
 //    ofstream os(name.c_str());
 // note: this does not preserve the original order of entries in the brian arrays - is that a problem?
     if (mode == b2g::FULL_MONTY) {
-    assert(source.size() == target.size());
-    assert(source.size() == gvector.size());
-    unsigned int size= source.size();
-    unsigned int cnt= 0;
-    for (int i= 0; i < srcNN; i++) {
-        for (int j= c.indInG[i]; j < c.indInG[i+1]; j++) {
-        source[cnt]= i;
-        target[cnt]= c.ind[j];
-        gvector[cnt]= gv[j];
-//		os << source[cnt] << " " << target[cnt] << " " << gvector[cnt] << endl;
-        cnt++;
+        assert(source.size() == target.size());
+        assert(source.size() == gvector.size());
+        size_t cnt= 0;
+        for (int i= 0; i < srcNN; i++) {
+            for (int j= 0; j < rowLength[i]; j++) {
+                source[cnt]= i;
+                target[cnt]= ind[(i * maxRowLength) + j];
+                gvector[cnt]= gv[(i * maxRowLength) + j];
+                //os << source[cnt] << " " << target[cnt] << " " << gvector[cnt] << endl;
+                cnt++;
+            }
         }
-    }
     }
     else {
-    unsigned int size= source.size();
-    unsigned int cnt= 0;
-    for (int i= 0; i < srcNN; i++) {
-        for (int j= c.indInG[i]; j < c.indInG[i+1]; j++) {
-        gvector[cnt++]= gv[j];
+        size_t cnt= 0;
+        for (int i= 0; i < srcNN; i++) {
+            for (int j= 0; j < rowLength[i]; j++) {
+                gvector[cnt++]= gv[(i * maxRowLength) + j];
+            }
         }
-    }
     }
 //    os.close();
 //    convertCnt++;
