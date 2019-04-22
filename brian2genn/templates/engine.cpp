@@ -25,18 +25,14 @@ double Network::_last_run_completed_fraction = 0.0;
 class engine
 {
  public:
-  NNmodel model;
   // end of data fields 
 
   engine();
   ~engine();
-  void init(unsigned int); 
   void free_device_mem(); 
-  void run(double, unsigned int); 
-#ifndef CPU_ONLY
+  void run(double);
   void getStateFromGPU(); 
   void getSpikesFromGPU(); 
-#endif
 };
 
 #endif
@@ -58,27 +54,10 @@ class engine
 
 engine::engine()
 {
-  modelDefinition(model);
   allocateMem();
   initialize();
   Network::_last_run_time= 0.0;
   Network::_last_run_completed_fraction= 0.0;
-}
-
-//--------------------------------------------------------------------------
-/*! \brief Method for initialising variables
- */
-//--------------------------------------------------------------------------
-
-void engine::init(unsigned int which)
-{
-#ifndef CPU_ONLY
-  if (which == CPU) {
-  }
-  if (which == GPU) {
-    copyStateToDevice();
-  }
-#endif
 }
 
 //--------------------------------------------------------------------------
@@ -94,14 +73,11 @@ engine::~engine()
  */
 //--------------------------------------------------------------------------
 
-void engine::run(double duration, //!< Duration of time to run the model for 
-		  unsigned int which //!< Flag determining whether to run on GPU or CPU only
+void engine::run(double duration  //!< Duration of time to run the model for
 		  )
 {
   std::clock_t start, current; 
   const double t_start = t;
-  unsigned int pno;
-  unsigned int offset= 0;
 
   start = std::clock();
   int riT= (int) (duration/DT+1e-2);
@@ -146,40 +122,29 @@ void engine::run(double duration, //!< Duration of time to run the model for
       }
       {% endif %}
       {% endfor %}
-#ifndef CPU_ONLY
-      if (which == GPU) {
-          stepTimeGPU();
-          // The stepTimeGPU function already updated everything for the next time step
-          iT--;
-          t = iT*DT;
-          {% for spkGen in spikegenerator_models %}
-          _run_{{spkGen.name}}_codeobject();
-          push{{spkGen.name}}SpikesToDevice();
-          {% endfor %}
-          {% for spkMon in spike_monitor_models %}
-          {% if (spkMon.notSpikeGeneratorGroup) %}
-          pull{{spkMon.neuronGroup}}SpikesFromDevice();
-          {% endif %}
-          {% endfor %}
-          {% for rateMon in rate_monitor_models %}
-          {% if (rateMon.notSpikeGeneratorGroup) %}
-          pull{{rateMon.neuronGroup}}SpikesFromDevice();
-          {% endif %}
-          {% endfor %}
-          {% for sm in state_monitor_models %}
-          pull{{sm.monitored}}StateFromDevice();
-          {% endfor %}
-      }
-#endif
-      if (which == CPU) {
-          stepTimeCPU();
-          // The stepTimeGPU function already updated everything for the next time step
-          iT--;
-          t = iT*DT;
-          {% for spkGen in spikegenerator_models %}
-          _run_{{spkGen.name}}_codeobject();
-          {% endfor %}
-      }
+
+      stepTime();
+      // The stepTimeGPU function already updated everything for the next time step
+      iT--;
+      t = iT*DT;
+      {% for spkGen in spikegenerator_models %}
+      _run_{{spkGen.name}}_codeobject();
+      push{{spkGen.name}}SpikesToDevice();
+      {% endfor %}
+      {% for spkMon in spike_monitor_models %}
+      {% if (spkMon.notSpikeGeneratorGroup) %}
+      pull{{spkMon.neuronGroup}}CurrentSpikesFromDevice();
+      {% endif %}
+      {% endfor %}
+      {% for rateMon in rate_monitor_models %}
+      {% if (rateMon.notSpikeGeneratorGroup) %}
+      pull{{rateMon.neuronGroup}}CurrentSpikesFromDevice();
+      {% endif %}
+      {% endfor %}
+      {% for sm in state_monitor_models %}
+      pull{{sm.monitored}}StateFromDevice();
+      {% endfor %}
+
       // report state 
       {% for sm in state_monitor_models %}
       {% if sm.when != 'start' %}
@@ -228,8 +193,6 @@ void engine::run(double duration, //!< Duration of time to run the model for
   }
 }
 
-
-#ifndef CPU_ONLY
 //--------------------------------------------------------------------------
 /*! \brief Method for copying all variables of the last time step from the GPU
  
@@ -251,12 +214,9 @@ void engine::getStateFromGPU()
 
 void engine::getSpikesFromGPU()
 {
-  copySpikeNFromDevice();
-  copySpikesFromDevice();
+  copyCurrentSpikesFromDevice();
 }
 
-
-#endif
 
 
 #endif	

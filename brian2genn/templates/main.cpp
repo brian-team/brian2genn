@@ -7,7 +7,6 @@
 //--------------------------------------------------------------------------
 
 #include "main.h"
-#include "magicnetwork_model.cpp"
 #include "magicnetwork_model_CODE/definitions.h"
 
 {% for header in header_files %}
@@ -25,17 +24,14 @@
 /*! \brief This function is the entry point for running the simulation of the MBody1 model network.
 */
 //--------------------------------------------------------------------------
-int which;
-
 int main(int argc, char *argv[])
 {
   if (argc != 4)
   {
-    fprintf(stderr, "usage: main <basename> <time (s)> <CPU=0, GPU=1> \n");
+    fprintf(stderr, "usage: main <basename> <time (s)> \n");
     return 1;
   }
   double totalTime= atof(argv[2]);
-  which= atoi(argv[3]);
   string OutDir = toString(argv[1]) +"_output";
   string cmd= toString("mkdir ") +OutDir;
   system(cmd.c_str());
@@ -43,7 +39,7 @@ int main(int argc, char *argv[])
   name= OutDir+ "/"+ toString(argv[1]) + toString(".time");
   FILE *timef= fopen(name.c_str(),"a");
 
-  timer.startTimer();
+  //timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
@@ -87,16 +83,16 @@ int main(int argc, char *argv[])
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
   {% for var in synapses.shared_variables %}
-  copy_brian_to_genn(brian::_array_{{synapses.name}}_{{var}}, &{{var}}{{synapses.name}}, 1);
+  std::copy_n(brian::_array_{{synapses.name}}_{{var}}, 1, &{{var}}{{synapses.name}})
   {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
-  initmagicnetwork_model();
+  initializeSparse();
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
   {% for var in neuron.variables %}
   {% if neuron.variablescope[var] == 'brian' %}
-  copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, {{var}}{{neuron.name}}, {{neuron.N}});
+  std::copy_n(brian::_array_{{neuron.name}}_{{var}}, {{neuron.N}}, {{var}}{{neuron.name}});
   {% endif %}
   {% endfor %}
   {% endfor %}
@@ -104,7 +100,7 @@ int main(int argc, char *argv[])
   // copy scalar variables
   {% for neuron in neuron_models %}
   {% for var in neuron.shared_variables %}
-  copy_brian_to_genn(brian::_array_{{neuron.name}}_{{var}}, &{{var}}{{neuron.name}}, 1);
+  std::copy_n(brian::_array_{{neuron.name}}_{{var}}, 1, &{{var}}{{neuron.name}});
   {% endfor %}
   {% endfor %}
   
@@ -126,10 +122,7 @@ int main(int argc, char *argv[])
 
   //-----------------------------------------------------------------
   
-  eng.init(which);         // this includes copying g's for the GPU version
-#ifndef CPU_ONLY
-  copyStateToDevice();
-#endif
+  eng.init();         // this includes copying g's for the GPU version
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation
@@ -138,9 +131,9 @@ int main(int argc, char *argv[])
   t= 0.;
   void *devPtr;
   {{'\n'.join(code_lines['before_run'])|autoindent}}
-  eng.run(totalTime, which); // run for the full duration
+  eng.run(totalTime); // run for the full duration
   {{'\n'.join(code_lines['after_run'])|autoindent}}
-  timer.stopTimer();
+  //timer.stopTimer();
   cerr << t << " done ..." << endl;
   {% if prefs['devices.genn.kernel_timing'] %}
   {% for kt in ('neuron_tme','synapse_tme','learning_tme','synDyn_tme') %}
@@ -149,15 +142,12 @@ int main(int argc, char *argv[])
   {% endif %}
   {% endfor %}
   {% endif %} 
-  fprintf(timef,"%f \n", timer.getElapsedTime());
+  //fprintf(timef,"%f \n", timer.getElapsedTime());
 
   // get the final results from the GPU 
-#ifndef CPU_ONLY
-  if (which == GPU) {
-    eng.getStateFromGPU();
-    eng.getSpikesFromGPU();
-  }
-#endif
+  eng.getStateFromGPU();
+  eng.getSpikesFromGPU();
+
   // translate GeNN arrays back to synaptic arrays
   {% for synapses in synapse_models %}
   {% if synapses.connectivity == 'DENSE' %}
@@ -181,7 +171,7 @@ int main(int argc, char *argv[])
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
   {% for var in synapses.shared_variables %}
-  copy_genn_to_brian(&{{var}}{{synapses.name}}, brian::_array_{{synapses.name}}_{{var}}, 1);
+  std::copy_n(&{{var}}{{synapses.name}}, 1, brian::_array_{{synapses.name}}_{{var}});
   {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
 
@@ -189,7 +179,7 @@ int main(int argc, char *argv[])
   {% for neuron in neuron_models %} 
   {% for var in neuron.variables %}
   {% if neuron.variablescope[var] == 'brian' %}
-  copy_genn_to_brian({{var}}{{neuron.name}}, brian::_array_{{neuron.name}}_{{var}}, {{neuron.N}});
+  std::copy_n({{var}}{{neuron.name}}, {{neuron.N}}, brian::_array_{{neuron.name}}_{{var}});
   {% endif %}
   {% endfor %}
   {% endfor %}
@@ -197,7 +187,7 @@ int main(int argc, char *argv[])
   // copy scalar variables
   {% for neuron in neuron_models %}
   {% for var in neuron.shared_variables %}
-  copy_genn_to_brian(&{{var}}{{neuron.name}}, brian::_array_{{neuron.name}}_{{var}}, 1);
+  std::copy_n(&{{var}}{{neuron.name}}, 1, brian::_array_{{neuron.name}}_{{var}});
   {% endfor %}
   {% endfor %}
 
@@ -221,30 +211,12 @@ int main(int argc, char *argv[])
 
 using namespace std;
 #include <cassert>
-#include "hr_time.h"
-
-#include "utils.h" // for CHECK_CUDA_ERRORS
-#include "stringUtils.h"
-
-#ifndef CPU_ONLY
-#include <cuda_runtime.h>
-#else
-#define __host__
-#define __device__
-#endif
-
-
-#ifndef RAND
-#define RAND(Y,X) Y = Y * 1103515245 +12345;X= (unsigned int)(Y >> 16) & 32767
-#endif
 
 // we will hard-code some stuff ... because at the end of the day that is 
 // what we will do for the CUDA version
 
 #define DBG_SIZE 10000
 
-// and some global variables
-CStopWatch timer;
 
 //----------------------------------------------------------------------
 // other stuff:
