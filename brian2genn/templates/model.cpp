@@ -182,15 +182,14 @@ void modelDefinition(NNmodel &model)
     {% for spikeGen_model in spikegenerator_models %}
     model.addNeuronPopulation<NeuronModels::SpikeSource>("{{spikeGen_model.name}}", {{spikeGen_model.N}}, {}, {});
     {% endfor %}
-    unsigned int delaySteps;
     {% for synapse_model in synapse_models %}
+    {
     // TODO: Consider flexible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
     {% if synapse_model.delay == 0 %}
-    delaySteps = NO_DELAY;
+    const unsigned int delaySteps = NO_DELAY;
     {% else %}
-    delaySteps = {{synapse_model.delay}};
+    const unsigned int delaySteps = {{synapse_model.delay}};
     {% endif %}
-    {
     auto *syn = model.addSynapsePopulation<{{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.name}}POSTSYN>(
         "{{synapse_model.name}}", SynapseMatrixType::{{synapse_model.connectivity}}_INDIVIDUALG, delaySteps,
         "{{synapse_model.srcname}}", "{{synapse_model.trgname}}",
