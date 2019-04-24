@@ -95,7 +95,7 @@ def freeze(code, ns):
             pass  # don't deal with this object
     return code
 
-
+"""
 def get_compile_args():
     '''
     Get the compile args based on the users preferences. Uses Brian's
@@ -121,7 +121,7 @@ def get_compile_args():
     compile_args_nvcc = ' '.join(prefs.devices.genn.extra_compile_args_nvcc)
 
     return compile_args_gcc, compile_args_msvc, compile_args_nvcc
-
+"""
 
 def decorate(code, variables, shared_variables, parameters, do_final=True):
     '''
@@ -771,7 +771,7 @@ class GeNNDevice(CPPStandaloneDevice):
         shutil.move(os.path.join(randomkit_dir, 'randomkit.c'),
                     os.path.join(randomkit_dir, 'randomkit.cc'))
         self.generate_code_objects(writer)
-        self.generate_model_source(writer)
+        self.generate_model_source(writer, use_GPU)
         self.generate_main_source(writer, main_lines)
         self.generate_engine_source(writer)
         self.generate_makefile(directory, use_GPU)
@@ -943,8 +943,8 @@ class GeNNDevice(CPPStandaloneDevice):
         env = os.environ.copy()
         env['GENN_PATH'] = genn_path
         if use_GPU:
-            if prefs.devices.genn.cuda_path is not None:
-                cuda_path = prefs.devices.genn.cuda_path
+            if prefs.devices.genn.cuda_backend.cuda_path is not None:
+                cuda_path = prefs.devices.genn.cuda_backend.cuda_path
                 env['CUDA_PATH'] = cuda_path
                 logger.debug('Using CUDA path from preference: '
                              '"{}"'.format(cuda_path))
@@ -1467,10 +1467,9 @@ class GeNNDevice(CPPStandaloneDevice):
             self.header_files.append(
                 'code_objects/' + sm.name + '_codeobject.h')
 
-    def generate_model_source(self, writer):
+    def generate_model_source(self, writer, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
-        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         default_dtype = prefs.core.default_float_dtype
         if default_dtype == numpy.float32:
             precision = 'GENN_FLOAT'
@@ -1480,13 +1479,11 @@ class GeNNDevice(CPPStandaloneDevice):
             raise NotImplementedError("GeNN does not support default dtype "
                                       "'{}'".format(default_dtype.__name__))
         model_tmp = GeNNCodeObject.templater.model(None, None,
+                                                   use_GPU=use_GPU,
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
                                                    dtDef=self.dtDef,
-                                                   compile_args_gcc=compile_args_gcc,
-                                                   compile_args_msvc=compile_args_msvc,
-                                                   compile_args_nvcc=compile_args_nvcc,
                                                    prefs=prefs,
                                                    precision=precision
                                                    )
@@ -1522,7 +1519,6 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('engine.*', engine_tmp)
 
     def generate_makefile(self, directory, use_GPU):
-        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         extra_link_args = list(prefs.codegen.cpp.extra_link_args)
         if os.sys.platform == 'linux2':
             extra_link_args += ['-no-pie']
@@ -1534,11 +1530,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                                 ROOTDIR=os.path.abspath(
                                                                     directory),
                                                                 source_files=self.source_files,
-                                                                use_GPU=use_GPU,
-                                                                compiler_flags=compile_args_msvc,
-                                                                linker_flags=linker_flags,
-                                                                nvcc_compiler_flags=compile_args_nvcc
-                                                                )
+                                                                use_GPU=use_GPU)
             open(os.path.join(directory, 'WINmakefile'), 'w').write(
                 makefile_tmp)
         else:
@@ -1547,11 +1539,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                              ROOTDIR=os.path.abspath(
                                                                  directory),
                                                              source_files=self.source_files,
-                                                             use_GPU=use_GPU,
-                                                             compiler_flags=compile_args_gcc,
-                                                             linker_flags=linker_flags,
-                                                             nvcc_compiler_flags=compile_args_nvcc
-                                                             )
+                                                             use_GPU=use_GPU)
             open(os.path.join(directory, 'Makefile'), 'w').write(makefile_tmp)
 
     def generate_objects_source(self, arange_arrays, net, static_array_specs,

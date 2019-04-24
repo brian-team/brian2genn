@@ -149,23 +149,22 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 
 void modelDefinition(NNmodel &model)
 {
-    // Compiler optimization flags
-    //GENN_PREFERENCES::userCxxFlagsWIN = "{{compile_args_msvc}}";
-    //GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
-    //GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
-
+    {% if use_GPU == 'start' %}
     // GENN_PREFERENCES set in brian2genn
-    //GENN_PREFERENCES::autoChooseDevice = {{prefs['devices.genn.auto_choose_device']|int}};
-    //GENN_PREFERENCES::defaultDevice = {{prefs['devices.genn.default_device']}};
-    //GENN_PREFERENCES::optimiseBlockSize = {{prefs['devices.genn.optimise_blocksize']|int}};
-    //GENN_PREFERENCES::preSynapseResetBlockSize = {{prefs['devices.genn.pre_synapse_reset_blocksize']}};
-    //GENN_PREFERENCES::neuronBlockSize = {{prefs['devices.genn.neuron_blocksize']}};
-    //GENN_PREFERENCES::synapseBlockSize = {{prefs['devices.genn.synapse_blocksize']}};
-    //GENN_PREFERENCES::learningBlockSize = {{prefs['devices.genn.learning_blocksize']}};
-    //GENN_PREFERENCES::synapseDynamicsBlockSize = {{prefs['devices.genn.synapse_dynamics_blocksize']}};
-    //GENN_PREFERENCES::initBlockSize = {{prefs['devices.genn.init_blocksize']}};
-    //GENN_PREFERENCES::initSparseBlockSize = {{prefs['devices.genn.init_sparse_blocksize']}};
-
+    GENN_PREFERENCES.deviceSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.device_select']|int}};
+    GENN_PREFERENCES.manualDeviceID = {{prefs['devices.genn.cuda_backend.manual_device']}};
+    GENN_PREFERENCES.blockSizeSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.blocksize_select_method']}};
+    GENN_PREFERENCES.manualBlockSizes = {
+        {{prefs['devices.genn.cuda_backend.neuron_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.learning_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_dynamics_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.init_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.init_sparse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.pre_neuron_reset_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.pre_synapse_reset_blocksize']}}};
+    {% endif %}
 
     {{ dtDef }}
 
