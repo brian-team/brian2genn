@@ -1,5 +1,5 @@
 GENERATED_CODE_DIR	:=magicnetwork_model_CODE
-CXXFLAGS 		+=-std=c++11 -Wall -Wpedantic -Wextra -I. -Ibrianlib/randomkit
+CXXFLAGS 		+=-std=c++11 -I. -Ibrianlib/randomkit
 
 .PHONY: all clean generated_code
 
