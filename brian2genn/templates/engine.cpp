@@ -95,7 +95,7 @@ void engine::run(double duration  //!< Duration of time to run the model for
       convert_sparse_synapses_2_dynamic_arrays(C{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
       {% endif %}
       {% else %}
-      copy_genn_to_brian({{var}}{{sm.monitored}}, brian::_array_{{sm.monitored}}_{{var}}, {{sm.N}});
+      std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
       {% endif %}
       {% endfor %}
       _run_{{sm.name}}_codeobject();
@@ -108,16 +108,16 @@ void engine::run(double duration  //!< Duration of time to run the model for
       {
         {% for var in nm.run_regularly_read %}
         {% if var == 't' %}
-        copy_genn_to_brian(&t, brian::_array_{{nm.clock.name}}_t, 1);
+        std::copy_n(&t, 1, brian::_array_{{nm.clock.name}}_t, 1);
         {% elif var == 'dt' %}
         {# nothing to do #}
         {% else %}
-        copy_genn_to_brian(&{{var}}{{nm.name}}, brian::_array_{{nm.name}}_{{var}}, 1);
+        std::copy_n(&{{var}}{{nm.name}}, 1, brian::_array_{{nm.name}}_{{var}});
         {% endif %}
         {% endfor %}
         _run_{{nm.run_regularly_object.name}}();
         {% for var in nm.run_regularly_write %}
-        copy_brian_to_genn(brian::_array_{{nm.name}}_{{var}}, &{{var}}{{nm.name}}, 1);
+        std::copy_n(brian::_array_{{nm.name}}_{{var}}, 1, &{{var}}{{nm.name}});
         {% endfor %}
       }
       {% endif %}
@@ -156,7 +156,7 @@ void engine::run(double duration  //!< Duration of time to run the model for
       convert_sparse_synapses_2_dynamic_arrays(C{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
       {% endif %}
       {% else %}
-      copy_genn_to_brian({{var}}{{sm.monitored}}, brian::_array_{{sm.monitored}}_{{var}}, {{sm.N}});
+      std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
       {% endif %}
       {% endfor %}
       _run_{{sm.name}}_codeobject();
