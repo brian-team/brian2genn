@@ -60,11 +60,7 @@ template < > struct _higher_type<{xtype},{ytype}> {{ typedef {hightype} type; }}
 _mod_support_code = '''
 
 template < typename T1, typename T2 >
-#ifdef CPU_ONLY
-static inline typename _higher_type<T1,T2>::type
-#else
-__host__ __device__ static inline typename _higher_type<T1,T2>::type 
-#endif
+SUPPORT_CODE_FUNC typename _higher_type<T1,T2>::type 
 _brian_mod(T1 x, T2 y)
 {{
     return x-y*floor(1.0*x/y);
@@ -73,11 +69,7 @@ _brian_mod(T1 x, T2 y)
 
 _floordiv_support_code = '''
 template < typename T1, typename T2 >
-#ifdef CPU_ONLY
-static inline typename _higher_type<T1,T2>::type
-#else
-__host__ __device__ static inline typename _higher_type<T1,T2>::type
-#endif
+SUPPORT_CODE_FUNC typename _higher_type<T1,T2>::type
 _brian_floordiv(T1 x, T2 y)
 {{
     return floor(1.0*x/y);
@@ -341,64 +333,16 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 
 
 # Functions that need to be implemented specifically
-randn_code = '''
-#ifdef CPU_ONLY
-double _ranf(uint64_t &seed)
-#else
-__host__ __device__ double _ranf(uint64_t &seed)
-#endif
-{
-    uint64_t x;
-    MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
-}
-
-#ifdef CPU_ONLY
-double _randn(uint64_t &seed)
-#else
-__host__ __device__ double _randn(uint64_t &seed)
-#endif
-{
-     double x1, x2, w;
-     double y1, y2;
-     do {
-         x1 = 2.0 * _ranf(seed) - 1.0;
-         x2 = 2.0 * _ranf(seed) - 1.0;
-         w = x1 * x1 + x2 * x2;
-     } while ( w >= 1.0 );
-
-     w = sqrt( (-2.0 * log( w ) ) / w );
-     y1 = x1 * w;
-     return y1;
-}
-'''
-
 DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
-                                                              code=randn_code,
-                                                              name='_randn')
+                                                              code=None,
+                                                              name='$(gennrand_normal)')
 
-rand_code = '''
-#ifdef CPU_ONLY
-double _rand(uint64_t &seed)
-#else
-__host__ __device__ double _rand(uint64_t &seed)
-#endif
-{
-        uint64_t x;
-        MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
-}
-'''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
-                                                             code=rand_code,
-                                                             name='_rand')
+                                                             code=None,
+                                                             name='$(gennrand_uniform)')
 
 clip_code = '''
-#ifdef CPU_ONLY
-double _clip(const float value, const float a_min, const float a_max)
-#else
-__host__ __device__ double _clip(const float value, const float a_min, const float a_max)
-#endif
+SUPPORT_CODE_FUNC double _clip(const float value, const float a_min, const float a_max)
 {
     if (value < a_min)
         return a_min;
@@ -412,11 +356,7 @@ DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
                                                              name='_clip')
 
 int_code = '''
-#ifdef CPU_ONLY
-int int_(const bool value)
-#else
-__host__ __device__ int int_(const bool value)
-#endif
+SUPPORT_CODE_FUNC int int_(const bool value)
 {
     return value ? 1 : 0;
 }
@@ -442,11 +382,7 @@ DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
 # Add support for the `timestep` function added in Brian 2.3.1
 if 'timestep' in DEFAULT_FUNCTIONS:
     timestep_code = '''
-#ifdef CPU_ONLY
-static inline int64_t _timestep(double t, double dt)
-#else
-__host__ __device__ static inline int64_t _timestep(double t, double dt)
-#endif
+SUPPORT_CODE_FUNC int64_t _timestep(double t, double dt)
 {
     return (int64_t)((t + 1e-3*dt)/dt); 
 }'''
