@@ -234,7 +234,7 @@ class synapseModel(object):
         self.support_code_lines = defaultdict(str)
         self.connectivity = ''
         self.delay = 0
-
+        self.summed_variables= None
 
 class spikeMonitorModel(object):
     '''
@@ -401,8 +401,9 @@ class GeNNDevice(CPPStandaloneDevice):
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
         '''
-        if (template_name in ['stateupdate', 'threshold', 'reset'] and
-                isinstance(owner, NeuronGroup)):
+        if ((template_name in ['stateupdate', 'threshold', 'reset'] and
+                isinstance(owner, NeuronGroup)) or (template_name in ['summed_variable']
+                                                    and isinstance(owner, Synapses))):
             # Delay the code generation process, we want to merge them into one
             # code object later
             codeobj = DelayedCodeObject(owner=owner,
@@ -739,7 +740,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_neuron_groups(neuron_groups, objects)
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
-        self.process_synapses(synapse_groups)
+        self.process_synapses(synapse_groups, objects)
         # need to establish which kernel timers will be created if kernel riming is desired
         if len(self.synapse_models) > 0:
             self.ktimer['synapse_tme']= True
@@ -1246,7 +1247,7 @@ class GeNNDevice(CPPStandaloneDevice):
             spikegenerator_model.N = obj.N
             self.spikegenerator_models.append(spikegenerator_model)
 
-    def process_synapses(self, synapse_groups):
+    def process_synapses(self, synapse_groups, objects):
         for obj in synapse_groups:
             synapse_model = synapseModel()
             synapse_model.name = obj.name
@@ -1319,11 +1320,29 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.fix_synapses_code(synapse_model, 'dynamics', codeobj,
                                        code)
 
+            synapse_model.summed_variables = [ s for s in objects if s.startswith(obj.name+'_summed_variable')]
+            if (len(synapse_model.summed_variables) > 0 and hasattr(obj, '_genn_post_write_var')):
+                raise NotImplementedError("brian2genn only supports a "
+                                          "either a single synaptic output variable "
+                                          "or a single summed variable per Synapses group.")
+            if (len(synapse_model.summed_variables) > 1):
+                 raise NotImplementedError("brian2genn only supports a "
+                                          "a single summed variable per Synapses group.")
             if (hasattr(obj, '_genn_post_write_var')):
                 synapse_model.postSyntoCurrent = '0; $(' + obj._genn_post_write_var.replace(
                     '_post', '') + ') += $(inSyn); $(inSyn)= 0'
             else:
-                synapse_model.postSyntoCurrent = '0'
+                if (len(synapse_model.summed_variables) > 0):
+                    summed_variable_updater= objects.get(synapse_model.summed_variables[0], None)
+                    if (obj.target != summed_variable_updater.target):
+                        raise NotImplementedError("brian2genn only supports summed "
+                                          "variables that target the post-synaptic neuron group of the Synapses the variable is defined in.")
+                    synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') += $(inSyn); $(inSyn)= 0'
+                    # also add the inSyn updating code to the synapse dynamics code
+                    code= '\\n\ \n $(addToInSyn,$('+summed_variable_updater.abstract_code.replace('_synaptic_var = ','').replace('\n','').replace(' ','')+'));\\n'
+                    synapse_model.main_code_lines['dynamics']+= code
+                else:
+                    synapse_model.postSyntoCurrent = '0'
             self.synapse_models.append(synapse_model)
             self.groupDict[synapse_model.name] = synapse_model
 
@@ -1617,11 +1636,11 @@ class GeNNDevice(CPPStandaloneDevice):
                 if len(obj._linked_variables) > 0:
                     raise NotImplementedError(
                         'The genn device does not support linked variables')
-        for obj in net.objects:
-            if hasattr(obj, 'template'):
-                if obj.template in ['summed_variable']:
-                    raise NotImplementedError(
-                        'The function of %s is not yet supported in GeNN.' % obj.template)
+#        for obj in net.objects:
+#            if hasattr(obj, 'template'):
+#                if obj.template in ['summed_variable']:
+#                    raise NotImplementedError(
+#                        'The function of %s is not yet supported in GeNN.' % obj.template)
 
         print 'running brian code generation ...'
 
