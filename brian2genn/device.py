@@ -1327,7 +1327,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                           "or a single summed variable per Synapses group.")
             if (len(synapse_model.summed_variables) > 1):
                  raise NotImplementedError("brian2genn only supports a "
-                                          "a single summed variable per Synapses group.")
+                                          "single summed variable per Synapses group.")
             if (hasattr(obj, '_genn_post_write_var')):
                 synapse_model.postSyntoCurrent = '0; $(' + obj._genn_post_write_var.replace(
                     '_post', '') + ') += $(inSyn); $(inSyn)= 0'
