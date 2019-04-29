@@ -192,7 +192,8 @@ class GeNNCodeGenerator(CodeGenerator):
                 post_write_var, statements = check_pre_code(self, statements,
                                                 vars_pre, vars_syn, vars_post,
                                                 conditional_write_vars)
-                self.owner._genn_post_write_var = post_write_var
+                if (post_write_var != None):
+                    self.owner._genn_post_write_var = post_write_var
         lines = []
         lines += self.translate_to_statements(statements)
         code = '\n'.join(lines)
