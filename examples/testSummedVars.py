@@ -11,7 +11,7 @@ H = NeuronGroup(10, 'V:1', threshold='V > 0.5')
 
 S = Synapses(H, neurons,'''
                 dg_syn/dt = -g_syn/(100*ms) : 1 (clock-driven)
-                g_post = g_syn : 1 (summed)''', on_pre='g_syn= g_syn+1')
+                g_post = 2*g_syn : 1 (summed)''', on_pre='g_syn= g_syn+1')
 
 
 S.connect(True)
