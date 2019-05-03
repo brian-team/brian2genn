@@ -1325,6 +1325,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 raise NotImplementedError("brian2genn only supports a "
                                           "either a single synaptic output variable "
                                           "or a single summed variable per Synapses group.")
+            if (len(synapse_model.summed_variables) > 0 and isinstance(obj.target,Subgroup)):
+                raise NotImplementedError("brian2genn does not support summed variables "
+                                          "when the target is a Subgroup.")
             if (len(synapse_model.summed_variables) > 1):
                  raise NotImplementedError("brian2genn only supports a "
                                           "single summed variable per Synapses group.")
@@ -1337,7 +1340,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     if (obj.target != summed_variable_updater.target):
                         raise NotImplementedError("brian2genn only supports summed "
                                           "variables that target the post-synaptic neuron group of the Synapses the variable is defined in.")
-                    synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') += $(inSyn); $(inSyn)= 0'
+                    synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') = $(inSyn); $(inSyn)= 0'
                     # also add the inSyn updating code to the synapse dynamics code
                     addVar= summed_variable_updater.abstract_code.replace('_synaptic_var = ','').replace('\n','').replace(' ','')
                     for v in synapse_model.variables:
