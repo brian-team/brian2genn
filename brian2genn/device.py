@@ -145,12 +145,12 @@ def extract_source_variables(variables, varname, smvariables):
     '''
     identifiers = get_identifiers(variables[varname].expr)
     for vnm, var in variables.items():
-        if var in defaultclock.variables.values():
-            raise NotImplementedError('Recording an expression that depends on '
-                                      'the time t or the timestep dt is '
-                                      'currently not supported in Brian2GeNN')
         if vnm in identifiers:
-            if isinstance(var, ArrayVariable):
+            if var in defaultclock.variables.values():
+                raise NotImplementedError('Recording an expression that depends on '
+                                          'the time t or the timestep dt is '
+                                          'currently not supported in Brian2GeNN')
+            elif isinstance(var, ArrayVariable):
                 smvariables.append(vnm)
             elif isinstance(var, Subexpression):
                 smvariables = extract_source_variables(variables, vnm,
