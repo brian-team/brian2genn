@@ -16,6 +16,7 @@ steps:
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       cd ../genn
       if [ $(use_genn_master) == 'false' ]; then
+        git fetch --tags
         git checkout $(genn_stable)
       fi
     displayName: 'Install GeNN'
