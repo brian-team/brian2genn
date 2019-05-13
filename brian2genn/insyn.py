@@ -71,7 +71,7 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post,
         raise NotImplementedError("GeNN only supports writing to a single postsynaptic variable.")
     if len(post_write)==0:
         logger.warn("Warning: You have defined (a) synaptic group(s) that has no direct postsynaptic effect.")
-        return None, []
+        return None, stmts
     
     post_write_var = list(post_write)[0]
         
