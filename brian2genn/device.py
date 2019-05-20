@@ -10,6 +10,7 @@ from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
 from collections import defaultdict
+import re
 import tempfile
 import itertools
 import numpy
@@ -134,7 +135,7 @@ def decorate(code, variables, shared_variables, parameters, do_final=True):
     code = word_substitute(code, {'dt': 'DT'}).strip()
     if do_final:
         code = stringify(code)
-        code = word_substitute(code, {'addtoinSyn': '$(addtoinSyn)'})
+        code = re.sub(r'addtoinSyn\s*=\s*(.*);', r'$(addToInSyn,\1);', code)
         code = word_substitute(code, {'_hidden_weightmatrix': '$(_hidden_weightmatrix)'})
     return code
 
@@ -1304,8 +1305,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                     line = line.replace(
                                         '_hidden_weightmatrix *', '')
                             new_code_lines.append(line)
-                            if line.startswith('addtoinSyn'):
-                                new_code_lines.append('$(updatelinsyn);')
                         code = '\n'.join(new_code_lines)
 
                     self.fix_synapses_code(synapse_model, pathway, codeobj,
