@@ -44,23 +44,34 @@ namespace b2g {
 
 void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target,
                                 unsigned int *rowLength, unsigned int *ind, unsigned int maxRowLength,
-                                int srcNN, int trgNN)
+                                int srcNN, int trgNN,
+                                vector<size_t> &indices)
 {
     // Initially zero row lengths
     std::fill_n(rowLength, srcNN, 0);
 
     const size_t size = source.size();
+
+    // Reserve indices
+    indices.clear();
+    indices.reserve(size);
+
+    // Loop through input arrays
     for (size_t i= 0; i < size; i++) {
         assert(source[i] < srcNN);
         assert(target[i] < trgNN);
 
-        // Insert postsynaptic index in correct location
-        ind[(source[i] * maxRowLength) + rowLength[source[i]]] = target[i];
+        // Calculate index of synapse in ragged structure
+        const size_t index = (source[i] * maxRowLength) + rowLength[source[i]];
+
+        // Add index to vector and insert postsynaptic index into correct location
+        // **TODO** insert in correct position to keep sorted
+        indices.push_back(index);
+        ind[index] = target[i];
 
         // Increment row length
         rowLength[source[i]]++;
     }
-
 
     // Reserve temporary vector
     vector<int32_t> targets;
@@ -85,28 +96,13 @@ void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int3
 }
 
 template<class scalar>
-void convert_dynamic_arrays_2_sparse_synapses(const vector<int32_t> &source, const vector<int32_t> &target, vector<scalar> &gvector, scalar *gv, int srcNN, int trgNN,
-                                              const vector<vector<int32_t> > &bypre)
+void convert_dynamic_arrays_2_sparse_synapses(const vector<scalar> &gvector, const vector<size_t> &indices,
+                                              scalar *gv, int srcNN, int trgNN)
 {
-    // create a list of the postsynaptic targets ordered by presynaptic sources
-    vector<vector<scalar> > bypreG;
-    unsigned int size;
-    assert(source.size() == target.size());
-    assert(source.size() == gvector.size());
-
-    bypreG.clear();
-    bypreG.resize(srcNN);
-    size = source.size();
-    for (int i= 0; i < size; i++) {
-        bypreG[source[i]].push_back(gvector[i]);
-    }
-    unsigned int cnt = 0;
-    for (int i = 0; i < srcNN; i++) {
-        size = bypre[i].size();
-        for (int j = 0; j < size; j++) {
-            gv[cnt] = bypreG[i][j];
-            cnt++;
-        }
+    const size_t size = indices.size();
+    for (size_t i= 0; i < size; i++) {
+        // Insert postsynaptic index in correct location
+        gv[indices[i]] = gvector[i];
     }
 }
 
@@ -118,9 +114,9 @@ void convert_dense_matrix_2_dynamic_arrays(scalar *g, int srcNN, int trgNN, vect
     assert(source.size() == gvector.size());
     unsigned int size= source.size(); 
     for (int i= 0; i < size; i++) {
-    assert(source[i] < srcNN);
-    assert(target[i] < trgNN);
-    gvector[i]= g[source[i]*trgNN+target[i]];
+        assert(source[i] < srcNN);
+        assert(target[i] < trgNN);
+        gvector[i]= g[source[i]*trgNN+target[i]];
     }
 }
 
@@ -157,7 +153,7 @@ void convert_sparse_synapses_2_dynamic_arrays(unsigned int *rowLength, unsigned 
     }
 //    os.close();
 //    convertCnt++;
-}	
+}
 
 void create_hidden_weightmatrix(vector<int32_t> &source, vector<int32_t> &target, char* hwm, int srcNN, int trgNN)
 {

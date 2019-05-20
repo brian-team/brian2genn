@@ -60,6 +60,7 @@ int main(int argc, char *argv[])
 	  {{ main_lines | autoindent }}
   }
 
+  std::vector<size_t> sparseSynapseIndices;
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
   {% if synapses.connectivity == 'DENSE' %}
@@ -72,11 +73,12 @@ int main(int argc, char *argv[])
   {% else %} {# for sparse matrix representations #}
   initialize_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
                              rowLength{{synapses.name}}, ind{{synapses.name}}, maxRowLength{{synapses.name}},
-                             {{synapses.srcN}}, {{synapses.trgN}});
+                             {{synapses.srcN}}, {{synapses.trgN}},
+                             sparseSynapseIndices);
   {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
-  convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
-                                           brian::_dynamic_array_{{synapses.name}}_{{var}}, {{var}}{{synapses.name}},
+  convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}_{{var}}, sparseSynapseIndices,
+                                           {{var}}{{synapses.name}},
                                            {{synapses.srcN}}, {{synapses.trgN}});
   {% endif %}
   {% endfor %} {# all synapse variables #}
@@ -104,7 +106,7 @@ int main(int argc, char *argv[])
   {% endfor %}
   
   // initialise random seeds (if any are used)
-  {% for neuron in neuron_models %} 
+  {% for neuron in neuron_models %} ;
   {% if '_seed' in neuron.variables %}
   for (int i= 0; i < {{neuron.N}}; i++) {
       _seed{{neuron.name}}[i]= (uint64_t) (rand()*MYRAND_MAX);
