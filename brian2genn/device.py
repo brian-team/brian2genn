@@ -35,7 +35,7 @@ from brian2.monitors.spikemonitor import SpikeMonitor
 from brian2.monitors.ratemonitor import PopulationRateMonitor
 from brian2.monitors.statemonitor import StateMonitor
 from brian2.utils.filetools import copy_directory, ensure_directory
-from brian2.utils.stringtools import word_substitute, get_identifiers
+from brian2.utils.stringtools import word_substitute, get_identifiers, replace
 from brian2.groups.group import Group, CodeRunner
 from brian2.groups.neurongroup import (NeuronGroup, StateUpdater, Resetter,
                                        Thresholder, SubexpressionUpdater)
@@ -137,6 +137,10 @@ def decorate(code, variables, shared_variables, parameters, do_final=True):
         code = stringify(code)
         code = re.sub(r'addtoinSyn\s*=\s*(.*);', r'$(addToInSyn,\1);', code)
         code = word_substitute(code, {'_hidden_weightmatrix': '$(_hidden_weightmatrix)'})
+        
+        # Replace C-style function calls to GeNN random number generator with GeNN-style calls
+        code = replace(code, {'gennrand_normal(_vectorisation_idx)': '$(gennrand_normal)',
+                              'gennrand_uniform(_vectorisation_idx)': '$(gennrand_uniform)'})
     return code
 
 
