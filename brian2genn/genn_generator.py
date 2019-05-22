@@ -366,11 +366,7 @@ DEFAULT_FUNCTIONS['int'].implementations.add_implementation(GeNNCodeGenerator,
                                                             name='int_')
 
 sign_code = '''
-#ifdef CPU_ONLY
-template <typename T> int sign_(T val)
-#else
-template <typename T> __host__ __device__ int sign_(T val)
-#endif
+template <typename T> SUPPORT_CODE_FUNC int sign_(T val)
 {
     return (T(0) < val) - (val < T(0));
 }
