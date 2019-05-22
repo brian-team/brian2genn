@@ -73,8 +73,7 @@ engine::~engine()
  */
 //--------------------------------------------------------------------------
 
-void engine::run(double duration  //!< Duration of time to run the model for
-		  )
+void engine::run(double duration)  //!< Duration of time to run the model for
 {
   std::clock_t start, current; 
   const double t_start = t;
