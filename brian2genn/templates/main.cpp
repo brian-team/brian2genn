@@ -84,7 +84,7 @@ int main(int argc, char *argv[])
   {% endfor %} {# all synapse variables #}
   {% endif %} {# dense/sparse #}
   {% for var in synapses.shared_variables %}
-  std::copy_n(brian::_array_{{synapses.name}}_{{var}}, 1, &{{var}}{{synapses.name}})
+  std::copy_n(brian::_array_{{synapses.name}}_{{var}}, 1, &{{var}}{{synapses.name}});
   {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
 
