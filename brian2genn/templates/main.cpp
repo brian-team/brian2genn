@@ -87,7 +87,6 @@ int main(int argc, char *argv[])
   std::copy_n(brian::_array_{{synapses.name}}_{{var}}, 1, &{{var}}{{synapses.name}})
   {% endfor %} {# shared variables #}
   {% endfor %} {# all synapse_models #}
-  initializeSparse();
 
   // copy variable arrays
   {% for neuron in neuron_models %} 
@@ -105,21 +104,8 @@ int main(int argc, char *argv[])
   {% endfor %}
   {% endfor %}
   
-  // initialise random seeds (if any are used)
-  {% for neuron in neuron_models %} ;
-  {% if '_seed' in neuron.variables %}
-  for (int i= 0; i < {{neuron.N}}; i++) {
-      _seed{{neuron.name}}[i]= (uint64_t) (rand()*MYRAND_MAX);
-  }
-  {% endif %}
-  {% endfor %}
-  {% for synapses in synapse_models %}
-  {% if '_seed' in synapses.variables %}
-  for (int i= 0; i < C{{synapses.name}}.connN; i++) {
-      _seed{{synapses.name}}[i]= (uint64_t) (rand()*MYRAND_MAX);
-  }
-  {% endif %}
-  {% endfor %}
+  // Perform final stage of initialization, uploading manually initialized variables to GPU etc
+  initializeSparse();
 
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation
