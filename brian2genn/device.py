@@ -1519,8 +1519,8 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def generate_makefile(self, directory, use_GPU):
         if os.sys.platform == 'win32':
-            project_tmp = GeNNCodeObject.templater.project(None, None,
-                                                           source_files=self.source_files)
+            project_tmp = GeNNCodeObject.templater.project_vcxproj(None, None,
+                                                                   source_files=self.source_files)
             open(os.path.join(directory, 'project.vcxproj'), 'w').write(
                 project_tmp)
         else:
