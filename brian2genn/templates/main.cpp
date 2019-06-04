@@ -104,9 +104,25 @@ int main(int argc, char *argv[])
   {% endfor %}
   {% endfor %}
   
+  // initialise random seeds (if any are used)
+  {% for neuron in neuron_models %} ;
+  {% if '_seed' in neuron.variables %}
+  for (int i= 0; i < {{neuron.N}}; i++) {
+      _seed{{neuron.name}}[i]= (uint64_t) (rand()*0x0000FFFFFFFFFFFFLL);
+  }
+  {% endif %}
+  {% endfor %}
+  {% for synapses in synapse_models %}
+  {% if '_seed' in synapses.variables %}
+  for (int i= 0; i < C{{synapses.name}}.connN; i++) {
+      _seed{{synapses.name}}[i]= (uint64_t) (rand()*0x0000FFFFFFFFFFFFLL);
+  }
+  {% endif %}
+  {% endfor %}
+
   // Perform final stage of initialization, uploading manually initialized variables to GPU etc
   initializeSparse();
-
+  
   //------------------------------------------------------------------
   // output general parameters to output file and start the simulation
   fprintf(stderr, "# We are running with fixed time step %f \n", DT);
