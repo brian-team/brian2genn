@@ -13,7 +13,13 @@ steps:
     displayName: 'Install Brian2GeNN'
 
   - bash: |
-      git clone --single-branch --branch genn_4 https://github.com/genn-team/genn.git ../genn
+      git clone --depth=1 https://github.com/genn-team/genn.git ../genn
+      cd ../genn
+      if [ $(use_genn_master) == 'false' ]; then
+        git fetch --tags
+        latestTag=$(git describe --tags `git rev-list --tags --max-count=1`)
+        git checkout $latestTag
+      fi
     displayName: 'Install GeNN'
 
   - task: CopyFiles@2
