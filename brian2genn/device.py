@@ -604,6 +604,28 @@ class GeNNDevice(CPPStandaloneDevice):
                 main_lines.append(codeobj.code.main_finalise)
         return main_lines
 
+    def fix_random_generators(self, model, code):
+        '''
+        Translates cpp_standalone style random number generator calls into
+        GeNN- compatible calls by replacing the cpp_standalone
+        `_vectorisation_idx` argument with the GeNN `_seed` argument.
+        '''
+        # TODO: In principle, _vectorisation_idx is an argument to any
+        # function that does not take any arguments -- in practice, random
+        # number generators are the only argument-less functions that are
+        # commonly used. We cannot check for explicit names `_rand`, etc.,
+        # since multiple uses of binomial or PoissonInput will need to names
+        # that we cannot easily predict (poissoninput_binomial_2, etc.)
+        if '(_vectorisation_idx)' in code:
+            code = code.replace('(_vectorisation_idx)',
+                                '(_seed)')
+            if not '_seed' in model.variables:
+                model.variables.append('_seed')
+                model.variabletypes.append('uint64_t')
+                model.variablescope['_seed'] = 'genn'
+
+        return code
+
     # --------------------------------------------------------------------------
     def build(self, directory='GeNNworkspace', compile=True, run=True,
               use_GPU=True,
@@ -1026,6 +1048,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         self.add_parameter(neuron_model, k, v)
                 code = codeobj.code.cpp_file
 
+            code = self.fix_random_generators(neuron_model, code)
             code = decorate(code, neuron_model.variables,
                             neuron_model.shared_variables,
                             neuron_model.parameters).strip()
@@ -1207,6 +1230,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 reset_code = codeobj.code.reset_code
                 for code, lines in [(update_code, neuron_model.code_lines),
                                     (reset_code, neuron_model.reset_code_lines)]:
+                    code = self.fix_random_generators(neuron_model, code)
                     code = decorate(code, neuron_model.variables,
                                     neuron_model.shared_variables,
                                     neuron_model.parameters).strip()
@@ -1340,6 +1364,7 @@ class GeNNDevice(CPPStandaloneDevice):
     def fix_synapses_code(self, synapse_model, pathway, codeobj, code):
         if synapse_model.connectivity == 'DENSE':
             code = 'if (_hidden_weightmatrix != 0.0) {' + code + '}'
+        code = self.fix_random_generators(synapse_model, code)
         thecode = decorate(code, synapse_model.variables,
                            synapse_model.shared_variables,
                            synapse_model.parameters, False).strip()
