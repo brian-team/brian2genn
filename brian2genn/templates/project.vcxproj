@@ -35,7 +35,7 @@
   <PropertyGroup>
     <OutDir>./</OutDir>
     <IntDir>$(Platform)\$(Configuration)\</IntDir>
-    <TargetName>$(ProjectName)_$(Configuration)</TargetName>
+    <TargetName>main_$(Configuration)</TargetName>
   </PropertyGroup>
   <ItemDefinitionGroup>
     <ClCompile>

@@ -873,12 +873,12 @@ class GeNNDevice(CPPStandaloneDevice):
 
         with std_silent(with_output):
             if os.sys.platform == 'win32':
-                cmd = directory + "\\main.exe test " + str(
-                    self.run_duration) + " " + gpu_arg
+                cmd = directory + "\\main_Release.exe test " + str(
+                    self.run_duration)
                 check_call(cmd, cwd=directory)
             else:
                 # print ["./main", "test", str(self.run_duration), gpu_arg]
-                check_call(["./main", "test", str(self.run_duration), gpu_arg],
+                check_call(["./main", "test", str(self.run_duration)],
                            cwd=directory)
         self.has_been_run = True
         last_run_info = open(
@@ -991,7 +991,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " magicnetwork_model.cpp"
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
+                cmd += ' && msbuild /p:Configuration=Release magicnetwork_model_CODE/runner.vcxproj && msbuild /p:Configuration=Release project.vcxproj'
                 check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
@@ -1518,27 +1518,14 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('engine.*', engine_tmp)
 
     def generate_makefile(self, directory, use_GPU):
-        extra_link_args = list(prefs.codegen.cpp.extra_link_args)
-        if os.sys.platform == 'linux2':
-            extra_link_args += ['-no-pie']
-        linker_flags = ' '.join(extra_link_args)
         if os.sys.platform == 'win32':
-            assert False
-            makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
-                                                                neuron_models=self.neuron_models,
-                                                                ROOTDIR=os.path.abspath(
-                                                                    directory),
-                                                                source_files=self.source_files,
-                                                                use_GPU=use_GPU)
-            open(os.path.join(directory, 'WINmakefile'), 'w').write(
-                makefile_tmp)
+            project_tmp = GeNNCodeObject.templater.project(None, None,
+                                                           source_files=self.source_files)
+            open(os.path.join(directory, 'project.vcxproj'), 'w').write(
+                project_tmp)
         else:
             makefile_tmp = GeNNCodeObject.templater.Makefile(None, None,
-                                                             neuron_models=self.neuron_models,
-                                                             ROOTDIR=os.path.abspath(
-                                                                 directory),
-                                                             source_files=self.source_files,
-                                                             use_GPU=use_GPU)
+                                                             source_files=self.source_files)
             open(os.path.join(directory, 'Makefile'), 'w').write(makefile_tmp)
 
     def generate_objects_source(self, arange_arrays, net, static_array_specs,

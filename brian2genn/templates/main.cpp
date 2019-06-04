@@ -26,7 +26,7 @@
 //--------------------------------------------------------------------------
 int main(int argc, char *argv[])
 {
-  if (argc != 4)
+  if (argc != 3)
   {
     fprintf(stderr, "usage: main <basename> <time (s)> \n");
     return 1;
