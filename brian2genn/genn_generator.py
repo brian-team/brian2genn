@@ -330,16 +330,46 @@ abs_code = '''
 DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
                                                             code=abs_code,
                                                             name='_brian_abs')
-
-
 # Functions that need to be implemented specifically
-DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
-                                                              code=None,
-                                                              name='$(gennrand_normal)')
+randn_code = '''
+SUPPORT_CODE_FUNC double _ranf(uint64_t &seed)
+{
+    seed = seed * 1103515245 + 12345;
+    const uint64_t x = (seed >> 16);
+    return ((double)x)/0x0000FFFFFFFFFFFFLL;
+}
 
+SUPPORT_CODE_FUNC double _randn(uint64_t &seed)
+{
+     double x1, x2, w;
+     double y1, y2;
+     do {
+         x1 = 2.0 * _ranf(seed) - 1.0;
+         x2 = 2.0 * _ranf(seed) - 1.0;
+         w = x1 * x1 + x2 * x2;
+     } while ( w >= 1.0 );
+
+     w = sqrt( (-2.0 * log( w ) ) / w );
+     y1 = x1 * w;
+     return y1;
+}
+'''
+
+DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
+                                                              code=randn_code,
+                                                              name='_randn')
+
+rand_code = '''
+SUPPORT_CODE_FUNC double _rand(uint64_t &seed)
+{
+    seed = seed * 1103515245 + 12345;
+    const uint64_t x = (seed >> 16);
+    return ((double)x)/0x0000FFFFFFFFFFFFLL;
+}
+'''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
-                                                             code=None,
-                                                             name='$(gennrand_uniform)')
+                                                             code=rand_code,
+                                                             name='_rand')
 
 clip_code = '''
 SUPPORT_CODE_FUNC double _clip(const float value, const float a_min, const float a_max)
