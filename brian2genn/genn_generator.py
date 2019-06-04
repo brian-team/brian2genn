@@ -333,14 +333,13 @@ DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
 
 
 # Functions that need to be implemented specifically
-# **NOTE** these are not wrapped in $() at this point as it breaks AST
 DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
                                                               code=None,
-                                                              name='gennrand_normal')
+                                                              name='$(gennrand_normal)')
 
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
                                                              code=None,
-                                                             name='gennrand_uniform')
+                                                             name='$(gennrand_uniform)')
 
 clip_code = '''
 SUPPORT_CODE_FUNC double _clip(const float value, const float a_min, const float a_max)
