@@ -107,14 +107,14 @@ int main(int argc, char *argv[])
   // initialise random seeds (if any are used)
   {% for neuron in neuron_models %} ;
   {% if '_seed' in neuron.variables %}
-  for (int i= 0; i < {{neuron.N}}; i++) {
+  for (unsigned int i= 0; i < {{neuron.N}}; i++) {
       _seed{{neuron.name}}[i]= (uint64_t) (rand()*0x0000FFFFFFFFFFFFLL);
   }
   {% endif %}
   {% endfor %}
   {% for synapses in synapse_models %}
   {% if '_seed' in synapses.variables %}
-  for (int i= 0; i < C{{synapses.name}}.connN; i++) {
+  for (unsigned int i= 0; i < (maxRowLength{{synapses.name}} * {{synapses.srcN}}); i++) {
       _seed{{synapses.name}}[i]= (uint64_t) (rand()*0x0000FFFFFFFFFFFFLL);
   }
   {% endif %}
