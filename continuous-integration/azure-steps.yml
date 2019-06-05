@@ -3,11 +3,18 @@ steps:
     inputs:
       environmentName: 'test_environment'
       updateConda: false
-      packageSpecs: 'python=$(python.version) brian2 pip nose'
+      packageSpecs: 'python=$(python.version) pip nose'
       installOptions: '-c conda-forge'
       createOptions: '-c conda-forge'
       cleanEnvironment: true
       createCustomEnvironment: true
+
+  - bash: |
+      - if [ $(use_master) == 'false' ]; then
+          conda install --quiet --yes brian2
+        else
+          pip install https://github.com/brian-team/brian2/archive/master.zip
+        fi
 
   - script: python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
@@ -15,7 +22,7 @@ steps:
   - bash: |
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       cd ../genn
-      if [ $(use_genn_master) == 'false' ]; then
+      if [ $(use_master) == 'false' ]; then
         git fetch --tags
         git checkout $(genn_stable)
       fi
