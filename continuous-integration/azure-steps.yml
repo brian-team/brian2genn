@@ -10,11 +10,12 @@ steps:
       createCustomEnvironment: true
 
   - bash: |
-      - if [ $(use_master) == 'false' ]; then
-          conda install --quiet --yes brian2
-        else
-          pip install https://github.com/brian-team/brian2/archive/master.zip
-        fi
+      if [ $(use_master) == 'false' ]; then
+        conda install --quiet --yes brian2
+      else
+        pip install https://github.com/brian-team/brian2/archive/master.zip
+      fi
+    displayName: 'Install Brian2'
 
   - script: python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
