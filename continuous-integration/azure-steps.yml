@@ -3,8 +3,8 @@ steps:
     displayName: Add conda to PATH
 
   - bash: |
-      conda create -n test_env -c conda-forge --yes --quiet python=$(python.version) pip nose
-      source activate test_env
+      conda create --prefix $HOME/test_env ---c conda-forge --yes --quiet python=$(python.version) pip nose
+      source activate $HOME/test_env
     displayName: 'Setup conda environment'
 
   - bash: |
