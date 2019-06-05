@@ -1,17 +1,12 @@
 steps:
-  - task: CondaEnvironment@1
-    inputs:
-      environmentName: 'test_environment'
-      updateConda: false
-      packageSpecs: 'python=$(python.version) pip nose'
-      installOptions: '-c conda-forge'
-      createOptions: '-c conda-forge'
-      cleanEnvironment: true
-      createCustomEnvironment: true
+  - script: |
+      conda create -n test_env -c conda-forge --yes --quiet python=$(python.version) pip nose
+      conda activate test_env
+    displayName: 'Setup conda environment'
 
   - bash: |
       if [ $(use_master) == 'false' ]; then
-        conda install --quiet --yes brian2
+        conda install --quiet --yes -c conda-forge brian2
       else
         pip install https://github.com/brian-team/brian2/archive/master.zip
       fi
@@ -23,6 +18,7 @@ steps:
   - bash: |
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       cd ../genn
+      export GENN_PATH=$(pwd)
       if [ $(use_master) == 'false' ]; then
         git fetch --tags
         git checkout $(genn_stable)
@@ -36,7 +32,6 @@ steps:
       targetFolder: $(Build.SourcesDirectory)/..
 
   - bash: |
-      export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
       SOURCE_PATH=$(pwd)
       cd ..  # move out of the source directory to avoid direct import
       python $SOURCE_PATH/scripts/$(script_name)
