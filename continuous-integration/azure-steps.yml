@@ -4,10 +4,10 @@ steps:
 
   - bash: |
       conda create --prefix $HOME/test_env ---c conda-forge --yes --quiet python=$(python.version) pip nose
-      source activate $HOME/test_env
     displayName: 'Setup conda environment'
 
   - bash: |
+      source activate $HOME/test_env
       if [ $(use_master) == 'false' ]; then
         conda install --quiet --yes -c conda-forge brian2 nose
       else
@@ -16,7 +16,9 @@ steps:
       fi
     displayName: 'Install Brian2'
 
-  - bash: python -m pip install --no-deps --ignore-installed --user .
+  - bash: |
+      source activate $HOME/test_env
+      python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
 
   - bash: |
@@ -35,6 +37,7 @@ steps:
       targetFolder: $(Build.SourcesDirectory)/..
 
   - bash: |
+      source activate $HOME/test_env
       export GENN_PATH=$(GENN_PATH)
       SOURCE_PATH=$(pwd)
       cd ..  # move out of the source directory to avoid direct import
