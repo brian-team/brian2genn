@@ -24,10 +24,7 @@ steps:
       cd ../genn
       export GENN_PATH=$(pwd)
       echo '##vso[task.setvariable variable=GENN_PATH;]'$GENN_PATH
-      if [ $(use_master) == 'false' ]; then
-        git fetch --tags
-        git checkout $(genn_stable)
-      fi
+      git checkout $(genn_stable)  # Always use GeNN 3.3 for now
     displayName: 'Install GeNN'
 
   - task: CopyFiles@2
