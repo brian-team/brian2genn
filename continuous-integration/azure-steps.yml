@@ -9,8 +9,9 @@ steps:
 
   - bash: |
       if [ $(use_master) == 'false' ]; then
-        conda install --quiet --yes -c conda-forge brian2
+        conda install --quiet --yes -c conda-forge brian2 nose
       else
+        conda install --quiet --yes -c conda-forge nose cython sympy future pyparsing numpy jinja2
         pip install https://github.com/brian-team/brian2/archive/master.zip
       fi
     displayName: 'Install Brian2'
