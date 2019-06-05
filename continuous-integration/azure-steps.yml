@@ -1,7 +1,10 @@
 steps:
-  - script: |
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+
+  - bash: |
       conda create -n test_env -c conda-forge --yes --quiet python=$(python.version) pip nose
-      conda activate test_env
+      source activate test_env
     displayName: 'Setup conda environment'
 
   - bash: |
@@ -12,7 +15,7 @@ steps:
       fi
     displayName: 'Install Brian2'
 
-  - script: python -m pip install --no-deps --ignore-installed --user .
+  - bash: python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
 
   - bash: |
