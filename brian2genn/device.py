@@ -1343,9 +1343,20 @@ class GeNNDevice(CPPStandaloneDevice):
                     synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') = $(inSyn); $(inSyn)= 0'
                     # also add the inSyn updating code to the synapse dynamics code
                     addVar= summed_variable_updater.abstract_code.replace('_synaptic_var = ','').replace('\n','').replace(' ','')
-                    for v in synapse_model.variables:
-                        addVar= addVar.replace(v,'$('+v+')')
-                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'
+                    identifiers = get_identifiers(addVar)
+                    for k,v in obj.variables.iteritems():
+                        if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
+                            pass
+                        else:
+                            if '_pre' not in k and '_post' not in k:
+                                if isinstance(v, Constant):
+                                    if k not in synapse_model.parameters:
+                                        self.add_parameter(synapse_model, k, v)
+                                elif isinstance(v, ArrayVariable):
+                                    if k not in synapse_model.variables:
+                                        self.add_array_variable(synapse_model, k, v)
+                            addVar= addVar.replace(k,'$('+k+')')
+                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'                    
                     synapse_model.main_code_lines['dynamics']+= code
                 else:
                     synapse_model.postSyntoCurrent = '0'
@@ -1642,11 +1653,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 if len(obj._linked_variables) > 0:
                     raise NotImplementedError(
                         'The genn device does not support linked variables')
-#        for obj in net.objects:
-#            if hasattr(obj, 'template'):
-#                if obj.template in ['summed_variable']:
-#                    raise NotImplementedError(
-#                        'The function of %s is not yet supported in GeNN.' % obj.template)
 
         print 'running brian code generation ...'
 
