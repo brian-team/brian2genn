@@ -1,24 +1,40 @@
 steps:
-  - task: CondaEnvironment@1
-    inputs:
-      environmentName: 'test_environment'
-      updateConda: false
-      packageSpecs: 'python=$(python.version) brian2 pip nose'
-      installOptions: '-c conda-forge'
-      createOptions: '-c conda-forge'
-      cleanEnvironment: true
-      createCustomEnvironment: true
+  - bash: echo "##vso[task.prependpath]$CONDA/Scripts"
+    displayName: Add conda to PATH
+    condition: eq(variables['agent.os'], 'Windows_NT')
+  - bash: echo "##vso[task.prependpath]$CONDA/bin"
+    displayName: Add conda to PATH
+    condition: in(variables['agent.os'], 'Darwin', 'Linux')
+  - bash: sudo chown -R $USER $CONDA
+    displayName: Take ownership of conda directory
+    condition: eq(variables['agent.os'], 'Darwin')
 
-  - script: python -m pip install --no-deps --ignore-installed --user .
+  - bash: |
+      conda create --prefix $HOME/test_env -c conda-forge --yes --quiet python=$(python.version) pip nose
+    displayName: 'Setup conda environment'
+
+  - bash: |
+      source activate $HOME/test_env
+      if [ $(use_master) == 'false' ]; then
+        conda install --quiet --yes -c conda-forge brian2 nose
+      else
+        conda install --quiet --yes -c conda-forge nose cython sympy future pyparsing numpy jinja2
+        pip install https://github.com/brian-team/brian2/archive/master.zip
+      fi
+    displayName: 'Install Brian2'
+
+  - bash: |
+      source activate $HOME/test_env
+      python -m pip install --no-deps --ignore-installed --user .
     displayName: 'Install Brian2GeNN'
 
   - bash: |
       git clone --depth=1 https://github.com/genn-team/genn.git ../genn
       cd ../genn
-      if [ $(use_genn_master) == 'false' ]; then
-        git fetch --tags
-        git checkout $(genn_stable)
-      fi
+      export GENN_PATH=$(pwd)
+      echo '##vso[task.setvariable variable=GENN_PATH;]'$GENN_PATH
+      git fetch --tags
+      git checkout $(genn_stable)  # Always use GeNN 3.3 for now
     displayName: 'Install GeNN'
 
   - task: CopyFiles@2
@@ -28,7 +44,8 @@ steps:
       targetFolder: $(Build.SourcesDirectory)/..
 
   - bash: |
-      export GENN_PATH=$(python -c "import os; print(os.path.realpath('../genn'))")
+      source activate $HOME/test_env
+      export GENN_PATH=$(GENN_PATH)
       SOURCE_PATH=$(pwd)
       cd ..  # move out of the source directory to avoid direct import
       python $SOURCE_PATH/scripts/$(script_name)

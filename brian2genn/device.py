@@ -681,30 +681,38 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append(
                 (name, c_data_type(arr.dtype), arr.size, name))
 
+        try:
+            # Brian versions > 2.2.2.1 do not save the "contained objects" in
+            # net.objects anymore
+            from brian2.core.network import _get_all_objects
+            net_objects = _get_all_objects(self.net.objects)
+        except ImportError:
+            net_objects = self.net.objects
+
         synapses = []
-        synapses.extend(s for s in self.net.objects if isinstance(s, Synapses))
+        synapses.extend(s for s in net_objects if isinstance(s, Synapses))
 
         main_lines = self.make_main_lines()
 
         # assemble the model descriptions:
-        objects = dict((obj.name, obj) for obj in self.net.objects)
-        neuron_groups = [obj for obj in self.net.objects if
+        objects = dict((obj.name, obj) for obj in net_objects)
+        neuron_groups = [obj for obj in net_objects if
                          isinstance(obj, NeuronGroup)]
-        poisson_groups = [obj for obj in self.net.objects if
+        poisson_groups = [obj for obj in net_objects if
                           isinstance(obj, PoissonGroup)]
-        spikegenerator_groups = [obj for obj in self.net.objects if
+        spikegenerator_groups = [obj for obj in net_objects if
                                  isinstance(obj, SpikeGeneratorGroup)]
 
-        synapse_groups = [obj for obj in self.net.objects if
+        synapse_groups = [obj for obj in net_objects if
                           isinstance(obj, Synapses)]
 
-        spike_monitors = [obj for obj in self.net.objects if
+        spike_monitors = [obj for obj in net_objects if
                           isinstance(obj, SpikeMonitor)]
-        rate_monitors = [obj for obj in self.net.objects if
+        rate_monitors = [obj for obj in net_objects if
                          isinstance(obj, PopulationRateMonitor)]
-        state_monitors = [obj for obj in self.net.objects if
+        state_monitors = [obj for obj in net_objects if
                           isinstance(obj, StateMonitor)]
-        for obj in self.net.objects:
+        for obj in net_objects:
             if isinstance(obj, (SpatialNeuron, SpatialStateUpdater)):
                 raise NotImplementedError(
                     'Brian2GeNN does not support multicompartmental neurons')
