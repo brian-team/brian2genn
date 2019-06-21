@@ -3,6 +3,9 @@
 # Add steps that analyze code, save the dist with the build record, publish to a PyPI-compatible index, and more:
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
+variables:
+  genn_stable: '3.3.0'
+
 jobs:
 
 - job: 'Linux'
@@ -14,23 +17,23 @@ jobs:
       Python27_single_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: false
+        use_master: false
       Python27_single_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: true
+        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
       Python27_double_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: true
+        use_master: true
       Python36:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
 
 
   steps:
@@ -45,23 +48,23 @@ jobs:
       Python27_single_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: false
+        use_master: false
       Python27_single_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: true
+        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
       Python27_double_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: true
+        use_master: true
       Python36:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
 
   steps:
   - template: continuous-integration/azure-steps.yml
@@ -75,23 +78,23 @@ jobs:
       Python27_single_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: false
+        use_master: false
       Python27_single_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
-        use_genn_master: true
+        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
       Python27_double_latest:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: true
+        use_master: true
       Python36:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
-        use_genn_master: false
+        use_master: false
 
   steps:
   - template: continuous-integration/azure-steps.yml
