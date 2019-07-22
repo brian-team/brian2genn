@@ -22,4 +22,12 @@ void copy_genn_to_brian(scalar *gv, scalar *bv, int N)
     }
 }
 
+// This does not really belong here, but it seems like it is a simple way of making sure, the "sign" function is supported 
+
+template<class type>
+__host__ __device__ type sign(type x)
+{
+    return (x >= 0 ? 1 : -1);
+}
+
 #endif
