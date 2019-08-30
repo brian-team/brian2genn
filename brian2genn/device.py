@@ -4,8 +4,8 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 
 import os
 import shutil
-import sys
 import platform
+
 from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
@@ -25,7 +25,6 @@ from brian2.codegen.generators.cpp_generator import (c_data_type,
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
-from brian2.core.network import Network
 from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
@@ -45,8 +44,9 @@ from brian2.synapses.synapses import StateUpdater as SynapsesStateUpdater
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
+
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
-from .genn_generator import get_var_ndim
+from .genn_generator import get_var_ndim, GeNNCodeGenerator
 
 
 __all__ = ['GeNNDevice']
@@ -1350,7 +1350,12 @@ class GeNNDevice(CPPStandaloneDevice):
                                           "variables that target the post-synaptic neuron group of the Synapses the variable is defined in.")
                     synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') = $(inSyn); $(inSyn)= 0'
                     # also add the inSyn updating code to the synapse dynamics code
-                    addVar= summed_variable_updater.abstract_code.replace('_synaptic_var = ','').replace('\n','').replace(' ','')
+                    addVar = summed_variable_updater.abstract_code.replace('_synaptic_var = ', '').replace('\n', '').replace(' ', '')
+                    codeobj = summed_variable_updater.codeobj
+                    code_generator = GeNNCodeGenerator(codeobj.variables, codeobj.variable_indices, codeobj.owner, None,
+                                                       GeNNCodeObject, codeobj.name, None)
+                    addVar = code_generator.translate_expression(addVar)
+                    kwds = code_generator.determine_keywords()
                     identifiers = get_identifiers(addVar)
                     for k,v in obj.variables.iteritems():
                         if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
@@ -1365,7 +1370,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                         self.add_array_variable(synapse_model, k, v)
                             addVar= addVar.replace(k,'$('+k+')')
                     code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'                    
-                    synapse_model.main_code_lines['dynamics']+= code
+                    synapse_model.main_code_lines['dynamics'] += code
+                    synapse_model.support_code_lines['dynamics'] += stringify('\n'.join(kwds['support_code_lines']))
                 else:
                     synapse_model.postSyntoCurrent = '0'
             self.synapse_models.append(synapse_model)
