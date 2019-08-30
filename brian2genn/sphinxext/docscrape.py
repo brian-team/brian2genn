@@ -114,7 +114,7 @@ class NumpyDocString(object):
         return self._parsed_data[key]
 
     def __setitem__(self, key, val):
-        if not self._parsed_data.has_key(key):
+        if key not in self._parsed_data:
             warn("Unknown section %s" % key)
         else:
             self._parsed_data[key] = val
@@ -375,7 +375,7 @@ class NumpyDocString(object):
         idx = self['index']
         out = []
         out += ['.. index:: %s' % idx.get('default','')]
-        for section, references in idx.iteritems():
+        for section, references in list(idx.items()):
             if section == 'default':
                 continue
             out += ['   :%s: %s' % (section, ', '.join(references))]
@@ -454,8 +454,8 @@ class FunctionDoc(NumpyDocString):
                  'meth': 'method'}
 
         if self._role:
-            if not roles.has_key(self._role):
-                print "Warning: invalid role %s" % self._role
+            if self._role not in roles:
+                print(("Warning: invalid role %s" % self._role))
             out += '.. %s:: %s\n    \n\n' % (roles.get(self._role,''),
                                              func_name)
 
@@ -495,7 +495,7 @@ class ClassDoc(NumpyDocString):
     def methods(self):
         if self._cls is None:
             return [] 
-        methods = [name for name, func in getattr(self._cls, '__dict__').iteritems()
+        methods = [name for name, func in list(getattr(self._cls, '__dict__').items())
                    if ((not name.startswith('_')
                         or name in self.extra_public_methods)
                        and ((callable(func) and not isinstance(func, type)) or
@@ -508,9 +508,9 @@ class ClassDoc(NumpyDocString):
             return []
         analyzer = ModuleAnalyzer.for_module(self._cls.__module__)
         instance_members = set([attr_name for (class_name, attr_name) in
-                                analyzer.find_attr_docs().keys()
+                                list(analyzer.find_attr_docs().keys())
                                 if class_name == self._cls.__name__])
-        class_members = set([name for name, func in getattr(self._cls, '__dict__').iteritems()
+        class_members = set([name for name, func in list(getattr(self._cls, '__dict__').items())
                              if not name.startswith('_') and (func is None or
                                                               inspect.isdatadescriptor(func))])
 

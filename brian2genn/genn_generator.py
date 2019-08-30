@@ -133,7 +133,7 @@ class GeNNCodeGenerator(CodeGenerator):
             return device.get_array_name(var, access_data=False)
 
     def translate_expression(self, expr):
-        for varname, var in self.variables.iteritems():
+        for varname, var in list(self.variables.items()):
             if isinstance(var, Function):
                 try:
                     impl_name = var.implementations[self.codeobj_class].name
@@ -185,9 +185,9 @@ class GeNNCodeGenerator(CodeGenerator):
     def translate_one_statement_sequence(self, statements, scalar=False):
         if len(statements) and self.template_name=='synapses':
             _, _, _, conditional_write_vars = self.arrays_helper(statements)
-            vars_pre = [k for k, v in self.variable_indices.items() if v=='_presynaptic_idx']
-            vars_syn = [k for k, v in self.variable_indices.items() if v=='_idx']
-            vars_post = [k for k, v in self.variable_indices.items() if v=='_postsynaptic_idx']
+            vars_pre = [k for k, v in list(self.variable_indices.items()) if v=='_presynaptic_idx']
+            vars_syn = [k for k, v in list(self.variable_indices.items()) if v=='_idx']
+            vars_post = [k for k, v in list(self.variable_indices.items()) if v=='_postsynaptic_idx']
             if '_pre_codeobject' in self.name:
                 post_write_var, statements = check_pre_code(self, statements,
                                                 vars_pre, vars_syn, vars_post,
@@ -217,14 +217,14 @@ class GeNNCodeGenerator(CodeGenerator):
         pointers = []
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
-        if isinstance(funccode, basestring):
+        if isinstance(funccode, str):
             funccode = {'support_code': funccode}
         if funccode is not None:
             # To make namespace variables available to functions, we
             # create global variables and assign to them in the main
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
-            for ns_key, ns_value in func_namespace.iteritems():
+            for ns_key, ns_value in list(func_namespace.items()):
                 if hasattr(ns_value, 'dtype'):
                     if ns_value.shape == ():
                         raise NotImplementedError((
@@ -243,7 +243,7 @@ class GeNNCodeGenerator(CodeGenerator):
         dep_pointers = []
         dep_support_code = []
         if impl.dependencies is not None:
-            for dep_name, dep in impl.dependencies.iteritems():
+            for dep_name, dep in list(impl.dependencies.items()):
                 if dep_name not in self.variables:  # do not add a dependency twice
                     self.variables[dep_name] = dep
                     hd, ps, sc, uf = self._add_user_function(dep_name, dep)
@@ -269,7 +269,7 @@ class GeNNCodeGenerator(CodeGenerator):
         # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
-        for varname, var in self.variables.iteritems():
+        for varname, var in list(self.variables.items()):
             if isinstance(var, ArrayVariable):
                 # This is the "true" array name, not the restricted pointer.
                 array_name = device.get_array_name(var)
@@ -289,7 +289,7 @@ class GeNNCodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in self.variables.items():
+        for varname, variable in list(self.variables.items()):
             if isinstance(variable, Function):
                 hd, ps, sc, uf = self._add_user_function(varname, variable)
                 user_functions.extend(uf)

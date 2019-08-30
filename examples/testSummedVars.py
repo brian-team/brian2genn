@@ -13,7 +13,7 @@ S = Synapses(neurons,H,'''
                dg_syn/dt = -g_syn/(100*ms) : 1 (event-driven)
                 V_post = g_syn : 1 (summed)''', on_pre='g_syn= g_syn+1')
 S.connect(True)
-mon= StateMonitor(S,variables=True,record= range(10))
+mon= StateMonitor(S,variables=True,record= list(range(10)))
 mon2= StateMonitor(neurons, variables=True, record= True)
 mon3= StateMonitor(H,variables=True, record= True)
 run(101*ms)
