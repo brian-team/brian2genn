@@ -125,29 +125,37 @@ void engine::run(double duration, //!< Duration of time to run the model for
       _run_{{sm.name}}_codeobject();
       {% endif %}
       {% endfor %}
-      // Execute scalar code for run_regularly operations (if any)
-      {% for nm in neuron_models %}
-      {% if nm.run_regularly_object != None %}
-      if (i % {{nm.run_regularly_step}} == 0)
+      // Execute code for run_regularly operations (if any)
+      {% for run_reg in run_regularly_operations %}
+      if (i % {{run_reg['step']}} == 0)
       {
-        {% for var in nm.run_regularly_read %}
-        {% if var == 't' %}
-        copy_genn_to_brian(&t, brian::_array_{{nm.clock.name}}_t, 1);
-        {% elif var == 'dt' %}
-        {# nothing to do #}
-        {% else %}
-        copy_genn_to_brian(&{{var}}{{nm.name}}, brian::_array_{{nm.name}}_{{var}}, 1);
-        {% endif %}
-        {% endfor %}
-        _run_{{nm.run_regularly_object.name}}();
-        {% for var in nm.run_regularly_write %}
-        copy_brian_to_genn(brian::_array_{{nm.name}}_{{var}}, &{{var}}{{nm.name}}, 1);
-        {% endfor %}
+          // Execute run_regularly operation: {{run_reg['name']}}
+          {% for var in run_reg['read'] %}
+          {% if var == 't' %}
+          copy_genn_to_brian(&t, brian::_array_{{run_reg['owner'].clock.name}}_t, 1);
+          {% elif var == 'dt' %}
+          {# nothing to do #}
+          {% else %}
+          copy_genn_to_brian({{var}}{{run_reg['owner'].name}},
+                             brian::_array_{{run_reg['owner'].name}}_{{var}}, {{run_reg['owner'].variables[var].size}});
+          {% endif %}
+          {% endfor %}
+
+          _run_{{run_reg['codeobj'].name}}();
+
+           {% for var in run_reg['write'] %}
+           copy_brian_to_genn(brian::_array_{{run_reg['owner'].name}}_{{var}},
+                              {{var}}{{run_reg['owner'].name}}, {{run_reg['owner'].variables[var].size}});
+           {% endfor %}
       }
-      {% endif %}
       {% endfor %}
 #ifndef CPU_ONLY
       if (which == GPU) {
+          {% for run_reg in run_regularly_operations %}
+          {% for var in run_reg['write'] %}
+          push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
+          {% endfor %}
+          {% endfor %}
           stepTimeGPU();
           // The stepTimeGPU function already updated everything for the next time step
           iT--;
@@ -168,6 +176,13 @@ void engine::run(double duration, //!< Duration of time to run the model for
           {% endfor %}
           {% for sm in state_monitor_models %}
           pull{{sm.monitored}}StateFromDevice();
+          {% endfor %}
+          {% for run_reg in run_regularly_operations %}
+            {% for var in run_reg['read'] %}
+            {% if not var in ['t', 'dt'] %}
+            pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
+            {% endif %}
+            {% endfor %}
           {% endfor %}
       }
 #endif
