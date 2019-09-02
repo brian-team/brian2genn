@@ -616,9 +616,9 @@ class GeNNDevice(CPPStandaloneDevice):
         # commonly used. We cannot check for explicit names `_rand`, etc.,
         # since multiple uses of binomial or PoissonInput will need to names
         # that we cannot easily predict (poissoninput_binomial_2, etc.)
-        if '(_vectorisation_idx)' in code:
-            code = code.replace('(_vectorisation_idx)',
-                                '(_seed)')
+        if '_vectorisation_idx)' in code:
+            code = code.replace('_vectorisation_idx)',
+                                '_seed)')
             if not '_seed' in model.variables:
                 model.variables.append('_seed')
                 model.variabletypes.append('uint64_t')
@@ -1191,6 +1191,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                               template_kwds={'has_run_regularly': has_run_regularly},
                                                               override_conditional_write=combined_override_conditional_write,
                                                               )
+
                 # Remove the code object from the code_objects dictionary, we
                 # take care of it manually and do not want it to be generated as
                 # part of `generate_code_objects`.
