@@ -8,9 +8,9 @@ extern double t;
 {% endblock%}
 
 {% block maincode %}
-	{# USES_VARIABLES { rate, t, _clock_t, _clock_dt, _spikespace,
+	{# USES_VARIABLES { N, rate, t, _clock_t, _clock_dt, _spikespace,
 	                    _num_source_neurons, _source_start, _source_stop } #}
-
+    {# WRITES_TO_READ_ONLY_VARIABLES { N } #}
         {% set sourcename= _spikespace.replace('_ptr_array_','').replace('__spikespace','') %}
         int _num_spikes = spikeCount_{{sourcename}};
 	// For subgroups, we do not want to record all spikes
@@ -26,5 +26,6 @@ extern double t;
 	}
 	{{_dynamic_rate}}.push_back(1.0*_nSpikes/{{_clock_dt}}/_num_source_neurons);
 	{{_dynamic_t}}.push_back(t);
+	{{N}}++;
 {% endblock %}
 
