@@ -136,16 +136,51 @@ void engine::run(double duration, //!< Duration of time to run the model for
           {% elif var == 'dt' %}
           {# nothing to do #}
           {% else %}
-          copy_genn_to_brian({{var}}{{run_reg['owner'].name}},
-                             brian::_array_{{run_reg['owner'].name}}_{{var}}, {{run_reg['owner'].variables[var].size}});
+          {% if run_reg['isSynaptic'] %}
+          {% if run_reg['connectivity'] == 'DENSE' %}
+          convert_dense_matrix_2_dynamic_arrays({{var}}{{run_reg['owner'].name}},
+                                                {{run_reg['srcN']}}, {{run_reg['trgN']}},
+                                                brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_pre,
+                                                brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_post,
+                                                brian::_dynamic_array_{{run_reg['owner'].name}}_{{var}});
+          {% else %}
+          convert_sparse_synapses_2_dynamic_arrays(C{{run_reg['owner'].name}}, {{var}}{{run_reg['owner'].name}},
+                                                   {{run_reg['srcN']}}, {{run_reg['trgN']}},
+                                                   brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_pre,
+                                                   brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_post,
+                                                   brian::_dynamic_array_{{run_reg['owner'].name}}_{{var}}, b2g::FULL_MONTY);
+          {% endif %}
+          {% else %}
+           copy_genn_to_brian({{var}}{{run_reg['owner'].name}},
+                              brian::_array_{{run_reg['owner'].name}}_{{var}},
+                              {{run_reg['owner'].variables[var].size}});
+          {% endif %}
           {% endif %}
           {% endfor %}
 
           _run_{{run_reg['codeobj'].name}}();
 
            {% for var in run_reg['write'] %}
+           {% if run_reg['isSynaptic'] %}
+           {% if run_reg['connectivity'] == 'DENSE' %}
+           convert_dynamic_arrays_2_dense_matrix(brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_pre,
+                                                 brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_post,
+                                                 brian::_dynamic_array_{{run_reg['owner'].name}}_{{var}},
+                                                 {{var}}{{run_reg['owner'].name}},
+                                                 {{run_reg['srcN']}}, {{run_reg['trgN']}});
+           {% else %}
+           convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_pre,
+                                                    brian::_dynamic_array_{{run_reg['owner'].name}}__synaptic_post,
+                                                    brian::_dynamic_array_{{run_reg['owner'].name}}_{{var}},
+                                                    {{var}}{{run_reg['owner'].name}},
+                                                    {{run_reg['srcN']}}, {{run_reg['trgN']}},
+                                                    _{{run_reg['owner'].name}}_bypre);
+           {% endif %}
+           {% else %}
            copy_brian_to_genn(brian::_array_{{run_reg['owner'].name}}_{{var}},
-                              {{var}}{{run_reg['owner'].name}}, {{run_reg['owner'].variables[var].size}});
+                              {{var}}{{run_reg['owner'].name}},
+                              {{run_reg['owner'].variables[var].size}});
+           {% endif %}
            {% endfor %}
       }
       {% endfor %}

@@ -1557,12 +1557,20 @@ class GeNNDevice(CPPStandaloneDevice):
                     'the dt used by the group.')
             step_value = int(run_regularly_dt / group_dt + 0.5)
             codeobj_read_write = self.run_regularly_read_write[run_reg.codeobj.name]
-            run_regularly_operations.append({'name': run_reg.name,
-                                             'codeobj': run_reg.codeobj,
-                                             'owner': run_reg.group,
-                                             'read': codeobj_read_write['read'],
-                                             'write': codeobj_read_write['write'],
-                                             'step': step_value})
+            op = {'name': run_reg.name,
+                  'codeobj': run_reg.codeobj,
+                  'owner': run_reg.group,
+                  'read': codeobj_read_write['read'],
+                  'write': codeobj_read_write['write'],
+                  'step': step_value,
+                  'isSynaptic': False}
+            if isinstance(run_reg.group, Synapses):
+                op['isSynaptic'] = True
+                op['srcN'] = run_reg.group.source.variables['N'].get_value()
+                op['trgN'] = run_reg.group.target.variables['N'].get_value()
+                op['connectivity'] = self.connectivityDict[run_reg.group.name]
+            run_regularly_operations.append(op)
+
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
