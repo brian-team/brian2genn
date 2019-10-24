@@ -259,6 +259,7 @@ class stateMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.order = 0
         self.monitored = ''
         self.isSynaptic = False
         self.variables = []
@@ -1450,6 +1451,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in state_monitors:
             sm = stateMonitorModel()
             sm.name = obj.name
+            sm.order = obj.order
             src = obj.source
             if isinstance(src, Subgroup):
                 src = src.source
@@ -1558,6 +1560,7 @@ class GeNNDevice(CPPStandaloneDevice):
             step_value = int(run_regularly_dt / group_dt + 0.5)
             codeobj_read_write = self.run_regularly_read_write[run_reg.codeobj.name]
             op = {'name': run_reg.name,
+                  'order': run_reg.order,
                   'codeobj': run_reg.codeobj,
                   'owner': run_reg.group,
                   'read': codeobj_read_write['read'],
@@ -1571,6 +1574,19 @@ class GeNNDevice(CPPStandaloneDevice):
                 op['connectivity'] = self.connectivityDict[run_reg.group.name]
             run_regularly_operations.append(op)
 
+        # StateMonitors and run_regularly operations are both executed in the "start"
+        # slot. Their order of execution can matter, so we provide a list which sorts
+        # them by their order attribute. For convenient use in the template, the list
+        # stores tuples of a boolean and the object, where the boolean states whether
+        # the object is a stateMonitorModel.
+        run_reg_state_monitor_operations = ([(run_reg['order'], run_reg['name'], False, run_reg)
+                                             for run_reg in run_regularly_operations] +
+                                            [(sm.order, sm.name, True, sm)
+                                             for sm in self.state_monitor_models]
+                                            )
+        run_reg_state_monitor_operations = [(is_state_mon, obj)
+                                            for _, _, is_state_mon, obj
+                                            in sorted(run_reg_state_monitor_operations)]
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
@@ -1579,7 +1595,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      rate_monitor_models=self.rate_monitor_models,
                                                      state_monitor_models=self.state_monitor_models,
                                                      run_regularly_operations=run_regularly_operations,
-                                                     maximum_run_time=maximum_run_time
+                                                     maximum_run_time=maximum_run_time,
+                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations
                                                      )
         writer.write('engine.*', engine_tmp)
 
