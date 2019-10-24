@@ -113,8 +113,9 @@ Timed arrays
 Timed arrays post a problem in the Brian2GeNN interface because they
 necessitate communication from the timed array to the target group at
 runtime that would result in host to GPU copies in the final CUDA/C++
-code. This could lead to large inefficiences and for the moment we
-have therefore decided to not support this feature.
+code. This could lead to large inefficiences, the use of ``TimedArray`` is therefore
+currently restricted to code in ``run_regularly`` operations that will be executed on
+the CPU.
 
 Multiple clocks
 ---------------
