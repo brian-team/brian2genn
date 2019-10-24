@@ -196,9 +196,13 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% endfor %}
 #ifndef CPU_ONLY
       if (which == GPU) {
+          {% set states_pushed = [] %}
           {% for run_reg in run_regularly_operations %}
           {% for var in run_reg['write'] %}
+          {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
           push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
+          {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
+          {% endif %}
           {% endfor %}
           {% endfor %}
           stepTimeGPU();
@@ -209,23 +213,37 @@ void engine::run(double duration, //!< Duration of time to run the model for
           _run_{{spkGen.name}}_codeobject();
           push{{spkGen.name}}SpikesToDevice();
           {% endfor %}
+          {% set spikes_pulled = [] %}
           {% for spkMon in spike_monitor_models %}
           {% if (spkMon.notSpikeGeneratorGroup) %}
+          {% if not spkMon.neuronGroup in spikes_pulled %}
           pull{{spkMon.neuronGroup}}SpikesFromDevice();
+          {% if spikes_pulled.append(spkMon.neuronGroup) %}{% endif %}
+          {% endif %}
           {% endif %}
           {% endfor %}
           {% for rateMon in rate_monitor_models %}
           {% if (rateMon.notSpikeGeneratorGroup) %}
+          {% if not rateMon.neuronGroup in spikes_pulled %}
           pull{{rateMon.neuronGroup}}SpikesFromDevice();
+          {% if spikes_pulled.append(rateMon.neuronGroup) %}{% endif %}
+          {% endif %}
           {% endif %}
           {% endfor %}
+          {% set states_pulled = [] %}
           {% for sm in state_monitor_models %}
+          {% if not sm.monitored in states_pulled %}
           pull{{sm.monitored}}StateFromDevice();
+          {% if states_pulled.append(sm.monitored) %}{% endif %}
+          {% endif %}
           {% endfor %}
           {% for run_reg in run_regularly_operations %}
             {% for var in run_reg['read'] %}
             {% if not var in ['t', 'dt'] %}
+            {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
             pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
+            {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
+            {% endif %}
             {% endif %}
             {% endfor %}
           {% endfor %}
@@ -233,7 +251,7 @@ void engine::run(double duration, //!< Duration of time to run the model for
 #endif
       if (which == CPU) {
           stepTimeCPU();
-          // The stepTimeGPU function already updated everything for the next time step
+          // The stepTimeCPU function already updated everything for the next time step
           iT--;
           t = iT*DT;
           {% for spkGen in spikegenerator_models %}
