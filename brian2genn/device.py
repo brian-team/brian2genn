@@ -398,7 +398,7 @@ class GeNNDevice(CPPStandaloneDevice):
         Processes abstract code into code objects and stores them in different
         arrays for `GeNNCodeObjects` and `GeNNUserCodeObjects`.
         '''
-        if name.endswith('_run_regularly_codeobject*'):
+        if '_run_regularly_' in name:
             variables['N'] = owner.variables['N']
             # Add an extra code object that executes the scalar code of
             # the run_regularly operation (will be directly called from
@@ -881,7 +881,7 @@ class GeNNDevice(CPPStandaloneDevice):
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
             if ((codeobj.template_name not in ['stateupdate', 'threshold',
                                                'reset', 'synapses']) or
-                    ('_run_regularly_codeobject' in codeobj.name)):
+                    ('_run_regularly_' in codeobj.name)):
                 if isinstance(codeobj.code, MultiTemplate):
                     code = freeze(codeobj.code.cpp_file, ns)
                     code = code.replace('%CONSTANTS%', '\n'.join(
