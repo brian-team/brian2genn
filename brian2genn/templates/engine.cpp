@@ -198,12 +198,15 @@ void engine::run(double duration, //!< Duration of time to run the model for
       if (which == GPU) {
           {% set states_pushed = [] %}
           {% for run_reg in run_regularly_operations %}
-          {% for var in run_reg['write'] %}
-          {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
-          push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
-          {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
-          {% endif %}
-          {% endfor %}
+          if (i % {{run_reg['step']}} == 0)  // only push state if we executed the operation
+          {
+              {% for var in run_reg['write'] %}
+              {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
+              push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
+              {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
+              {% endif %}
+              {% endfor %}
+          }
           {% endfor %}
           stepTimeGPU();
           // The stepTimeGPU function already updated everything for the next time step
@@ -238,14 +241,17 @@ void engine::run(double duration, //!< Duration of time to run the model for
           {% endif %}
           {% endfor %}
           {% for run_reg in run_regularly_operations %}
-            {% for var in run_reg['read'] %}
-            {% if not var in ['t', 'dt'] %}
-            {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
-            pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
-            {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
-            {% endif %}
-            {% endif %}
-            {% endfor %}
+            if ((i + 1) % {{run_reg['step']}} == 0)  // only pull state if next time step executes operation
+            {
+                {% for var in run_reg['read'] %}
+                {% if not var in ['t', 'dt'] %}
+                {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
+                pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
+                {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
+                {% endif %}
+                {% endif %}
+                {% endfor %}
+            }
           {% endfor %}
       }
 #endif
