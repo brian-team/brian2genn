@@ -75,7 +75,6 @@ int main(int argc, char *argv[])
   create_hidden_weightmatrix(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post, _hidden_weightmatrix{{synapses.name}},{{synapses.srcN}}, {{synapses.trgN}});
   {% else %} {# for sparse matrix representations #}
   allocate{{synapses.name}}(brian::_dynamic_array_{{synapses.name}}__synaptic_pre.size());
-  vector<vector<int32_t> > _{{synapses.name}}_bypre;
   initialize_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
                              C{{synapses.name}}, {{synapses.srcN}}, {{synapses.trgN}}, _{{synapses.name}}_bypre);
   {% for var in synapses.variables %}
@@ -225,6 +224,7 @@ using namespace std;
 
 #include "utils.h" // for CHECK_CUDA_ERRORS
 #include "stringUtils.h"
+#include <vector>
 
 #ifndef CPU_ONLY
 #include <cuda_runtime.h>
@@ -248,6 +248,10 @@ CStopWatch timer;
 
 //----------------------------------------------------------------------
 // other stuff:
-
-
+// global variables for pre-calculated list of the postsynaptic targets ordered by presynaptic sources
+{% for synapses in synapse_models %}
+{% if synapses.connectivity != 'DENSE' %}
+vector<vector<int32_t> > _{{synapses.name}}_bypre;
+{% endif %}
+{% endfor %}
 {% endmacro %}
