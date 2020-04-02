@@ -20,7 +20,7 @@ Brian2GeNN need to be fully installed.
 To install GeNN and Brian 2, refer to their respective documentation:
 
 * `Brian 2 installation instructions <https://brian2.readthedocs.io/en/stable/introduction/install.html>`_
-* `GeNN installation instructions <http://genn-team.github.io/genn/documentation/3/html/Installation.html>`_
+* `GeNN installation instructions <https://genn-team.github.io/genn/documentation/3/html/d8/d99/Installation.html>`_
 
 Note that you will have to also install the CUDA toolkit and driver necessary
 to run simulations on a NVIDIA graphics card. These will have to be installed
@@ -38,7 +38,7 @@ To install brian2genn, use ``pip``::
 (might require administrator privileges depending on the configuration of your
 system; add ``--user`` to force an installation with user privileges only).
 
-As detailed in the `GeNN installation instructions <http://genn-team.github.io/genn/documentation/html/Installation.html>`_),
+As detailed in the `GeNN installation instructions <https://genn-team.github.io/genn/documentation/3/html/d8/d99/Installation.html>`_),
 you need to set the ``GENN_PATH`` environment variable to the GeNN installation
 directory. Alternatively, you can set the `devices.genn.path` preference to the
 sam effect.

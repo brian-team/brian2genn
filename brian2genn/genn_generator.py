@@ -141,10 +141,11 @@ class GeNNCodeGenerator(CodeGenerator):
                 except KeyError:
                     raise NotImplementedError('Function {} is not available '
                                               'for use with '
-                                              'GeNN.'.format(var.name))
+                                              'GeNN.'.format(getattr(var, 'name',
+                                                                     getattr(var, '__name__', None))))
                 if impl_name is not None:
                     expr = word_substitute(expr, {varname: impl_name})
-        return CPPNodeRenderer().render_expr(expr).strip()
+        return CPPNodeRenderer(auto_vectorise=self.auto_vectorise).render_expr(expr).strip()
 
     def translate_statement(self, statement):
         var, op, expr, comment = (statement.var, statement.op,
@@ -219,6 +220,15 @@ class GeNNCodeGenerator(CodeGenerator):
         user_functions = [(varname, variable)]
         funccode = impl.get_code(self.owner)
         if isinstance(funccode, str):
+            # Rename references to any dependencies if necessary
+            for dep_name, dep in iteritems(impl.dependencies):
+                dep_impl = dep.implementations[self.codeobj_class]
+                dep_impl_name = dep_impl.name
+                if dep_impl_name is None:
+                    dep_impl_name = dep.pyfunc.__name__
+                if dep_name != dep_impl_name:
+                    funccode = word_substitute(funccode,
+                                               {dep_name: dep_impl_name})
             funccode = {'support_code': funccode}
         if funccode is not None:
             # To make namespace variables available to functions, we
@@ -247,6 +257,9 @@ class GeNNCodeGenerator(CodeGenerator):
             for dep_name, dep in iteritems(impl.dependencies):
                 if dep_name not in self.variables:  # do not add a dependency twice
                     self.variables[dep_name] = dep
+                    dep_impl = dep.implementations[self.codeobj_class]
+                    if dep_name != dep_impl.name:
+                        self.func_name_replacements[dep_name] = dep_impl.name
                     hd, ps, sc, uf = self._add_user_function(dep_name, dep)
                     dep_hash_defines.extend(hd)
                     dep_pointers.extend(ps)
