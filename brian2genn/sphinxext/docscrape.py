@@ -6,6 +6,7 @@ import inspect
 import textwrap
 import re
 import pydoc
+from six import iteritems, iterkeys
 from warnings import warn
 
 from sphinx.pycode import ModuleAnalyzer
@@ -375,7 +376,7 @@ class NumpyDocString(object):
         idx = self['index']
         out = []
         out += ['.. index:: %s' % idx.get('default','')]
-        for section, references in list(idx.items()):
+        for section, references in iteritems(idx):
             if section == 'default':
                 continue
             out += ['   :%s: %s' % (section, ', '.join(references))]
@@ -495,7 +496,7 @@ class ClassDoc(NumpyDocString):
     def methods(self):
         if self._cls is None:
             return [] 
-        methods = [name for name, func in list(getattr(self._cls, '__dict__').items())
+        methods = [name for name, func in iteritems(getattr(self._cls, '__dict__'))
                    if ((not name.startswith('_')
                         or name in self.extra_public_methods)
                        and ((callable(func) and not isinstance(func, type)) or
@@ -508,9 +509,9 @@ class ClassDoc(NumpyDocString):
             return []
         analyzer = ModuleAnalyzer.for_module(self._cls.__module__)
         instance_members = set([attr_name for (class_name, attr_name) in
-                                list(analyzer.find_attr_docs().keys())
+                                iterkeys(analyzer.find_attr_docs())
                                 if class_name == self._cls.__name__])
-        class_members = set([name for name, func in list(getattr(self._cls, '__dict__').items())
+        class_members = set([name for name, func in iteritems(getattr(self._cls, '__dict__'))
                              if not name.startswith('_') and (func is None or
                                                               inspect.isdatadescriptor(func))])
 

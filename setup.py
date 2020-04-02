@@ -65,6 +65,7 @@ setup(name='Brian2GeNN',
       install_requires=[
                         'brian2>=2.2.2.1',
                         'setuptools>=6.0',
+                        'six',
                        ],
       setup_requires=[
                       'setuptools>=6.0'
