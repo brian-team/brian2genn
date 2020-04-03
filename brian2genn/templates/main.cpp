@@ -211,6 +211,7 @@ int main(int argc, char *argv[])
 
 using namespace std;
 #include <cassert>
+#include <cstdint>
 #include <vector>
 
 // we will hard-code some stuff ... because at the end of the day that is 
