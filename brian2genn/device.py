@@ -29,6 +29,7 @@ from brian2.codegen.generators.cpp_generator import (c_data_type,
 from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
+from brian2.core.functions import Function
 from brian2.core.network import Network
 from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
