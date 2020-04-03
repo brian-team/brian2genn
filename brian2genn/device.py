@@ -1072,8 +1072,9 @@ class GeNNDevice(CPPStandaloneDevice):
     def process_poisson_groups(self, objects, poisson_groups):
         for obj in poisson_groups:
             # throw error if events other than spikes are used
-            if len(list(obj.events.keys())) > 1 or (len(
-                    list(obj.events.keys())) == 1 and not next(iter(list(obj.events.keys()))) == 'spike'):
+            event_keys = list(iterkeys(obj.events))
+            if (len(event_keys) > 1 
+                or (len(event_keys) == 1 and event_keys[0] != 'spike')):
                 raise NotImplementedError(
                     'Brian2GeNN does not support events that are not spikes')
 
@@ -1638,7 +1639,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                 synapses, writer):
         # ------------------------------------------------------------------------------
         # create the objects.cpp and objects.h code
-        the_objects = list(self.code_objects.values())
+        the_objects = list(itervalues(self.code_objects))
         arr_tmp = GeNNUserCodeObject.templater.objects(
             None, None,
             array_specs=self.arrays,
@@ -1682,7 +1683,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
-                         + '%s') % ', '.join(list(kwds.keys())))
+                         + '%s') % ', '.join(iterkeys(kwds)))
 
         if self.run_duration is not None:
             raise NotImplementedError(

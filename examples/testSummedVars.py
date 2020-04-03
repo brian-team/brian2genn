@@ -1,5 +1,6 @@
 from brian2 import *
 import brian2genn
+from builtins import range
 
 set_device('genn', directory='testSummedVars', use_GPU= False)
 #set_device('cpp_standalone')
