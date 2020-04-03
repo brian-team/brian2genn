@@ -223,7 +223,7 @@ using namespace std;
 // global variables for pre-calculated list of the postsynaptic targets ordered by presynaptic sources
 {% for synapses in synapse_models %}
 {% if synapses.connectivity != 'DENSE' %}
-vector<vector<int32_t> > _{{synapses.name}}_bypre;
+std::vector<std::vector<int32_t> > _{{synapses.name}}_bypre;
 {% endif %}
 {% endfor %}
 {% endmacro %}
