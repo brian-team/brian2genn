@@ -160,7 +160,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                     _{{obj['owner'].name}}_bypre);
            {% endif %}
            {% else %}
-           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, 1, &{{var}}{{obj['owner'].name}});
+           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, 1, {{var}}{{obj['owner'].name}});
            {% endif %}
         {% endfor %}
       }
