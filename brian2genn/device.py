@@ -9,6 +9,7 @@ import platform
 from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
+from builtins import map, range
 from collections import defaultdict
 from six import iteritems, iterkeys, itervalues
 import tempfile
@@ -927,8 +928,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.has_been_run = True
         last_run_info = open(
             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
-        self._last_run_time, self._last_run_completed_fraction = list(map(float,
-                                                                     last_run_info.split()))
+        self._last_run_time, self._last_run_completed_fraction =\ 
+            list(map(float, last_run_info.split()))
 
         # The following is a verbatim copy of the respective code in
         # CPPStandaloneDevice.run. In the long run, we can hopefully implement
