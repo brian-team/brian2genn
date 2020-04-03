@@ -135,7 +135,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}}, b2g::FULL_MONTY);
           {% endif %}
           {% else %}
-           std::copy_n({{var}}{{obj['owner'].name}, {{obj['owner'].variables[var].size}},
+           std::copy_n({{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
                        brian::_array_{{obj['owner'].name}}_{{var}});
           {% endif %}
         {% endif %}
