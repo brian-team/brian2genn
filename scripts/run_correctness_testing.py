@@ -29,7 +29,7 @@ if __name__=='__main__':
     #print run_feature_tests(configurations=[DefaultConfiguration, 
     #                                         GeNNConfiguration],
     #                         feature_tests=[NeuronGroupIntegrationLinear]).tables_and_exceptions
-    print run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration],feature_tests=[
+    print((run_feature_tests(configurations=[DefaultConfiguration,GeNNConfiguration],feature_tests=[
         #run_feature_tests(configurations=[GeNNConfiguration], feature_tests=[
         NeuronGroupIntegrationLinear,
         NeuronGroupIntegrationEuler,
@@ -41,5 +41,5 @@ if __name__=='__main__':
         SpikeMonitorTest,
         StateMonitorTest,
         SpikeGeneratorGroupTest
-    ]).tables_and_exceptions
+    ]).tables_and_exceptions))
     

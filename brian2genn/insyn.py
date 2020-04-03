@@ -48,6 +48,9 @@ call this function and rewrite the appropriate statement.
 '''
 from brian2.utils.stringtools import get_identifiers
 from brian2.codegen.statements import Statement
+from brian2.utils.logger import get_logger
+
+logger = get_logger('brian2.devices.genn')
 
 def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post,
                    conditional_write_vars):
@@ -64,10 +67,11 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post,
     read, write, indices = codegen.array_read_write(stmts)
     
     post_write = set(write).intersection(set(vars_post))
-    if len(post_write)==0:
-        raise NotImplementedError("GeNN does not support Synapses with no postsynaptic effect.")
     if len(post_write)>1:
         raise NotImplementedError("GeNN only supports writing to a single postsynaptic variable.")
+    if len(post_write)==0:
+        logger.warn("Warning: You have defined (a) synaptic group(s) that has no direct postsynaptic effect.")
+        return None, stmts
     
     post_write_var = list(post_write)[0]
         

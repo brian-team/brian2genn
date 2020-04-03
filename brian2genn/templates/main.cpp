@@ -46,7 +46,7 @@ int main(int argc, char *argv[])
   {{'\n'.join(code_lines['before_start'])|autoindent}}
 
   //-----------------------------------------------------------------
-  // build the neuronal circuiteryinitializeSparse (calls initialize and allocateMem)
+  // build the neuronal circuitery (calls initialize and allocateMem)
   engine eng;
 
   //-----------------------------------------------------------------
@@ -220,6 +220,10 @@ using namespace std;
 
 //----------------------------------------------------------------------
 // other stuff:
-
-
+// global variables for pre-calculated list of the postsynaptic targets ordered by presynaptic sources
+{% for synapses in synapse_models %}
+{% if synapses.connectivity != 'DENSE' %}
+vector<vector<int32_t> > _{{synapses.name}}_bypre;
+{% endif %}
+{% endfor %}
 {% endmacro %}
