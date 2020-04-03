@@ -303,7 +303,7 @@ class GeNNCodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in iteritems(self.variables):
+        for varname, variable in list(iteritems(self.variables)):
             if isinstance(variable, Function):
                 hd, ps, sc, uf = self._add_user_function(varname, variable)
                 user_functions.extend(uf)
