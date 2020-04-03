@@ -116,7 +116,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
           // Execute run_regularly operation: {{obj['name']}}
           {% for var in obj['read'] %}
         {% if var == 't' %}
-          copy_genn_to_brian(&t, brian::_array_{{obj['owner'].clock.name}}_t, 1);
+        std::copy_n(&t, 1, brian::_array_{{obj['owner'].clock.name}}_t);
         {% elif var == 'dt' %}
         {# nothing to do #}
         {% else %}
@@ -135,9 +135,8 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}}, b2g::FULL_MONTY);
           {% endif %}
           {% else %}
-           copy_genn_to_brian({{var}}{{obj['owner'].name}},
-                              brian::_array_{{obj['owner'].name}}_{{var}},
-                              {{obj['owner'].variables[var].size}});
+           std::copy_n({{var}}{{obj['owner'].name}, {{obj['owner'].variables[var].size}},
+                       brian::_array_{{obj['owner'].name}}_{{var}});
           {% endif %}
         {% endif %}
         {% endfor %}
@@ -161,9 +160,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                     _{{obj['owner'].name}}_bypre);
            {% endif %}
            {% else %}
-           copy_brian_to_genn(brian::_array_{{obj['owner'].name}}_{{var}},
-                              {{var}}{{obj['owner'].name}},
-                              {{obj['owner'].variables[var].size}});
+           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, 1, &{{var}}{{obj['owner'].name}});
            {% endif %}
         {% endfor %}
       }
