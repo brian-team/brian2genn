@@ -176,7 +176,7 @@ class DelayedCodeObject(object):
         self.variable_indices = variable_indices
         self.override_conditional_write = override_conditional_write
 
-    def before_run(self, run_namespace):
+    def before_run(self):
         pass
 
     def after_run(self):
