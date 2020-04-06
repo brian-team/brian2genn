@@ -160,6 +160,7 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
+
 class DelayedCodeObject(object):
     '''
     Dummy class used for delaying the CodeObject creation of stateupdater,
@@ -174,6 +175,12 @@ class DelayedCodeObject(object):
         self.variables = variables
         self.variable_indices = variable_indices
         self.override_conditional_write = override_conditional_write
+
+    def before_run(self, run_namespace):
+        pass
+
+    def after_run(self):
+        pass
 
 
 class neuronModel(object):
