@@ -29,14 +29,11 @@
         // vector code
         const int _idx = {{_indices}}[_i];
         const int _vectorisation_idx = _idx;
-        {% block maincode_inner %}
-            {{ super() }}
-
-            {% for varname, var in _recorded_variables | dictsort %}
-            {% set _recorded =  get_array_name(var, access_data=False) %}
-            {{_recorded}}(_new_size-1, _i) = _to_record_{{varname}};
-            {% endfor %}
-        {% endblock %}
+        {{vector_code|autoindent}}
+        {% for varname, var in _recorded_variables | dictsort %}
+        {% set _recorded =  get_array_name(var, access_data=False) %}
+        {{_recorded}}(_new_size-1, _i) = _to_record_{{varname}};
+        {% endfor %}
     }
     {{N}} = _new_size;
 {% endblock %}
