@@ -14,6 +14,7 @@ from .genn_generator import *
 __all__ = ['GeNNCodeObject',
            'GeNNUserCodeObject']
 
+
 class GeNNCodeObject(CodeObject):
     '''
     Class of code objects that generate GeNN "code snippets"
@@ -24,6 +25,20 @@ class GeNNCodeObject(CodeObject):
                                        'constant_or_scalar': constant_or_scalar,
                                        'zip': zip})
     generator_class = GeNNCodeGenerator
+
+    # Overwrite Brian2 methods, we do not need to compile/run anything here
+    def compile(self):
+        pass
+
+    def before_run(self):
+        pass
+
+    def run(self):
+        pass
+
+    def after_run(self):
+        pass
+
 
 class GeNNUserCodeObject(CPPStandaloneCodeObject):
     '''
