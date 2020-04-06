@@ -326,6 +326,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.spikegenerator_models = []
         self.synapse_models = []
         self.max_row_length_code= []
+        self.max_row_length_runcode= []
         self.ktimer= dict()
         self.ktimer['neuron_tme']= True
         self.ktimer['synapse_tme']= False
@@ -477,22 +478,48 @@ class GeNNDevice(CPPStandaloneDevice):
             self.simple_code_objects[codeobj.name] = codeobj
         else:
             if '_synapses_create_array_' in name:
-                # we are handling a Synapses group that will be created from Synapses
-                # and need to extract the max_row_length information from the array of
-                # variables / indices
-                # FIXME: someone more pythonic please make this more efficient!
+                # we are handling a Synapses group that will be created from python arrays
+                # and need to extract the max_row_length/max_col_length information from
+                # the sources and targets arrays in the variables
                 src= variables["sources"].get_value()
                 trg= variables["targets"].get_value()
                 if prefs['devices.genn.cuda_backend.synapse_span_type'] == 'POSTSYNAPTIC':  
                     which, max_val = Counter(src).most_common(1)[0]
-                    max_name= 'Row';
+                    max_name= 'Row'
                 else:
                     which, max_val = Counter(trg).most_common(1)[0]
-                    max_name= 'Col';
+                    max_name= 'Col'
                 self.max_row_length_code.append('long max%s%s = %d;' % (max_name, owner.name, max_val))
                 print(self.max_row_length_code)
                 
             codeobj_class = GeNNUserCodeObject
+            if '_synapses_create_generator_' in name:
+                # Here we process max_row_length for synapses created by an algorithm in C++
+                # the strategy is to do a dry run of connection generationin the model definition
+                # function that has the same random numbers and just counts synaptic connections
+                # rather than generating then for real
+                if prefs['devices.genn.cuda_backend.synapse_span_type'] == 'POSTSYNAPTIC':  
+                    max_name= 'Row'
+                    count_target= 1
+                else:
+                    max_name= 'Col'
+                    count_target= 0
+                mrl_name= '%s_max_row_length' % owner.name
+                codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
+                                                              abstract_code,
+                                                              variables,
+                                                              'max_row_length_generator',
+                                                              variable_indices,
+                                                              codeobj_class=codeobj_class,
+                                                              template_kwds=template_kwds,
+                                                              override_conditional_write=override_conditional_write,
+                                                              )
+                self.code_objects['%s_max_row_length' % owner.name] = codeobj
+                self.max_row_length_code.append('#include "code_objects/%s_max_row_length.h"' % owner.name)
+                self.max_row_length_code.append('long max%s%s;' % (max_name, owner.name))
+                self.max_row_length_runcode.append('_run_%s_max_row_length();' % owner.name)
+                #print(codeobj.code.cpp_file)
+                print(self.code_objects)
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -1258,9 +1285,6 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def process_synapses(self, synapse_groups, objects):
         for obj in synapse_groups:
-            # first prepare code to estimate the synapse max_row_length
-            # (only for connectivity generated at C++ level)
-            
             synapse_model = synapseModel()
             synapse_model.name = obj.name
             if isinstance(obj.source, Subgroup):
@@ -1536,7 +1560,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
-                                                   max_row_length_code=self.max_row_length_code, 
+                                                   max_row_length_code=self.max_row_length_code,
+                                                   max_row_length_runcode=self.max_row_length_runcode,
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,
                                                    precision=precision

@@ -153,6 +153,10 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 
 void modelDefinition(NNmodel &model)
 {
+    {% for max_row_length in max_row_length_runcode %}
+    {{max_row_length}}
+    {% endfor %}
+
     {% if use_GPU == 'start' %}
     // GENN_PREFERENCES set in brian2genn
     GENN_PREFERENCES.deviceSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.device_select']|int}};
