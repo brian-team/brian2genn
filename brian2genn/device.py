@@ -18,6 +18,7 @@ import tempfile
 import itertools
 import numpy
 import numbers
+from collections import Counter
 
 from brian2.codegen.translation import make_statements
 from brian2.input.poissoninput import PoissonInput
@@ -324,6 +325,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.spikegenerator_models = []
         self.synapse_models = []
+        self.max_row_length_code= []
         self.ktimer= dict()
         self.ktimer['neuron_tme']= True
         self.ktimer['synapse_tme']= False
@@ -460,6 +462,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                         variable_indices=variable_indices,
                                         override_conditional_write=override_conditional_write)
             self.simple_code_objects[name] = codeobj
+
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name,
@@ -473,6 +476,22 @@ class GeNNDevice(CPPStandaloneDevice):
                                                           )
             self.simple_code_objects[codeobj.name] = codeobj
         else:
+            if '_synapses_create_array_' in name:
+                # we are handling a Synapses group that will be created from Synapses
+                # and need to extract the max_row_length information from the array of
+                # variables / indices
+                # FIXME: someone more pythonic please make this more efficient!
+                src= variables["sources"].get_value()
+                trg= variables["targets"].get_value()
+                if prefs['devices.genn.cuda_backend.synapse_span_type'] == 'POSTSYNAPTIC':  
+                    which, max_val = Counter(src).most_common(1)[0]
+                    max_name= 'Row';
+                else:
+                    which, max_val = Counter(trg).most_common(1)[0]
+                    max_name= 'Col';
+                self.max_row_length_code.append('long max%s%s = %d;' % (max_name, owner.name, max_val))
+                print(self.max_row_length_code)
+                
             codeobj_class = GeNNUserCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
@@ -1239,6 +1258,9 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def process_synapses(self, synapse_groups, objects):
         for obj in synapse_groups:
+            # first prepare code to estimate the synapse max_row_length
+            # (only for connectivity generated at C++ level)
+            
             synapse_model = synapseModel()
             synapse_model.name = obj.name
             if isinstance(obj.source, Subgroup):
@@ -1514,6 +1536,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
+                                                   max_row_length_code=self.max_row_length_code, 
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,
                                                    precision=precision

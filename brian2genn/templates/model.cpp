@@ -145,7 +145,11 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
     {% endif %}
 ){% endif %};
 {% endfor %}
- 
+
+{% for max_row_length in max_row_length_code %}
+{{max_row_length}}
+{% endfor %}
+
 
 void modelDefinition(NNmodel &model)
 {
