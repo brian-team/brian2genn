@@ -742,9 +742,6 @@ class GeNNDevice(CPPStandaloneDevice):
         except ImportError:
             net_objects = self.net.objects
 
-        synapses = []
-        synapses.extend(s for s in net_objects if isinstance(s, Synapses))
-
         main_lines = self.make_main_lines()
 
         # assemble the model descriptions:
@@ -794,7 +791,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
         self.process_synapses(synapse_groups, objects)
-        # need to establish which kernel timers will be created if kernel riming is desired
+        # need to establish which kernel timers will be created if kernel timing is desired
         if len(self.synapse_models) > 0:
             self.ktimer['synapse_tme']= True
             for synapse_model in self.synapse_models:
@@ -815,7 +812,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         self.generate_objects_source(arange_arrays, self.net,
                                      static_array_specs,
-                                     synapses, writer)
+                                     synapse_groups, writer)
         self.copy_source_files(writer, directory)
 
         # Rename randomkit.c so that it gets compiled by an explicit rule in
