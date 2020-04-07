@@ -327,6 +327,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.synapse_models = []
         self.max_row_length_code= []
         self.max_row_length_runcode= []
+        self.max_row_length_code_objects= {}
         self.ktimer= dict()
         self.ktimer['neuron_tme']= True
         self.ktimer['synapse_tme']= False
@@ -483,14 +484,11 @@ class GeNNDevice(CPPStandaloneDevice):
                 # the sources and targets arrays in the variables
                 src= variables["sources"].get_value()
                 trg= variables["targets"].get_value()
-                if prefs['devices.genn.cuda_backend.synapse_span_type'] == 'POSTSYNAPTIC':  
-                    which, max_val = Counter(src).most_common(1)[0]
-                    max_name= 'Row'
-                else:
-                    which, max_val = Counter(trg).most_common(1)[0]
-                    max_name= 'Col'
-                self.max_row_length_code.append('long max%s%s = %d;' % (max_name, owner.name, max_val))
-                print(self.max_row_length_code)
+                which, max_row = Counter(src).most_common(1)[0]
+                which, max_col = Counter(trg).most_common(1)[0]
+                self.max_row_length_code.append('long maxRow%s = %d;' % (owner.name, max_row))
+                self.max_row_length_code.append('long maxCol%s = %d;' % (owner.name, max_col))
+                #print(self.max_row_length_code)
                 
             codeobj_class = GeNNUserCodeObject
             if '_synapses_create_generator_' in name:
@@ -498,12 +496,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 # the strategy is to do a dry run of connection generationin the model definition
                 # function that has the same random numbers and just counts synaptic connections
                 # rather than generating then for real
-                if prefs['devices.genn.cuda_backend.synapse_span_type'] == 'POSTSYNAPTIC':  
-                    max_name= 'Row'
-                    count_target= 1
-                else:
-                    max_name= 'Col'
-                    count_target= 0
                 mrl_name= '%s_max_row_length' % owner.name
                 codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
                                                               abstract_code,
@@ -514,11 +506,16 @@ class GeNNDevice(CPPStandaloneDevice):
                                                               template_kwds=template_kwds,
                                                               override_conditional_write=override_conditional_write,
                                                               )
-                self.code_objects['%s_max_row_length' % owner.name] = codeobj
-                self.max_row_length_code.append('#include "code_objects/%s_max_row_length.h"' % owner.name)
-                self.max_row_length_code.append('long max%s%s;' % (max_name, owner.name))
+                #self.code_objects['%s_max_row_length' % owner.name] = codeobj
+                self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
+                self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
+                self.max_row_length_code.append('long maxRow%s;' % owner.name)
+                self.max_row_length_code.append('long maxCol%s;' % owner.name)
+                #self.max_row_length_code.append('#include "%s_max_row_length.h"' % owner.name)
+                self.max_row_length_code.append('#include "code_objects/%s_max_row_length.cpp"' % owner.name)
                 self.max_row_length_runcode.append('_run_%s_max_row_length();' % owner.name)
                 #print(codeobj.code.cpp_file)
+                print(self.code_objects)
                 print(self.code_objects)
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
@@ -529,6 +526,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                           template_kwds=template_kwds,
                                                           override_conditional_write=override_conditional_write,
                                                           )
+            # FIXME: is this actually necessary or is it already added by the super?
             self.code_objects[codeobj.name] = codeobj
         return codeobj
 
@@ -868,6 +866,7 @@ class GeNNDevice(CPPStandaloneDevice):
         shutil.move(os.path.join(randomkit_dir, 'randomkit.c'),
                     os.path.join(randomkit_dir, 'randomkit.cc'))
         self.generate_code_objects(writer)
+        self.generate_max_row_length_code_objects(writer)
         self.generate_model_source(writer, use_GPU)
         self.generate_main_source(writer, main_lines)
         self.generate_engine_source(writer, objects)
@@ -950,6 +949,64 @@ class GeNNDevice(CPPStandaloneDevice):
                                  codeobj.code.h_file)
                     self.header_files.append(
                         'code_objects/' + codeobj.name + '.h')
+
+    def generate_max_row_length_code_objects(self, writer):
+        # Generate data for non-constant values
+        code_object_defdefs = defaultdict(list)
+        code_object_defs = defaultdict(list)
+        for codeobj in itervalues(self.max_row_length_code_objects):
+            deflines= []
+            lines = []
+            for k, v in iteritems(codeobj.variables):
+                if isinstance(v, ArrayVariable):
+                    try:
+                        if isinstance(v, DynamicArrayVariable):
+                            if get_var_ndim(v) == 1:
+                                dyn_array_name = self.dynamic_arrays[v]
+                                array_name = self.arrays[v]
+                                # define the dynamic array
+                                line = 'vector<{c_type}> {dyn_array_name};'
+                                line = line.format(c_type=c_data_type(v.dtype),
+                                                   array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                deflines.append(line)
+                                # do the const stuff
+                                line = '{c_type}* const {array_name} = &{dyn_array_name}[0];'
+                                line = line.format(c_type=c_data_type(v.dtype),
+                                                   array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                lines.append(line)
+                                line = 'const int _num{k} = {dyn_array_name}.size();'
+                                line = line.format(k=k,
+                                                   dyn_array_name=dyn_array_name)
+                                lines.append(line)
+                        else:
+                            array_name = self.arrays[v]
+                            line = '{c_type} {array_name}[{size}];'
+                            line = line.format(c_type=c_data_type(v.dtype),
+                                               array_name=array_name,
+                                               size=v.size)
+                            deflines.append(line)
+                            lines.append('const int _num%s = %s;' % (k, v.size))
+                    except TypeError:
+                        pass
+            for line in lines:
+                # Sometimes an array is referred to by to different keys in our
+                # dictionary -- make sure to never add a line twice
+                if not line in code_object_defs[codeobj.name]:
+                    code_object_defs[codeobj.name].append(line)
+            for line in deflines:
+                if not line in code_object_defdefs[codeobj.name]:
+                    code_object_defdefs[codeobj.name].append(line)
+        for codeobj in itervalues(self.max_row_length_code_objects):
+            ns = codeobj.variables
+            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            code = freeze(codeobj.code, ns)
+            code = code.replace('%DEFINITIONS%', '\n'.join(code_object_defdefs[codeobj.name]))
+            code = code.replace('%CONSTANTS%', '\n'.join(
+                        code_object_defs[codeobj.name]))
+            code = '#include "objects.h"\n' + code
+            writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
@@ -1087,14 +1144,19 @@ class GeNNDevice(CPPStandaloneDevice):
                                               'genn-buildmodel.bat')
                 cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " magicnetwork_model.cpp"
                 if not use_GPU:
-                    cmd += ' -c'
+                    cmd += [' -c']
+                cmd += ' -i %s' % directory 
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release project.vcxproj'
                 check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
-                args = [buildmodel_cmd, 'magicnetwork_model.cpp']
+                args = [buildmodel_cmd]
                 if not use_GPU:
                     args += ['-c']
+                wdir= os.getcwd()
+                args += ['-i',wdir+'/'+directory]
+                args += ['magicnetwork_model.cpp']
+                print(args)
                 check_call(args, cwd=directory, env=env)
                 call(["make", "clean"], cwd=directory, env=env)
                 check_call(["make"], cwd=directory, env=env)
