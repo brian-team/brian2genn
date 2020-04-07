@@ -2,6 +2,7 @@
 
 #include <stdint.h>
 #include "modelSpec.h"
+#include "brianlib/randomkit/randomkit.cc"
 
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
@@ -150,9 +151,17 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {{max_row_length}}
 {% endfor %}
 
+// need the brian style random numbers for calculating max row length and max col length
+namespace brian {
+  std::vector< rk_state* > _mersenne_twister_states;
+}
 
 void modelDefinition(NNmodel &model)
 {
+    // Random number generator states (need one for each thread in OpenMP)
+    for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
+      brian::_mersenne_twister_states.push_back(new rk_state());
+
     {% for max_row_length in max_row_length_runcode %}
     {{max_row_length}}
     {% endfor %}

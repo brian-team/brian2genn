@@ -27,7 +27,7 @@ void _run_{{codeobj_name}}()
 
     ///// DEFINITIONS ///////////
     %DEFINITIONS%
-
+        
     ///// CONSTANTS ///////////
     %CONSTANTS%
 
