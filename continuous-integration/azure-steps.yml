@@ -15,10 +15,10 @@ steps:
 
   - bash: |
       source activate $HOME/test_env
+      conda install --quiet --yes -c conda-forge pytest cython sympy future pyparsing numpy jinja2 six
       if [ $(use_master) == 'false' ]; then
-        conda install --quiet --yes -c conda-forge brian2 pytest six
+        pip install brian2
       else
-        conda install --quiet --yes -c conda-forge pytest cython sympy future pyparsing numpy jinja2 six
         pip install https://github.com/brian-team/brian2/archive/master.zip
       fi
     displayName: 'Install Brian2'
