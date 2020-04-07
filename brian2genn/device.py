@@ -952,11 +952,9 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def generate_max_row_length_code_objects(self, writer):
         # Generate data for non-constant values
-        code_object_defdefs = defaultdict(list)
-        code_object_defs = defaultdict(list)
+        code_object_defdefs = defaultdict(set)
+        code_object_defs = defaultdict(set)
         for codeobj in itervalues(self.max_row_length_code_objects):
-            deflines= []
-            lines = []
             for k, v in iteritems(codeobj.variables):
                 if isinstance(v, ArrayVariable):
                     try:
@@ -969,35 +967,28 @@ class GeNNDevice(CPPStandaloneDevice):
                                 line = line.format(c_type=c_data_type(v.dtype),
                                                    array_name=array_name,
                                                    dyn_array_name=dyn_array_name)
-                                deflines.append(line)
+                                code_object_defdefs[codeobj.name].add(line)
                                 # do the const stuff
                                 line = '{c_type}* const {array_name} = &{dyn_array_name}[0];'
                                 line = line.format(c_type=c_data_type(v.dtype),
                                                    array_name=array_name,
                                                    dyn_array_name=dyn_array_name)
-                                lines.append(line)
+                                code_object_defs[codeobj.name].add(line)
                                 line = 'const int _num{k} = {dyn_array_name}.size();'
                                 line = line.format(k=k,
                                                    dyn_array_name=dyn_array_name)
-                                lines.append(line)
+                                code_object_defs[codeobj.name].add(line)
                         else:
                             array_name = self.arrays[v]
                             line = '{c_type} {array_name}[{size}];'
                             line = line.format(c_type=c_data_type(v.dtype),
                                                array_name=array_name,
                                                size=v.size)
-                            deflines.append(line)
-                            lines.append('const int _num%s = %s;' % (k, v.size))
+                            code_object_defdefs[codeobj.name].add(line)
+                            code_object_defs[codeobj.name].add('const int _num%s = %s;' % (k, v.size))
                     except TypeError:
                         pass
-            for line in lines:
-                # Sometimes an array is referred to by to different keys in our
-                # dictionary -- make sure to never add a line twice
-                if not line in code_object_defs[codeobj.name]:
-                    code_object_defs[codeobj.name].append(line)
-            for line in deflines:
-                if not line in code_object_defdefs[codeobj.name]:
-                    code_object_defdefs[codeobj.name].append(line)
+    
         for codeobj in itervalues(self.max_row_length_code_objects):
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
