@@ -1005,7 +1005,6 @@ class GeNNDevice(CPPStandaloneDevice):
             code = code.replace('%DEFINITIONS%', '\n'.join(code_object_defdefs[codeobj.name]))
             code = code.replace('%CONSTANTS%', '\n'.join(
                         code_object_defs[codeobj.name]))
-            code = '#include "objects.h"\n' + code
             writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
     def run(self, directory, use_GPU, with_output):

@@ -147,14 +147,15 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 ){% endif %};
 {% endfor %}
 
-{% for max_row_length in max_row_length_code %}
-{{max_row_length}}
-{% endfor %}
-
 // need the brian style random numbers for calculating max row length and max col length
 namespace brian {
   std::vector< rk_state* > _mersenne_twister_states;
 }
+
+{% for max_row_length in max_row_length_code %}
+{{max_row_length}}
+{% endfor %}
+
 
 void modelDefinition(NNmodel &model)
 {
