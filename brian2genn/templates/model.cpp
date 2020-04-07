@@ -214,7 +214,10 @@ void modelDefinition(NNmodel &model)
         {{synapse_model.name}}_p, {{synapse_model.name}}_ini,
         {}, {});
     syn->setSpanType(SynapseGroup::SpanType::{{prefs['devices.genn.cuda_backend.synapse_span_type']}});
-    // **TODO** maxRowLength and maxColLength
+    {% if synapse_model.connectivity == 'SPARSE' %}
+    syn->setMaxConnections(maxRow{{synapse_model.name}});
+    syn->setMaxSourceConnections(maxCol{{synapse_model.name}});
+    {% endif %}
     }
     {% endfor %}
 }
