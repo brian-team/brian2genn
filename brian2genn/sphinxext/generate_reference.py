@@ -31,7 +31,7 @@ def makename(package, module):
 def write_file(name, text, destdir, suffix):
     """Write the output file for module/package <name>."""
     fname = path.join(destdir, '%s.%s' % (name, suffix))
-    print 'Creating file %s.' % fname
+    print('Creating file %s.' % fname)
     f = open(fname, 'w')
     try:
         f.write(text)
@@ -53,7 +53,7 @@ def format_directive(module, destdir, package=None, basename='brian2genn'):
     directive += '\n'
     # document all the classes in the modules
     full_name = basename + '.' + module
-    print 'processing ' + full_name
+    print('processing ' + full_name)
     try:
         __import__(full_name)
     except:

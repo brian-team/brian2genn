@@ -42,7 +42,7 @@ def main(rootpath, destdir):
         shutil.os.makedirs(destdir)
 
     examplesfnames = [fname for fname in GlobDirectoryWalker(rootpath, '*.py')]
-    print 'Documenting %d examples' % len(examplesfnames)
+    print('Documenting %d examples' % len(examplesfnames))
     examplespaths = []
     examplesbasenames = []
     relativepaths = []
@@ -87,13 +87,13 @@ def main(rootpath, destdir):
                 break
         doc = '\n'.join(doc)
         # next line replaces unicode characters like e-acute with standard ascii representation
-        examplesdocs.append(unicodedata.normalize('NFKD', unicode(doc, 'latin-1')).encode('ascii', 'ignore'))
+        examplesdocs.append(unicodedata.normalize('NFKD', str(doc, 'latin-1')).encode('ascii', 'ignore'))
         examplesafterdoccode.append(afterdoccode)
         
     categories = defaultdict(list)    
-    examples = zip(examplesfnames, examplespaths, examplesbasenames,
+    examples = list(zip(examplesfnames, examplespaths, examplesbasenames,
                    examplescode, examplesdocs, examplesafterdoccode,
-                   relativepaths, outnames)
+                   relativepaths, outnames))
     # Get the path relative to the examples director (not relative to the
     # directory where this file is installed
     if 'BRIAN2_DOCS_EXAMPLE_DIR' in os.environ:
@@ -102,7 +102,7 @@ def main(rootpath, destdir):
         rootdir, _ = os.path.split(__file__)
         rootdir = os.path.normpath(os.path.join(rootdir, '../../examples'))
     eximgpath = os.path.abspath(os.path.join(rootdir, '../docs_sphinx/resources/examples_images'))
-    print 'Searching for example images in directory', eximgpath
+    print('Searching for example images in directory', eximgpath)
     for fname, path, basename, code, docs, afterdoccode, relpath, exname in examples:
         categories[relpath].append((exname, basename))
         title = 'Example: ' + basename
@@ -117,7 +117,7 @@ def main(rootpath, destdir):
         images = glob.glob(eximgpattern)
         for image in sorted(images):
             _, image = os.path.split(image)
-            print 'Found example image file', image
+            print('Found example image file', image)
             output += '.. image:: ../resources/examples_images/%s\n\n' % image
     
         open(os.path.join(destdir, exname + '.rst'), 'w').write(output)

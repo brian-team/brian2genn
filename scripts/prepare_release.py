@@ -13,7 +13,7 @@ if ret_val != 0:
 
 # Ask for version number
 print('Current version is: ' + brian2genn.__version__)
-version = raw_input('Enter new Brian2GeNN version number: ').strip()
+version = input('Enter new Brian2GeNN version number: ').strip()
 # update setup.py
 setup_py = open('../setup.py', 'r').read()
 setup_py = re.sub("version\s*=\s*'.*?'", "version='" + version + "'", setup_py)

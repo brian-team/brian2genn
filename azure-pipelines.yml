@@ -18,22 +18,26 @@ jobs:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
         use_master: false
-      Python27_single_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python27_double_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: true
-      Python36:
+      Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
         use_master: false
+      Python36_double_latest:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
+      Python38_double_stable:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: false
+      Python38_double_latest:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
 
 
   steps:
@@ -42,29 +46,33 @@ jobs:
 - job: 'OSX'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'macOS-10.13'
+    vmImage: 'macOS-10.14'
   strategy:
     matrix:
       Python27_single_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
         use_master: false
-      Python27_single_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python27_double_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: true
-      Python36:
+      Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
         use_master: false
+      Python36_double_latest:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
+      Python38_double_stable:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: false
+      Python38_double_latest:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
 
   steps:
   - template: continuous-integration/azure-steps.yml
@@ -79,22 +87,26 @@ jobs:
         python.version: '2.7'
         script_name: run_brian_tests_CPU_32bit.py
         use_master: false
-      Python27_single_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: true
       Python27_double_stable:
         python.version: '2.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python27_double_latest:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: true
-      Python36:
+      Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
         use_master: false
+      Python36_double_latest:
+        python.version: '3.6'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
+      Python38_double_stable:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: false
+      Python38_double_latest:
+        python.version: '3.8'
+        script_name: run_brian_tests_CPU.py
+        use_master: true
 
   steps:
   - template: continuous-integration/azure-steps.yml

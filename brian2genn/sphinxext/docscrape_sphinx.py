@@ -1,7 +1,7 @@
 import re, inspect, textwrap, pydoc
 import sphinx
 from sphinx.pycode import ModuleAnalyzer
-
+from six import iteritems
 from .docscrape import NumpyDocString, FunctionDoc, ClassDoc
 
 class SphinxDocString(NumpyDocString):
@@ -168,7 +168,7 @@ class SphinxDocString(NumpyDocString):
             return out
 
         out += ['.. index:: %s' % idx.get('default','')]
-        for section, references in idx.iteritems():
+        for section, references in iteritems(idx):
             if section == 'default':
                 continue
             elif section == 'refguide':

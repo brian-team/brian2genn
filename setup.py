@@ -65,13 +65,13 @@ setup(name='Brian2GeNN',
       install_requires=[
                         'brian2>=2.2.2.1',
                         'setuptools>=6.0',
+                        'six',
                        ],
       setup_requires=[
                       'setuptools>=6.0'
                       ],
       provides=['brian2genn'],
       extras_require={'docs': ['sphinx>=1.0.1', 'sphinxcontrib-issuetracker']},
-      use_2to3=True,
       url='http://github.com/brian-team/brian2genn',
       description='An interface to use the GeNN framework as a device in Brian 2',
       long_description=long_description,

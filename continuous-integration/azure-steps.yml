@@ -10,15 +10,15 @@ steps:
     condition: eq(variables['agent.os'], 'Darwin')
 
   - bash: |
-      conda create --prefix $HOME/test_env -c conda-forge --yes --quiet python=$(python.version) pip nose
+      conda create --prefix $HOME/test_env -c conda-forge --yes --quiet python=$(python.version) pip pytest
     displayName: 'Setup conda environment'
 
   - bash: |
       source activate $HOME/test_env
+      conda install --quiet --yes -c conda-forge pytest cython sympy future pyparsing numpy jinja2 six
       if [ $(use_master) == 'false' ]; then
-        conda install --quiet --yes -c conda-forge brian2 nose
+        pip install brian2
       else
-        conda install --quiet --yes -c conda-forge nose cython sympy future pyparsing numpy jinja2
         pip install https://github.com/brian-team/brian2/archive/master.zip
       fi
     displayName: 'Install Brian2'
