@@ -69,4 +69,4 @@ def auto_find_examples(obj, headersymbol='='):
     
 if __name__=='__main__':
     from brian2 import NeuronGroup, SpatialNeuron
-    print((auto_find_examples(NeuronGroup)))
+    print(auto_find_examples(NeuronGroup))

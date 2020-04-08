@@ -912,7 +912,7 @@ class GeNNDevice(CPPStandaloneDevice):
             where = 'on GPU'
         else:
             where = 'on CPU'
-        print(('executing genn binary %s ...' % where))
+        print('executing genn binary %s ...' % where)
 
         pref_vars = prefs['devices.cpp_standalone.run_environment_variables']
         for key, value in itertools.chain(iteritems(pref_vars),

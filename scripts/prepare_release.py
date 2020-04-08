@@ -12,7 +12,7 @@ if ret_val != 0:
     sys.exit(1)
 
 # Ask for version number
-print(('Current version is: ' + brian2genn.__version__))
+print('Current version is: ' + brian2genn.__version__)
 version = input('Enter new Brian2GeNN version number: ').strip()
 # update setup.py
 setup_py = open('../setup.py', 'r').read()
@@ -30,6 +30,6 @@ os.system('%s setup.py sdist --formats=gztar' % sys.executable)
 
 # print commands necessary for pushing
 print('')
-print(('*'*60))
+print('*'*60)
 print('To push, using the following command:')
 print('git push --tags origin master')
