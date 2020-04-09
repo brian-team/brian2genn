@@ -3,6 +3,13 @@
 #include <stdint.h>
 #include "modelSpec.h"
 #include "brianlib/randomkit/randomkit.cc"
+#define DRY_RUN
+#include "objects.h"
+#include "objects.cpp"
+
+{% for inc in codeobj_inc %}
+{{inc}}
+{% endfor %}
 
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
@@ -148,9 +155,9 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% endfor %}
 
 // need the brian style random numbers for calculating max row length and max col length
-namespace brian {
-  std::vector< rk_state* > _mersenne_twister_states;
-}
+//namespace brian {
+//  std::vector< rk_state* > _mersenne_twister_states;
+//}
 
 {% for max_row_length in max_row_length_code %}
 {{max_row_length}}
@@ -159,9 +166,18 @@ namespace brian {
 
 void modelDefinition(NNmodel &model)
 {
-    // Random number generator states (need one for each thread in OpenMP)
-    for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
-      brian::_mersenne_twister_states.push_back(new rk_state());
+  _init_arrays();
+  _load_arrays();
+  {{'\n'.join(code_lines['before_start'])|autoindent}}
+  rk_randomseed(brian::_mersenne_twister_states[0]);
+  {{'\n'.join(code_lines['after_start'])|autoindent}}
+  {
+	  using namespace brian;
+	  {{ main_lines | autoindent }}
+  }
+  //   // Random number generator states (need one for each thread in OpenMP)
+  //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
+  //    brian::_mersenne_twister_states.push_back(new rk_state());
 
     {% for max_row_length in max_row_length_runcode %}
     {{max_row_length}}
