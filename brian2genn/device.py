@@ -1140,6 +1140,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 if not use_GPU:
                     cmd += [' -c']
                 wdir= os.getcwd()
+                cmd += ' -i %s' % wdir
                 cmd += ' -i %s' % os.path.join(wdir, directory)
                 cmd += ' magicnetwork_model.cpp'
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release project.vcxproj'
@@ -1150,6 +1151,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 if not use_GPU:
                     args += ['-c']
                 wdir= os.getcwd()
+                args += ['-i',wdir]
                 args += ['-i',os.path.join(wdir, directory)]
                 args += ['magicnetwork_model.cpp']
                 print(args)

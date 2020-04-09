@@ -13,12 +13,16 @@
 #include "synapses_classes.h"
 
 ////// SUPPORT CODE ///////
+#ifndef MAX_ROW_LENGTH_SUPPORT_CODE
+#define MAX_ROW_LENGTH_SUPPORT_CODE
+
 namespace {
 	{{support_code_lines|autoindent}}
 }
 
 ////// HASH DEFINES ///////
 {{hashdefine_lines|autoindent}}
+#endif
 
 void _run_{{codeobj_name}}()
 {
@@ -161,17 +165,19 @@ void _run_{{codeobj_name}}()
                 {% endif %}
             }
             {% endif %}
-            {{vector_code['update_post']|autoindent}}
-
-            for (size_t _repetition=0; _repetition<_n; _repetition++) {
-                {{_dynamic_N_outgoing}}[_pre_idx] += 1;
-                {{_dynamic_N_incoming}}[_post_idx] += 1;
-		if (maxRow{{owner.name}} < {{_dynamic_N_outgoing}}[_pre_idx]) {
-		  maxRow{{owner.name}}= {{_dynamic_N_outgoing}}[_pre_idx];
-		}
-		if (maxCol{{owner.name}} < {{_dynamic_N_incoming}}[_post_idx]) {
-		  maxCol{{owner.name}}= {{_dynamic_N_incoming}}[_post_idx];
-		}
+            {{vector_code['update_post']|autoindent}} 
+	    {# as brian2genn currently doesn't support multi-synapses, there is no loop here
+	     FIXME: If this feature were supported, appropriate adjustments need to be made
+             (the loop brought back in); one of the problems why it's not straightforward
+	      is that synaptic rules apparently can  depend on neuron variables, which are
+	      not yet initialized here ... #}
+	    {{_dynamic_N_outgoing}}[_pre_idx] += 1;
+	    {{_dynamic_N_incoming}}[_post_idx] += 1;
+	    if (maxRow{{owner.name}} < {{_dynamic_N_outgoing}}[_pre_idx]) {
+	      maxRow{{owner.name}}= {{_dynamic_N_outgoing}}[_pre_idx];
+	    }
+	    if (maxCol{{owner.name}} < {{_dynamic_N_incoming}}[_post_idx]) {
+	      maxCol{{owner.name}}= {{_dynamic_N_incoming}}[_post_idx];
 	    }
         }
     }
