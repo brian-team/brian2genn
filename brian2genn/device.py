@@ -325,8 +325,10 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.spikegenerator_models = []
         self.synapse_models = []
-        self.max_row_length_code= []
-        self.max_row_length_runcode= []
+        self.max_row_length_include= []
+        self.max_row_length_code_1= []
+        self.max_row_length_code_2= []
+        self.max_row_length_vars= set()
         self.max_row_length_code_objects= {}
         self.ktimer= dict()
         self.ktimer['neuron_tme']= True
@@ -490,8 +492,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 max_row = int(numpy.amax(row_lengths))
                 col_lengths = numpy.bincount(trg, minlength=trg.size)
                 max_col = int(numpy.amax(col_lengths))
-                self.max_row_length_code.append('long maxRow%s = %d;' % (owner.name, max_row))
-                self.max_row_length_code.append('long maxCol%s = %d;' % (owner.name, max_col))
+                self.max_row_length_code_1.append('maxRow%s = %d;' % (owner.name, max_row))
+                self.max_row_length_code_1.append('maxCol%s = %d;' % (owner.name, max_col))
                 #print(self.max_row_length_code)
                 
             codeobj_class = GeNNUserCodeObject
@@ -513,14 +515,11 @@ class GeNNDevice(CPPStandaloneDevice):
                 #self.code_objects['%s_max_row_length' % owner.name] = codeobj
                 self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
                 self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
-                self.max_row_length_code.append('long maxRow%s;' % owner.name)
-                self.max_row_length_code.append('long maxCol%s;' % owner.name)
-                #self.max_row_length_code.append('#include "%s_max_row_length.h"' % owner.name)
-                self.max_row_length_code.append('#include "code_objects/%s_max_row_length.cpp"' % owner.name)
-                self.max_row_length_runcode.append('_run_%s_max_row_length();' % owner.name)
+                self.max_row_length_include.append('#include "code_objects/%s.cpp";' % codeobj.name)
+                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
+                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
+                self.max_row_length_code_2.append('_run_%s_max_row_length();' % owner.name)
                 #print(codeobj.code.cpp_file)
-                print(self.code_objects)
-                print(self.code_objects)
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -2349,8 +2348,10 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
                                                    main_lines=dry_main_lines,
-                                                   max_row_length_code=self.max_row_length_code,
-                                                   max_row_length_runcode=self.max_row_length_runcode,
+                                                   max_row_length_include= self.max_row_length_include,
+                                                   max_row_length_code_1=self.max_row_length_code_1,
+                                                   max_row_length_code_2=self.max_row_length_code_2,
+                                                   max_row_length_vars=self.max_row_length_vars,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,

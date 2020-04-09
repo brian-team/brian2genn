@@ -11,6 +11,14 @@
 {{inc}}
 {% endfor %}
 
+{% for var in max_row_length_vars %}
+{{var}}
+{% endfor %}
+
+{% for inc in max_row_length_include %}
+{{inc}}
+{% endfor %}
+
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
 */
@@ -159,10 +167,6 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 //  std::vector< rk_state* > _mersenne_twister_states;
 //}
 
-{% for max_row_length in max_row_length_code %}
-{{max_row_length}}
-{% endfor %}
-
 
 void modelDefinition(NNmodel &model)
 {
@@ -179,9 +183,14 @@ void modelDefinition(NNmodel &model)
   //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
   //    brian::_mersenne_twister_states.push_back(new rk_state());
 
-    {% for max_row_length in max_row_length_runcode %}
-    {{max_row_length}}
-    {% endfor %}
+  {% for max_row_length in max_row_length_code_1 %}
+  {{max_row_length}}
+  {% endfor %}
+
+  {% for max_row_length in max_row_length_code_2 %}
+  {{max_row_length}}
+  {% endfor %}
+
 
     {% if use_GPU == 'start' %}
     // GENN_PREFERENCES set in brian2genn
