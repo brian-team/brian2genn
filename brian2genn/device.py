@@ -568,16 +568,24 @@ class GeNNDevice(CPPStandaloneDevice):
         procedures = [('', main_lines)]
         runfuncs = {}
         for func, args in self.main_queue:
+            # explicitly exclude spike queue related code objects here:
+            if (func.endswith('run_code_object') and
+                    (args[0].name.endswith('_initialise_queue') or
+                     args[0].name.endswith('_push_spikes'))):
+                continue
             if func == 'run_code_object':
                 codeobj, = args
                 if self.run_statement_used:
                     raise NotImplementedError('Cannot execute code after the '
                                               'run statement '
                                               '(CodeObject: %s)' % codeobj.name)
-                # explicitly exclude spike queue related code objects here:
-                if not (codeobj.name.endswith('_initialise_queue') or
-                            (codeobj.name.endswith('_push_spikes'))):
-                    main_lines.append('_run_%s();' % codeobj.name)
+                main_lines.append('_run_%s();' % codeobj.name)
+            elif func == 'before_run_code_object':
+                codeobj, = args
+                main_lines.append('_before_run_%s();' % codeobj.name)
+            elif func == 'after_run_code_object':
+                codeobj, = args
+                main_lines.append('_after_run_%s();' % codeobj.name)
             elif func == 'run_network':
                 net, netcode = args
                 # do nothing
