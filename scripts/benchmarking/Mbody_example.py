@@ -16,7 +16,7 @@ else:
     prefs.devices.cpp_standalone.openmp_threads = threads
 set_device(device, **extra_args)
 
-print(('Running with arguments: ', sys.argv))
+print('Running with arguments: ', sys.argv)
 
 # defaultclock.dt = 0.025*ms
 # Constants
@@ -188,7 +188,7 @@ else:
 start = time.time()
 run(runtime, report='text')
 took = (time.time()-start)
-print(('took %.1fs' % took))
+print('took %.1fs' % took)
 neurons = N_AL + N_MB + N_LB
 synapses = len(PN_iKC) + len(iKC_eKC) + len(eKC_eKC)
 

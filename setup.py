@@ -50,7 +50,7 @@ except ValueError:
     data_files = []
 
 setup(name='Brian2GeNN',
-      version='1.3.1',
+      version='1.4',
       packages=find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
@@ -72,7 +72,6 @@ setup(name='Brian2GeNN',
                       ],
       provides=['brian2genn'],
       extras_require={'docs': ['sphinx>=1.0.1', 'sphinxcontrib-issuetracker']},
-      use_2to3=True,
       url='http://github.com/brian-team/brian2genn',
       description='An interface to use the GeNN framework as a device in Brian 2',
       long_description=long_description,

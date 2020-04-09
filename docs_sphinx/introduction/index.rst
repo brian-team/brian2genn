@@ -41,7 +41,7 @@ system; add ``--user`` to force an installation with user privileges only).
 As detailed in the `GeNN installation instructions <https://genn-team.github.io/genn/documentation/3/html/d8/d99/Installation.html>`_),
 you need to set the ``GENN_PATH`` environment variable to the GeNN installation
 directory. Alternatively, you can set the `devices.genn.path` preference to the
-sam effect.
+same effect.
 
 .. note::
     We no longer provide conda packages for Brian2GeNN. Conda packages for

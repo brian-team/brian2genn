@@ -1008,7 +1008,7 @@ class GeNNDevice(CPPStandaloneDevice):
             where = 'on GPU'
         else:
             where = 'on CPU'
-        print(('executing genn binary %s ...' % where))
+        print('executing genn binary %s ...' % where)
 
         pref_vars = prefs['devices.cpp_standalone.run_environment_variables']
         for key, value in itertools.chain(iteritems(pref_vars),
@@ -1031,8 +1031,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.has_been_run = True
         last_run_info = open(
             os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
-        self._last_run_time, self._last_run_completed_fraction =\
-            list(map(float, last_run_info.split()))
+        self._last_run_time, self._last_run_completed_fraction = map(float,
+                                                                     last_run_info.split())
 
         # The following is a verbatim copy of the respective code in
         # CPPStandaloneDevice.run. In the long run, we can hopefully implement
