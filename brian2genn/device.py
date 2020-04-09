@@ -647,6 +647,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 name, main_lines = procedures.pop(-1)
                 runfuncs[name] = main_lines
                 name, main_lines = procedures[-1]
+            elif func == 'seed':
+                raise NotImplementedError('Setting a seed is currently '
+                                          'not supported')
             else:
                 raise TypeError("Unknown main queue function type " + func)
 
