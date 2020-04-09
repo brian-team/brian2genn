@@ -34,21 +34,9 @@ htmlcov/
 nosetests.xml
 coverage.xml
 
-# Translations
-*.mo
-
-# Mr Developer
-.mr.developer.cfg
-.project
-.pydevproject
-
-# Rope
-.ropeproject
-
-# Django stuff:
-*.log
-*.pot
+# PyCharm
+.idea/
 
 # Sphinx documentation
-docs/_build/
-
+docs/
+docs_sphinx/reference/
