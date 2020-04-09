@@ -640,8 +640,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 runfuncs[name] = main_lines
                 name, main_lines = procedures[-1]
             else:
-                raise NotImplementedError(
-                    "Unknown main queue function type " + func)
+                raise TypeError("Unknown main queue function type " + func)
 
         # generate the finalisations
         for codeobj in itervalues(self.code_objects):
