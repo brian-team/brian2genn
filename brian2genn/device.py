@@ -861,6 +861,18 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_rate_monitors(rate_monitors)
         self.process_state_monitors(directory, state_monitors, writer)
 
+        # Turn anonymous namespaces into named namespaces to avoid
+        # issues when cpp files are included
+        for code_object in itertools.chain(self.code_objects.values(),
+                                           self.max_row_length_code_objects.values()):
+            cpp_code = getattr(code_object.code, 'cpp_file', code_object.code)
+            cpp_code = cpp_code.replace('namespace {', 'namespace {} {{'.format(code_object.name))
+            cpp_code = cpp_code.replace('using namespace brian;',
+                                        'using namespace brian;\nusing namespace {};'.format(code_object.name))
+            if hasattr(code_object.code, 'cpp_file'):
+                code_object.code.cpp_file = cpp_code
+            else:
+                code_object.code = cpp_code
         # Write files from templates
         # Create an empty network.h file, this allows us to use Brian2's
         # objects.cpp template unchanged
