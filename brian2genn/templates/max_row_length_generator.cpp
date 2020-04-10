@@ -162,8 +162,11 @@ void _run_{{codeobj_name}}()
             }
             {% endif %}
             {{vector_code['update_post']|autoindent}} 
-
-	    for (size_t _repetition=0; _repetition<_n; _repetition++) {
+	    {# FIXME: at times _n becomes negative or huge and causes problems
+		as brian2genn does not support multiple synapses I am replacing
+		_n by 1 in the loop control for the moment. #}
+	    
+	    for (size_t _repetition=0; _repetition<1; _repetition++) {
 	        {{_dynamic_N_outgoing}}[_pre_idx] += 1;
 	        {{_dynamic_N_incoming}}[_post_idx] += 1;
 	    }
