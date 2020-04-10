@@ -13,16 +13,12 @@
 #include "synapses_classes.h"
 
 ////// SUPPORT CODE ///////
-#ifndef MAX_ROW_LENGTH_SUPPORT_CODE
-#define MAX_ROW_LENGTH_SUPPORT_CODE
-
 namespace {
 	{{support_code_lines|autoindent}}
 }
 
 ////// HASH DEFINES ///////
 {{hashdefine_lines|autoindent}}
-#endif
 
 void _run_{{codeobj_name}}()
 {
