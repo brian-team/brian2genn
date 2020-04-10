@@ -3,9 +3,12 @@
 #include <stdint.h>
 #include "modelSpec.h"
 #include "brianlib/randomkit/randomkit.cc"
-#define DRY_RUN
+
 #include "objects.h"
 #include "objects.cpp"
+// We need these to compile objects.cpp, but they are only used in _write_arrays which we never call.
+double Network::_last_run_time = 0.0;
+double Network::_last_run_completed_fraction = 0.0;
 
 {% for inc in codeobj_inc %}
 {{inc}}
