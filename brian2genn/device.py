@@ -492,9 +492,10 @@ class GeNNDevice(CPPStandaloneDevice):
                 max_row = int(numpy.amax(row_lengths))
                 col_lengths = numpy.bincount(trg, minlength=trg.size)
                 max_col = int(numpy.amax(col_lengths))
+                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
+                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
                 self.max_row_length_code_1.append('maxRow%s = %d;' % (owner.name, max_row))
                 self.max_row_length_code_1.append('maxCol%s = %d;' % (owner.name, max_col))
-                #print(self.max_row_length_code)
                 
             codeobj_class = GeNNUserCodeObject
             if '_synapses_create_generator_' in name:
@@ -519,7 +520,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.max_row_length_vars.add('long maxRow%s;' % owner.name)
                 self.max_row_length_vars.add('long maxCol%s;' % owner.name)
                 self.max_row_length_code_2.append('_run_%s_max_row_length();' % owner.name)
-                #print(codeobj.code.cpp_file)
+                
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -866,11 +867,12 @@ class GeNNDevice(CPPStandaloneDevice):
         for code_object in itertools.chain(self.code_objects.values(),
                                            self.max_row_length_code_objects.values()):
             cpp_code = getattr(code_object.code, 'cpp_file', code_object.code)
-            cpp_code = cpp_code.replace('namespace {', 'namespace {} {{'.format(code_object.name))
-            cpp_code = cpp_code.replace('using namespace brian;',
-                                        'using namespace brian;\nusing namespace {};'.format(code_object.name))
-            if hasattr(code_object.code, 'cpp_file'):
-                code_object.code.cpp_file = cpp_code
+            if 'namespace {' in cpp_code:
+                cpp_code = cpp_code.replace('namespace {', 'namespace {} {{'.format(code_object.name))
+                cpp_code = cpp_code.replace('using namespace brian;',
+                                            'using namespace brian;\nusing namespace {};'.format(code_object.name))
+                if hasattr(code_object.code, 'cpp_file'):
+                    code_object.code.cpp_file = cpp_code
             else:
                 code_object.code = cpp_code
         # Write files from templates
