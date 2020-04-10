@@ -4,6 +4,24 @@
 #include "modelSpec.h"
 #include "brianlib/randomkit/randomkit.cc"
 
+#include "objects.h"
+#include "objects.cpp"
+// We need these to compile objects.cpp, but they are only used in _write_arrays which we never call.
+double Network::_last_run_time = 0.0;
+double Network::_last_run_completed_fraction = 0.0;
+
+{% for inc in codeobj_inc %}
+{{inc}}
+{% endfor %}
+
+{% for var in max_row_length_vars %}
+{{var}}
+{% endfor %}
+
+{% for inc in max_row_length_include %}
+{{inc}}
+{% endfor %}
+
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
 */
@@ -148,24 +166,34 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 {% endfor %}
 
 // need the brian style random numbers for calculating max row length and max col length
-namespace brian {
-  std::vector< rk_state* > _mersenne_twister_states;
-}
-
-{% for max_row_length in max_row_length_code %}
-{{max_row_length}}
-{% endfor %}
+//namespace brian {
+//  std::vector< rk_state* > _mersenne_twister_states;
+//}
 
 
 void modelDefinition(NNmodel &model)
 {
-    // Random number generator states (need one for each thread in OpenMP)
-    for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
-      brian::_mersenne_twister_states.push_back(new rk_state());
+  _init_arrays();
+  _load_arrays();
+  {{'\n'.join(code_lines['before_start'])|autoindent}}
+  rk_randomseed(brian::_mersenne_twister_states[0]);
+  {{'\n'.join(code_lines['after_start'])|autoindent}}
+  {
+	  using namespace brian;
+	  {{ main_lines | autoindent }}
+  }
+  //   // Random number generator states (need one for each thread in OpenMP)
+  //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
+  //    brian::_mersenne_twister_states.push_back(new rk_state());
 
-    {% for max_row_length in max_row_length_runcode %}
-    {{max_row_length}}
-    {% endfor %}
+  {% for max_row_length in max_row_length_code_1 %}
+  {{max_row_length}}
+  {% endfor %}
+
+  {% for max_row_length in max_row_length_code_2 %}
+  {{max_row_length}}
+  {% endfor %}
+
 
     {% if use_GPU == 'start' %}
     // GENN_PREFERENCES set in brian2genn
