@@ -96,7 +96,9 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                             brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
                                             brian::_dynamic_array_{{obj.monitored}}_{{var}});
       {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(C{{obj.monitored}},
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
+					       ind{{obj.monitored}},
+					       maxRowLength{{obj.monitored}},
                                                {{var}}{{obj.monitored}},
                                                {{obj.srcN}}, {{obj.trgN}},
                                                brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
@@ -128,7 +130,10 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                 brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
                                                 brian::_dynamic_array_{{obj['owner'].name}}_{{var}});
           {% else %}
-          convert_sparse_synapses_2_dynamic_arrays(C{{obj['owner'].name}}, {{var}}{{obj['owner'].name}},
+          convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj['owner'].name}},
+		                                   ind{{obj['owner'].name}},
+						   maxRowLength{{obj['owner'].name}},
+		                                   {{var}}{{obj['owner'].name}},
                                                    {{obj['srcN']}}, {{obj['trgN']}},
                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_pre,
                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
@@ -231,7 +236,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       {% if sm.connectivity == 'DENSE' %}
       convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}},brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}});
       {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(C{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}}, ind{{sm.monitored}}, maxRowLength{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
       {% endif %}
       {% else %}
       std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
