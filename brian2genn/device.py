@@ -488,10 +488,16 @@ class GeNNDevice(CPPStandaloneDevice):
                 trg= variables["targets"].get_value()
                 #which, max_row = Counter(src).most_common(1)[0]
                 #which, max_col = Counter(trg).most_common(1)[0]
-                row_lengths = numpy.bincount(src, minlength=src.size)
-                max_row = int(numpy.amax(row_lengths))
-                col_lengths = numpy.bincount(trg, minlength=trg.size)
-                max_col = int(numpy.amax(col_lengths))
+                if (src.size > 0):
+                    row_lengths = numpy.bincount(src, minlength=src.size)
+                    max_row = int(numpy.amax(row_lengths))
+                else:
+                    max_row= 1
+                if (trg.size > 0):
+                    col_lengths = numpy.bincount(trg, minlength=trg.size)
+                    max_col = int(numpy.amax(col_lengths))
+                else:
+                    max_col= 1
                 self.max_row_length_vars.add('long maxRow%s;' % owner.name)
                 self.max_row_length_vars.add('long maxCol%s;' % owner.name)
                 self.max_row_length_code_1.append('maxRow%s = %d;' % (owner.name, max_row))

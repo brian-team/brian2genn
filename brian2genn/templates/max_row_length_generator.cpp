@@ -34,8 +34,8 @@ void _run_{{codeobj_name}}()
     ///// POINTERS ////////////
     {{pointers_lines|autoindent}}
 
-    maxRow{{owner.name}}= 0;
-    maxCol{{owner.name}}= 0;
+    maxRow{{owner.name}}= 1;
+    maxCol{{owner.name}}= 1;
 	
     {# Get N_post and N_pre in the correct way, regardless of whether they are
     constants or scalar arrays#}
