@@ -522,7 +522,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 #self.code_objects['%s_max_row_length' % owner.name] = codeobj
                 self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
                 self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
-                self.max_row_length_include.append('#include "code_objects/%s.cpp";' % codeobj.name)
+                self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
                 self.max_row_length_vars.add('long maxRow%s;' % owner.name)
                 self.max_row_length_vars.add('long maxCol%s;' % owner.name)
                 self.max_row_length_code_2.append('_run_%s_max_row_length();' % owner.name)
