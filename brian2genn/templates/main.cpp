@@ -20,6 +20,7 @@
 #include "engine.cpp"
 
 
+
 //--------------------------------------------------------------------------
 /*! \brief This function is the entry point for running the simulation of the MBody1 model network.
 */
@@ -60,7 +61,6 @@ int main(int argc, char *argv[])
 	  {{ main_lines | autoindent }}
   }
 
-  std::vector<size_t> sparseSynapseIndices;
   // translate to GeNN synaptic arrays
   {% for synapses in synapse_models %}
   {% if synapses.connectivity == 'DENSE' %}
@@ -74,10 +74,11 @@ int main(int argc, char *argv[])
   initialize_sparse_synapses(brian::_dynamic_array_{{synapses.name}}__synaptic_pre, brian::_dynamic_array_{{synapses.name}}__synaptic_post,
                              rowLength{{synapses.name}}, ind{{synapses.name}}, maxRowLength{{synapses.name}},
                              {{synapses.srcN}}, {{synapses.trgN}},
-                             sparseSynapseIndices);
+                             sparseSynapseIndices{{synapses.name}});
   {% for var in synapses.variables %}
   {% if synapses.variablescope[var] == 'brian' %}
-  convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}_{{var}}, sparseSynapseIndices,
+  convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{synapses.name}}_{{var}},
+					   sparseSynapseIndices{{synapses.name}},
                                            {{var}}{{synapses.name}},
                                            {{synapses.srcN}}, {{synapses.trgN}});
   {% endif %}
@@ -222,10 +223,12 @@ using namespace std;
 
 //----------------------------------------------------------------------
 // other stuff:
-// global variables for pre-calculated list of the postsynaptic targets ordered by presynaptic sources
+// These variables (if any) are needed to be able to efficiently copy brian
+// synapse variables into genn SPARSE synaptic arrays (needed for run_regularly)
+
 {% for synapses in synapse_models %}
 {% if synapses.connectivity != 'DENSE' %}
-std::vector<std::vector<int32_t> > _{{synapses.name}}_bypre;
+std::vector<size_t> sparseSynapseIndices{{synapses.name}};
 {% endif %}
 {% endfor %}
 {% endmacro %}

@@ -157,12 +157,10 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                  {{var}}{{obj['owner'].name}},
                                                  {{obj['srcN']}}, {{obj['trgN']}});
            {% else %}
-           convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{obj['owner'].name}}__synaptic_pre,
-                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
-                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}},
+           convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{obj['owner'].name}}_{{var}},
+						    sparseSynapseIndices{{obj['owner'].name}},
                                                     {{var}}{{obj['owner'].name}},
-                                                    {{obj['srcN']}}, {{obj['trgN']}},
-                                                    _{{obj['owner'].name}}_bypre);
+                                                    {{obj['srcN']}}, {{obj['trgN']}});
            {% endif %}
            {% else %}
            std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, 1, {{var}}{{obj['owner'].name}});
