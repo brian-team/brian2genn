@@ -163,7 +163,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                     {{obj['srcN']}}, {{obj['trgN']}});
            {% endif %}
            {% else %}
-           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, 1, {{var}}{{obj['owner'].name}});
+           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, {{var}}{{obj['owner'].name}});
            {% endif %}
         {% endfor %}
       }
