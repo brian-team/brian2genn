@@ -25,9 +25,6 @@ void _run_{{codeobj_name}}()
     using namespace brian;
     using namespace {{owner.name}}_max_row_length_generator;
 
-    ///// DEFINITIONS ///////////
-    %DEFINITIONS%
-        
     ///// CONSTANTS ///////////
     %CONSTANTS%
 
