@@ -23,7 +23,7 @@ void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32
         // Check for duplicate entries
         if (! std::isnan(g[source[i]*trgNN+target[i]])) {
             std::cerr << "*****" << std::endl;
-            std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << target[i] << std::endl;
+            std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << target[i] << " and DENSE connectivity used." << std::endl;
             std::cerr << "*****" << std::endl;
             exit(222);
         }
@@ -85,13 +85,13 @@ void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int3
 
         // Sort and check for duplicates
         std::sort(targets.begin(), targets.end());
-        auto duplicate_pos = std::adjacent_find(targets.begin(), targets.end());
-        if (duplicate_pos != targets.end()) {
+        /* auto duplicate_pos = std::adjacent_find(targets.begin(), targets.end());
+	       if (duplicate_pos != targets.end()) {
             std::cerr << "*****" << std::endl;
             std::cerr << "ERROR  Cannot run GeNN simulation: More than one synapse for pair " << source[i] << " - " << *duplicate_pos << std::endl;
             std::cerr << "*****" << std::endl;
             exit(222);
-        }
+	    }*/
     }
 }
 
