@@ -54,7 +54,6 @@ from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
 from .genn_generator import get_var_ndim, GeNNCodeGenerator
 
-
 __all__ = ['GeNNDevice']
 
 logger = get_logger('brian2.devices.genn')
@@ -465,6 +464,15 @@ class GeNNDevice(CPPStandaloneDevice):
                                         variables=variables,
                                         variable_indices=variable_indices,
                                         override_conditional_write=override_conditional_write)
+            # We need to clear the array cache for these at some point (normally
+            # would be done in cpp_standalone.device.code_object()
+            # I will do it here but not sure this is the best place
+            # I am also not sure whether "written_readonly_vars" apply here
+            # I WILL ASSUME NOT
+            for var in codeobj.variables.values():
+                if (isinstance(var, ArrayVariable) and
+                    not var.read_only):
+                    self.array_cache[var] = None
             self.simple_code_objects[name] = codeobj
 
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
