@@ -20,6 +20,7 @@ import numpy
 import numbers
 from collections import Counter
 
+from brian2.codegen.cpp_prefs import get_msvc_env
 from brian2.codegen.translation import make_statements
 from brian2.input.poissoninput import PoissonInput
 from brian2.spatialneuron.spatialneuron import (SpatialNeuron,
@@ -1159,33 +1160,26 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
                                    'the devices.genn.cuda_path preference.')
-        if prefs['codegen.cpp.extra_link_args']:
-            # declare the link flags as an environment variable so that GeNN's
-            # generateALL can pick it up
-            env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+
         with std_silent(debug):
             if os.sys.platform == 'win32':
-                arch_name = prefs['codegen.cpp.msvc_architecture']
-                if arch_name == '':
-                    mach = platform.machine()
-                    if mach == 'AMD64':
-                        arch_name = 'x86_amd64'
-                    else:
-                        arch_name = 'x86'
-
-                # Find vcvars if it's not specified manually
-                vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
-                if vcvars_loc == '':
-                    from distutils import _msvccompiler
-                    vcvars_loc = _msvccompiler._find_vcvarsall("")[0]
-
-                # Start command line with call to vcvars batch file
-                cmd = '"' + vcvars_loc + '" ' + arch_name
+                # Make sure that all environment variables are upper case
+                env = {k.upper() : v for k, v in iteritems(env)}
                 
+                # If there is vcvars command to call, start cmd with that
+                cmd = ''
+                msvc_env, vcvars_cmd = get_msvc_env()
+                if vcvars_cmd:
+                    cmd += vcvars_cmd + ' && '
+                # Otherwise, update environment, again ensuring 
+                # that all variables are upper case
+                else:
+                    env.update({k.upper() : v for k, v in iteritems(msvc_env)})
+
                 # Add start of call to genn-buildmodel
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
-                cmd += ' && ' + buildmodel_cmd + ' -s'
+                cmd += buildmodel_cmd + ' -s'
                 
                 # If we're not using CPU, add CPU option
                 if not use_GPU:
