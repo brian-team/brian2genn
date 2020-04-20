@@ -1189,7 +1189,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 
                 # If we're not using CPU, add CPU option
                 if not use_GPU:
-                    cmd += [' -c']
+                    cmd += ' -c'
                     
                 # Add include directories
                 # **NOTE** on windows semicolons are used to seperate multiple include paths
