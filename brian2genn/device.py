@@ -1173,39 +1173,43 @@ class GeNNDevice(CPPStandaloneDevice):
                     else:
                         arch_name = 'x86'
 
-                # Call vcvars batch file to configure environment for Visual C++
+                # Find vcvars if it's not specified manually
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
                 if vcvars_loc == '':
                     from distutils import _msvccompiler
                     vcvars_loc = _msvccompiler._find_vcvarsall("")[0]
-                call([vcvars_loc, arch_name], cwd=directory, env=env)
 
-                # Get path to genn-buildmodel
+                # Start command line with call to vcvars batch file
+                cmd = '"' + vcvars_loc + '" ' + arch_name
+                
+                # Add start of call to genn-buildmodel
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
-
-                # Assemble arguments and call genn-buildmodel
+                cmd += ' && ' + buildmodel_cmd + ' -s'
+                
+                # If we're not using CPU, add CPU option
+                if not use_GPU:
+                    cmd += [' -c']
+                    
+                # Add include directories
                 # **NOTE** on windows semicolons are used to seperate multiple include paths
                 # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
                 # files so we have to build argument string manually(https://bugs.python.org/issue23862)
-                wdir= os.getcwd()
-                inc_path= wdir;
-                inc_path+= ';'+os.path.join(wdir, directory)
-                inc_path+= ';'+os.path.join(wdir, directory, 'brianlib','randomkit')
-                args = buildmodel_cmd + ' -i "' + inc_path + '"'
-                if not use_GPU:
-                    args += ' -c'
-                args += ' -s'
-                args += ' magicnetwork_model.cpp'
-                check_call(args, cwd=directory, env=env)
-
-                # Build generated code
-                check_call(['msbuild', '/p:Configuration=Release', '/m', '/verbosity:minimal',
-                            os.path.join(directory, 'magicnetwork_model_CODE', 'runner.vcxproj')])
-
-                # Build executable
-                check_call(['msbuild', '/p:Configuration=Release', '/m', '/verbosity:minimal',
-                            os.path.join(directory, 'project.vcxproj')])
+                wdir = os.getcwd()
+                cmd += ' -i "%s;%s;%s"' % (wdir, os.path.join(wdir, directory),
+                                           os.path.join(wdir, directory, 'brianlib','randomkit'))
+                cmd += ' magicnetwork_model.cpp'
+                
+                # Add call to build generated code
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'magicnetwork_model_CODE', 'runner.vcxproj') + '"'
+                
+                # Add call to build executable
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'project.vcxproj') + '"'
+                
+                # Run combined command
+                # **NOTE** because vcvars MODIFIED environment, 
+                # making seperate check_calls doesn't work
+                check_call(cmd, cwd=directory, env=env)
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
