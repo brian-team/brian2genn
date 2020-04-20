@@ -1113,7 +1113,7 @@ class GeNNDevice(CPPStandaloneDevice):
             logger.debug('Using GeNN path from environment variable: '
                          '"{}"'.format(genn_path))
         else:
-            # Find GeNN 
+            # Find genn-buildmodel
             genn_bin = (find_executable("genn-buildmodel.bat")
                         if os.sys.platform == 'win32'
                         else find_executable("genn-buildmodel.sh"))
@@ -1121,8 +1121,11 @@ class GeNNDevice(CPPStandaloneDevice):
             if genn_bin is None:
                 raise RuntimeError('Add GeNN\'s bin directory to the path '
                                    'or set the devices.genn.path preference.')
-            
-            genn_path = os.path.join(os.path.dirname(genn_bin), "..")
+
+            # Remove genn-buildmodel from path, navigate up a directory and normalize
+            genn_path = os.path.normpath(os.path.join(os.path.dirname(genn_bin), ".."))
+            logger.debug('Using GeNN path determined from path: '
+                         '"{}"'.format(genn_path))
         
         # Check for GeNN compatibility
         genn_version = None
@@ -1162,34 +1165,47 @@ class GeNNDevice(CPPStandaloneDevice):
             env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
         with std_silent(debug):
             if os.sys.platform == 'win32':
+                arch_name = prefs['codegen.cpp.msvc_architecture']
+                if arch_name == '':
+                    mach = platform.machine()
+                    if mach == 'AMD64':
+                        arch_name = 'x86_amd64'
+                    else:
+                        arch_name = 'x86'
+
+                # Call vcvars batch file to configure environment for Visual C++
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
                 if vcvars_loc == '':
                     from distutils import _msvccompiler
-                    vcvars_cmd = _msvccompiler._find_vcvarsall("")[0]
-                else:
-                    arch_name = prefs['codegen.cpp.msvc_architecture']
-                    if arch_name == '':
-                        mach = platform.machine()
-                        if mach == 'AMD64':
-                            arch_name = 'x86_amd64'
-                        else:
-                            arch_name = 'x86'
+                    vcvars_loc = _msvccompiler._find_vcvarsall("")[0]
+                call([vcvars_loc, arch_name], cwd=directory, env=env)
 
-                    vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
-                        vcvars_loc=vcvars_loc, arch_name=arch_name)
-
+                # Get path to genn-buildmodel
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
-                cmd = vcvars_cmd + ' && ' + buildmodel_cmd 
-                if not use_GPU:
-                    cmd += [' -c']
+
+                # Assemble arguments and call genn-buildmodel
+                # **NOTE** on windows semicolons are used to seperate multiple include paths
+                # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
+                # files so we have to build argument string manually(https://bugs.python.org/issue23862)
                 wdir= os.getcwd()
-                cmd += ' -i %s' % wdir
-                cmd += ':%s' % os.path.join(wdir, directory)
-                cmd += ':%s' % os.path.join(wdir, directory, 'brianlib','randomkit')
-                cmd += ' magicnetwork_model.cpp'
-                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release project.vcxproj'
-                check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
+                inc_path= wdir;
+                inc_path+= ';'+os.path.join(wdir, directory)
+                inc_path+= ';'+os.path.join(wdir, directory, 'brianlib','randomkit')
+                args = buildmodel_cmd + ' -i "' + inc_path + '"'
+                if not use_GPU:
+                    args += ' -c'
+                args += ' -s'
+                args += ' magicnetwork_model.cpp'
+                check_call(args, cwd=directory, env=env)
+
+                # Build generated code
+                check_call(['msbuild', '/p:Configuration=Release', '/m', '/verbosity:minimal',
+                            os.path.join(directory, 'magicnetwork_model_CODE', 'runner.vcxproj')])
+
+                # Build executable
+                check_call(['msbuild', '/p:Configuration=Release', '/m', '/verbosity:minimal',
+                            os.path.join(directory, 'project.vcxproj')])
             else:
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
