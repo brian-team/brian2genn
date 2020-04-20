@@ -162,6 +162,23 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
+def find_executable(executable):
+    """Tries to find 'executable' in the path
+
+    Modified version of distutils.spawn.find_executable as 
+    this has stupid rules for extensions on Windows. 
+    Returns the complete filename or None if not found.
+    """
+    path = os.environ.get('PATH', os.defpath)
+
+    paths = path.split(os.pathsep)
+
+    for p in paths:
+        f = os.path.join(p, executable)
+        if os.path.isfile(f):
+            # the file exists, we have a shot at spawn working
+            return f
+    return None
 
 class DelayedCodeObject(object):
     '''
@@ -1096,9 +1113,17 @@ class GeNNDevice(CPPStandaloneDevice):
             logger.debug('Using GeNN path from environment variable: '
                          '"{}"'.format(genn_path))
         else:
-            raise RuntimeError('Set the GENN_PATH environment variable or '
-                               'the devices.genn.path preference.')
-
+            # Find GeNN 
+            genn_bin = (find_executable("genn-buildmodel.bat")
+                        if os.sys.platform == 'win32'
+                        else find_executable("genn-buildmodel.sh"))
+            
+            if genn_bin is None:
+                raise RuntimeError('Add GeNN\'s bin directory to the path '
+                                   'or set the devices.genn.path preference.')
+            
+            genn_path = os.path.join(os.path.dirname(genn_bin), "..")
+        
         # Check for GeNN compatibility
         genn_version = None
         version_file = os.path.join(genn_path, 'version.txt')
@@ -1118,7 +1143,6 @@ class GeNNDevice(CPPStandaloneDevice):
                             'fails.', once=True)
 
         env = os.environ.copy()
-        env['GENN_PATH'] = genn_path
         if use_GPU:
             if prefs.devices.genn.cuda_backend.cuda_path is not None:
                 cuda_path = prefs.devices.genn.cuda_backend.cuda_path
