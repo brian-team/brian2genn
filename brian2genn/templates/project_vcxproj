@@ -44,7 +44,7 @@
       <Optimization>Disabled</Optimization>
       <FunctionLevelLinking Condition="'$(Configuration)'=='Release'">true</FunctionLevelLinking>
       <IntrinsicFunctions Condition="'$(Configuration)'=='Release'">true</IntrinsicFunctions>
-      <SDLCheck>true</SDLCheck>
+      <SDLCheck>false</SDLCheck>
       <AdditionalIncludeDirectories>.;magicnetwork_model_CODE;brianlib/randomkit</AdditionalIncludeDirectories>
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;%(PreprocessorDefinitions)</PreprocessorDefinitions>
     </ClCompile>
