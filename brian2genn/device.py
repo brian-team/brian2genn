@@ -1164,28 +1164,20 @@ class GeNNDevice(CPPStandaloneDevice):
             if os.sys.platform == 'win32':
                 vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
                 if vcvars_loc == '':
-                    from distutils import msvc9compiler
-                    for version in range(16, 8, -1):
-                        fname = msvc9compiler.find_vcvarsall(version)
-                        if fname:
-                            vcvars_loc = fname
-                            break
-                if vcvars_loc == '':
-                    raise IOError("Cannot find vcvarsall.bat on standard "
-                                  "search path. Set the "
-                                  "codegen.cpp.msvc_vars_location preference "
-                                  "explicitly.")
+                    from distutils import _msvccompiler
+                    vcvars_cmd = _msvccompiler._find_vcvarsall("")[0]
+                else:
+                    arch_name = prefs['codegen.cpp.msvc_architecture']
+                    if arch_name == '':
+                        mach = platform.machine()
+                        if mach == 'AMD64':
+                            arch_name = 'x86_amd64'
+                        else:
+                            arch_name = 'x86'
 
-                arch_name = prefs['codegen.cpp.msvc_architecture']
-                if arch_name == '':
-                    mach = platform.machine()
-                    if mach == 'AMD64':
-                        arch_name = 'x86_amd64'
-                    else:
-                        arch_name = 'x86'
+                    vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
+                        vcvars_loc=vcvars_loc, arch_name=arch_name)
 
-                vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
-                    vcvars_loc=vcvars_loc, arch_name=arch_name)
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
                 cmd = vcvars_cmd + ' && ' + buildmodel_cmd 
