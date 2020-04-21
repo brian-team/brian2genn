@@ -1205,6 +1205,11 @@ class GeNNDevice(CPPStandaloneDevice):
                 # making seperate check_calls doesn't work
                 check_call(cmd, cwd=directory, env=env)
             else:
+                if prefs['codegen.cpp.extra_link_args']:
+                    # declare the link flags as an environment variable so that GeNN's
+                    # generateALL can pick it up
+                    env['LDFLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+                
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
                 if not use_GPU:
