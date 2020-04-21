@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 variables:
-  genn_stable: 'windows_fixes'
+  genn_stable: '4_2_0_release'
 
 jobs:
 
