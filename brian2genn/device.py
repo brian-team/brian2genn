@@ -20,6 +20,7 @@ import numpy
 import numbers
 from collections import Counter
 
+from brian2.codegen.cpp_prefs import get_msvc_env
 from brian2.codegen.translation import make_statements
 from brian2.input.poissoninput import PoissonInput
 from brian2.spatialneuron.spatialneuron import (SpatialNeuron,
@@ -162,6 +163,23 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
+def find_executable(executable):
+    """Tries to find 'executable' in the path
+
+    Modified version of distutils.spawn.find_executable as 
+    this has stupid rules for extensions on Windows. 
+    Returns the complete filename or None if not found.
+    """
+    path = os.environ.get('PATH', os.defpath)
+
+    paths = path.split(os.pathsep)
+
+    for p in paths:
+        f = os.path.join(p, executable)
+        if os.path.isfile(f):
+            # the file exists, we have a shot at spawn working
+            return f
+    return None
 
 class DelayedCodeObject(object):
     '''
@@ -1084,9 +1102,20 @@ class GeNNDevice(CPPStandaloneDevice):
             logger.debug('Using GeNN path from environment variable: '
                          '"{}"'.format(genn_path))
         else:
-            raise RuntimeError('Set the GENN_PATH environment variable or '
-                               'the devices.genn.path preference.')
+            # Find genn-buildmodel
+            genn_bin = (find_executable("genn-buildmodel.bat")
+                        if os.sys.platform == 'win32'
+                        else find_executable("genn-buildmodel.sh"))
+            
+            if genn_bin is None:
+                raise RuntimeError('Add GeNN\'s bin directory to the path '
+                                   'or set the devices.genn.path preference.')
 
+            # Remove genn-buildmodel from path, navigate up a directory and normalize
+            genn_path = os.path.normpath(os.path.join(os.path.dirname(genn_bin), ".."))
+            logger.debug('Using GeNN path determined from path: '
+                         '"{}"'.format(genn_path))
+        
         # Check for GeNN compatibility
         genn_version = None
         version_file = os.path.join(genn_path, 'version.txt')
@@ -1106,7 +1135,6 @@ class GeNNDevice(CPPStandaloneDevice):
                             'fails.', once=True)
 
         env = os.environ.copy()
-        env['GENN_PATH'] = genn_path
         if use_GPU:
             if prefs.devices.genn.cuda_backend.cuda_path is not None:
                 cuda_path = prefs.devices.genn.cuda_backend.cuda_path
@@ -1120,49 +1148,56 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
                                    'the devices.genn.cuda_path preference.')
-        if prefs['codegen.cpp.extra_link_args']:
-            # declare the link flags as an environment variable so that GeNN's
-            # generateALL can pick it up
-            env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+
         with std_silent(debug):
             if os.sys.platform == 'win32':
-                vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
-                if vcvars_loc == '':
-                    from distutils import msvc9compiler
-                    for version in range(16, 8, -1):
-                        fname = msvc9compiler.find_vcvarsall(version)
-                        if fname:
-                            vcvars_loc = fname
-                            break
-                if vcvars_loc == '':
-                    raise IOError("Cannot find vcvarsall.bat on standard "
-                                  "search path. Set the "
-                                  "codegen.cpp.msvc_vars_location preference "
-                                  "explicitly.")
+                # Make sure that all environment variables are upper case
+                env = {k.upper() : v for k, v in iteritems(env)}
+                
+                # If there is vcvars command to call, start cmd with that
+                cmd = ''
+                msvc_env, vcvars_cmd = get_msvc_env()
+                if vcvars_cmd:
+                    cmd += vcvars_cmd + ' && '
+                # Otherwise, update environment, again ensuring 
+                # that all variables are upper case
+                else:
+                    env.update({k.upper() : v for k, v in iteritems(msvc_env)})
 
-                arch_name = prefs['codegen.cpp.msvc_architecture']
-                if arch_name == '':
-                    mach = platform.machine()
-                    if mach == 'AMD64':
-                        arch_name = 'x86_amd64'
-                    else:
-                        arch_name = 'x86'
-
-                vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
-                    vcvars_loc=vcvars_loc, arch_name=arch_name)
+                # Add start of call to genn-buildmodel
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
-                cmd = vcvars_cmd + ' && ' + buildmodel_cmd 
+                cmd += buildmodel_cmd + ' -s'
+                
+                # If we're not using CPU, add CPU option
                 if not use_GPU:
-                    cmd += [' -c']
-                wdir= os.getcwd()
-                cmd += ' -i %s' % wdir
-                cmd += ':%s' % os.path.join(wdir, directory)
-                cmd += ':%s' % os.path.join(wdir, directory, 'brianlib','randomkit')
+                    cmd += ' -c'
+                    
+                # Add include directories
+                # **NOTE** on windows semicolons are used to seperate multiple include paths
+                # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
+                # files so we have to build argument string manually(https://bugs.python.org/issue23862)
+                wdir = os.getcwd()
+                cmd += ' -i "%s;%s;%s"' % (wdir, os.path.join(wdir, directory),
+                                           os.path.join(wdir, directory, 'brianlib','randomkit'))
                 cmd += ' magicnetwork_model.cpp'
-                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release project.vcxproj'
-                check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
+                
+                # Add call to build generated code
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'magicnetwork_model_CODE', 'runner.vcxproj') + '"'
+                
+                # Add call to build executable
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'project.vcxproj') + '"'
+                
+                # Run combined command
+                # **NOTE** because vcvars MODIFIED environment, 
+                # making seperate check_calls doesn't work
+                check_call(cmd, cwd=directory, env=env)
             else:
+                if prefs['codegen.cpp.extra_link_args']:
+                    # declare the link flags as an environment variable so that GeNN's
+                    # generateALL can pick it up
+                    env['LDFLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+                
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
                 if not use_GPU:

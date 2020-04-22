@@ -16,7 +16,7 @@ prefs.register_preferences(
         default='SPARSE'
     ),
     path=BrianPreference(
-        docs='''The path to the GeNN installation (if not set, the GENN_PATH environment variable will be used instead)''',
+        docs='''The path to the GeNN installation (if not set, the version of GeNN in the path will be used instead)''',
         default=None,
         validator=lambda value: value is None or os.path.isdir(value)
     ),
