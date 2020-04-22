@@ -195,11 +195,15 @@ void modelDefinition(NNmodel &model)
   {% endfor %}
 
 
-    {% if use_GPU == 'start' %}
+    {% if use_GPU %}
     // GENN_PREFERENCES set in brian2genn
-    GENN_PREFERENCES.deviceSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.device_select']|int}};
+    GENN_PREFERENCES.deviceSelectMethod = DeviceSelect::{{prefs['devices.genn.cuda_backend.device_select']}};
+    {% if prefs['devices.genn.cuda_backend.device_select'] == 'MANUAL' %}
     GENN_PREFERENCES.manualDeviceID = {{prefs['devices.genn.cuda_backend.manual_device']}};
+    {% endif %}
     GENN_PREFERENCES.blockSizeSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.blocksize_select_method']}};
+
+    {% if prefs['devices.genn.cuda_backend.blocksize_select_method'] == 'MANUAL' %}
     GENN_PREFERENCES.manualBlockSizes = {
         {{prefs['devices.genn.cuda_backend.neuron_blocksize']}},
         {{prefs['devices.genn.cuda_backend.synapse_blocksize']}},
@@ -210,6 +214,7 @@ void modelDefinition(NNmodel &model)
         {{prefs['devices.genn.cuda_backend.init_sparse_blocksize']}},
         {{prefs['devices.genn.cuda_backend.pre_neuron_reset_blocksize']}},
         {{prefs['devices.genn.cuda_backend.pre_synapse_reset_blocksize']}}};
+    {% endif %}
     {% endif %}
 
     {{ dtDef }}
