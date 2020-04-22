@@ -136,10 +136,8 @@ int main(int argc, char *argv[])
   //timer.stopTimer();
   cerr << t << " done ..." << endl;
   {% if prefs['devices.genn.kernel_timing'] %}
-  {% for kt in ('neuron_tme','synapse_tme','learning_tme','synDyn_tme') %}
-  {% if ktimer[kt] %}
+  {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
   fprintf(timef,"%f ", {{kt}});
-  {% endif %}
   {% endfor %}
   {% endif %} 
   //fprintf(timef,"%f \n", timer.getElapsedTime());
