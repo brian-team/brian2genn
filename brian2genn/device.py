@@ -347,6 +347,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.max_row_length_code_2= []
         self.max_row_length_vars= set()
         self.max_row_length_code_objects= {}
+        self.max_row_length_array= set()
         self.delays = {}
         self.spike_monitor_models = []
         self.rate_monitor_models = []
@@ -356,7 +357,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.net = None
         self.simple_code_objects = {}
         self.report_func = ''
-
+        self.src_counts= dict()
+        self.trg_counts= dict()
         #: List of all source and header files (to be included in runner)
         self.source_files = []
         self.header_files = []
@@ -507,22 +509,23 @@ class GeNNDevice(CPPStandaloneDevice):
                 # the sources and targets arrays in the variables
                 src= variables["sources"].get_value()
                 trg= variables["targets"].get_value()
-                #which, max_row = Counter(src).most_common(1)[0]
-                #which, max_col = Counter(trg).most_common(1)[0]
                 if (src.size > 0):
-                    row_lengths = numpy.bincount(src, minlength=src.size)
-                    max_row = int(numpy.amax(row_lengths))
-                else:
-                    max_row= 1
+                    row_lengths = numpy.bincount(src)
+                    if owner.name not in self.src_counts:
+                        self.src_counts[owner.name]= numpy.zeros(owner.source.__len__(),dtype=int)
+                    row_lengths.resize(self.src_counts[owner.name].shape)
+                    self.src_counts[owner.name]= numpy.add(self.src_counts[owner.name],row_lengths)
                 if (trg.size > 0):
-                    col_lengths = numpy.bincount(trg, minlength=trg.size)
-                    max_col = int(numpy.amax(col_lengths))
-                else:
-                    max_col= 1
-                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
-                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
-                self.max_row_length_code_1.append('maxRow%s = %d;' % (owner.name, max_row))
-                self.max_row_length_code_1.append('maxCol%s = %d;' % (owner.name, max_col))
+                    col_lengths = numpy.bincount(trg)
+                    if owner.target is not None:
+                        trgN= owner.target.__len__()
+                    else:
+                        trgN= owner.source.__len__()
+                    if owner.name not in self.trg_counts:
+                        self.trg_counts[owner.name]= numpy.zeros(trgN,dtype=int)
+                    col_lengths.resize(self.trg_counts[owner.name].shape)
+                    self.trg_counts[owner.name]= numpy.add(self.trg_counts[owner.name],col_lengths)
+                self.max_row_length_array.add(owner.name)
                 
             codeobj_class = GeNNUserCodeObject
             if '_synapses_create_generator_' in name:
@@ -782,6 +785,21 @@ class GeNNDevice(CPPStandaloneDevice):
 
         print('building genn executable ...')
 
+        # get the maxCol and maxRow values for synapses from disk
+        for name in self.max_row_length_array:
+            if name in self.src_counts:
+                print(name)
+                print(self.src_counts[name])
+                max_row= int(numpy.amax(self.src_counts[name]))
+                max_col= int(numpy.amax(self.trg_counts[name]))
+            else:
+                max_row= 1;
+                max_col= 1;
+            self.max_row_length_vars.add('long maxRow%s;' % name)
+            self.max_row_length_code_1.append('maxRow%s = %d;' % (name, max_row))
+            self.max_row_length_vars.add('long maxCol%s;' % name)
+            self.max_row_length_code_1.append('maxCol%s = %d;' % (name, max_col))
+        
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
 
@@ -876,7 +894,6 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
         self.process_synapses(synapse_groups, objects)
-        
         # Process monitors
         self.process_spike_monitors(spike_monitors)
         self.process_rate_monitors(rate_monitors)
@@ -1036,6 +1053,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         code_object_defs[codeobj.name]))
             writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
+              
+            
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
