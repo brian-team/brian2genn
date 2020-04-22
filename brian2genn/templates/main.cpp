@@ -40,7 +40,6 @@ int main(int argc, char *argv[])
   name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
 
-  //timer.startTimer();
   fprintf(stderr, "# DT %f \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
@@ -133,14 +132,12 @@ int main(int argc, char *argv[])
   {{'\n'.join(code_lines['before_run'])|autoindent}}
   eng.run(totalTime); // run for the full duration
   {{'\n'.join(code_lines['after_run'])|autoindent}}
-  //timer.stopTimer();
   cerr << t << " done ..." << endl;
   {% if prefs['devices.genn.kernel_timing'] %}
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
   fprintf(timef,"%f ", {{kt}});
   {% endfor %}
   {% endif %} 
-  //fprintf(timef,"%f \n", timer.getElapsedTime());
 
   // get the final results from the GPU 
   eng.getStateFromGPU();
