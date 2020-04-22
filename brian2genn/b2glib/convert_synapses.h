@@ -73,10 +73,6 @@ void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int3
         rowLength[source[i]]++;
     }
 
-    // Reserve temporary vector
-    vector<int32_t> targets;
-    targets.reserve(trgNN);
-}
 
 template<class scalar>
 void convert_dynamic_arrays_2_sparse_synapses(const vector<scalar> &gvector, const vector<size_t> &indices,
@@ -107,10 +103,6 @@ template<class scalar>
 void convert_sparse_synapses_2_dynamic_arrays(unsigned int *rowLength, unsigned int *ind, unsigned int maxRowLength,
                                               scalar *gv, int srcNN, int trgNN, vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, unsigned int mode)
 {
-//    static int convertCnt= 0;
-//    string name= "debug_convert";
-//    name= name+to_string(convertCnt)+".dat";
-//    ofstream os(name.c_str());
 // note: this does not preserve the original order of entries in the brian arrays - is that a problem?
     if (mode == b2g::FULL_MONTY) {
         assert(source.size() == target.size());
@@ -121,7 +113,6 @@ void convert_sparse_synapses_2_dynamic_arrays(unsigned int *rowLength, unsigned 
                 source[cnt]= i;
                 target[cnt]= ind[(i * maxRowLength) + j];
                 gvector[cnt]= gv[(i * maxRowLength) + j];
-                //os << source[cnt] << " " << target[cnt] << " " << gvector[cnt] << endl;
                 cnt++;
             }
         }
@@ -134,8 +125,6 @@ void convert_sparse_synapses_2_dynamic_arrays(unsigned int *rowLength, unsigned 
             }
         }
     }
-//    os.close();
-//    convertCnt++;
 }
 
 void create_hidden_weightmatrix(vector<int32_t> &source, vector<int32_t> &target, char* hwm, int srcNN, int trgNN)
