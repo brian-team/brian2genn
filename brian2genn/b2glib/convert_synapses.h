@@ -72,6 +72,7 @@ void initialize_sparse_synapses(const vector<int32_t> &source, const vector<int3
         // Increment row length
         rowLength[source[i]]++;
     }
+}
 
 
 template<class scalar>
