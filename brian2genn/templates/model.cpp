@@ -187,11 +187,11 @@ void modelDefinition(NNmodel &model)
   //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
   //    brian::_mersenne_twister_states.push_back(new rk_state());
 
-  {% for max_row_length in max_row_length_code_1 %}
+  {% for max_row_length in max_row_length_run_arrray %}
   {{max_row_length}}
   {% endfor %}
 
-  {% for max_row_length in max_row_length_code_2 %}
+  {% for max_row_length in max_row_length_run_generator %}
   {{max_row_length}}
   {% endfor %}
 

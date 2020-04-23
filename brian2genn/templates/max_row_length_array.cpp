@@ -46,7 +46,7 @@ void _run_{{codeobj_name}}()
 
     for (size_t _idx=0; _idx<_numsources; _idx++) {
       {# After this code has been executed, the arrays _real_sources and
-	  _real_variables contain the final indices. Having any code here it all is
+	  _real_targets contain the final indices. Having any code here it all is
 	  only necessary for supporting subgroups #}
       {{vector_code|autoindent}}
 

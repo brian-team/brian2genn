@@ -343,8 +343,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.spikegenerator_models = []
         self.synapse_models = []
         self.max_row_length_include= []
-        self.max_row_length_code_1= []
-        self.max_row_length_code_2= []
+        self.max_row_length_run_array= []
+        self.max_row_length_run_generator= []
         self.max_row_length_synapses= set()
         self.max_row_length_code_objects= {}
         self.delays = {}
@@ -535,9 +535,9 @@ class GeNNDevice(CPPStandaloneDevice):
                 # add _array run functions to the first code block, _generator ones to the
                 # second so that they are executed in the right order
                 if generator:
-                    self.max_row_length_code_2.append('_run_%s();' % mrl_name)
+                    self.max_row_length_run_generator.append('_run_%s();' % mrl_name)
                 else:
-                    self.max_row_length_code_1.append('_run_%s();' % mrl_name)
+                    self.max_row_length_run_array.append('_run_%s();' % mrl_name)
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -1676,8 +1676,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    synapse_models=self.synapse_models,
                                                    main_lines=dry_main_lines,
                                                    max_row_length_include= self.max_row_length_include,
-                                                   max_row_length_code_1=self.max_row_length_code_1,
-                                                   max_row_length_code_2=self.max_row_length_code_2,
+                                                   max_row_length_run_array=self.max_row_length_run_array,
+                                                   max_row_length_run_generator=self.max_row_length_run_generator,
                                                    max_row_length_synapses=self.max_row_length_synapses,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
