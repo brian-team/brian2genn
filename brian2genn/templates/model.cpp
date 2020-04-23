@@ -14,11 +14,6 @@ double Network::_last_run_completed_fraction = 0.0;
 {{inc}}
 {% endfor %}
 
-{% for synapses in max_row_length_synapses %}
-long maxRow{{synapses}};
-long maxCol{{synapses}};
-{% endfor %}
-
 {% for inc in max_row_length_include %}
 {{inc}}
 {% endfor %}
@@ -187,7 +182,7 @@ void modelDefinition(NNmodel &model)
   //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
   //    brian::_mersenne_twister_states.push_back(new rk_state());
 
-  {% for max_row_length in max_row_length_run_arrray %}
+  {% for max_row_length in max_row_length_run_array %}
   {{max_row_length}}
   {% endfor %}
 
@@ -196,18 +191,8 @@ void modelDefinition(NNmodel &model)
   {% endfor %}
 
   {% for synapses in max_row_length_synapses %}
-  maxRow{{synapses}}= 1;
-  maxCol{{synapses}}= 1;
-  for (size_t Nrow : brian::_dynamic_array_{{synapses}}_N_outgoing) {
-    if (maxRow{{synapses}} < Nrow) {
-      maxRow{{synapses}}= Nrow;
-    }
-  }
-  for (size_t Ncol : brian::_dynamic_array_{{synapses}}_N_incoming) {
-    if (maxCol{{synapses}} < Ncol) {
-      maxCol{{synapses}}= Ncol;
-    }
-  }
+  const long maxRow{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_outgoing.begin(),brian::_dynamic_array_{{synapses}}_N_outgoing.end()),1);
+  const long maxCol{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_incoming.begin(),brian::_dynamic_array_{{synapses}}_N_incoming.end()),1);
   {% endfor %}
   
     {% if use_GPU %}

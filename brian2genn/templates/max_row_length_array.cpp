@@ -34,9 +34,6 @@ void _run_{{codeobj_name}}()
     ///// POINTERS ////////////
     {{pointers_lines|autoindent}}
   
-    const size_t _old_num_synapses = {{N}};
-    const size_t _new_num_synapses = _old_num_synapses + _numsources;
-
     {# Get N_post and N_pre in the correct way, regardless of whether they are
 	constants or scalar arrays#}
     const size_t _N_pre = {{constant_or_scalar('N_pre', variables['N_pre'])}};
