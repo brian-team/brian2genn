@@ -1,6 +1,8 @@
 {# USES_VARIABLES { _synaptic_pre, _synaptic_post, rand,
                     N_incoming, N_outgoing, N,
                     N_pre, N_post, _source_offset, _target_offset } #}
+{# WRITES_TO_READ_ONLY_VARIABLES { N_incoming, N_outgoing}
+#}
 
 #include "brianlib/common_math.h"
 #include "brianlib/stdint_compat.h"
@@ -13,7 +15,7 @@
 #include "synapses_classes.h"
 
 ////// SUPPORT CODE ///////
-namespace {{owner.name}}_max_row_length_generator {
+namespace {{codeobj_name}}_generator {
 	{{support_code_lines|autoindent}}
 }
 
@@ -23,16 +25,13 @@ namespace {{owner.name}}_max_row_length_generator {
 void _run_{{codeobj_name}}()
 {
     using namespace brian;
-    using namespace {{owner.name}}_max_row_length_generator;
+    using namespace  {{codeobj_name}}_generator;
 
     ///// CONSTANTS ///////////
     %CONSTANTS%
 
     ///// POINTERS ////////////
     {{pointers_lines|autoindent}}
-
-    maxRow{{owner.name}}= 1;
-    maxCol{{owner.name}}= 1;
 	
     {# Get N_post and N_pre in the correct way, regardless of whether they are
     constants or scalar arrays#}

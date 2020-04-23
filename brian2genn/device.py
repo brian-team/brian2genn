@@ -345,9 +345,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.max_row_length_include= []
         self.max_row_length_code_1= []
         self.max_row_length_code_2= []
-        self.max_row_length_vars= set()
+        self.max_row_length_synapses= set()
         self.max_row_length_code_objects= {}
-        self.max_row_length_array= set()
         self.delays = {}
         self.spike_monitor_models = []
         self.rate_monitor_models = []
@@ -503,54 +502,42 @@ class GeNNDevice(CPPStandaloneDevice):
                                                           )
             self.simple_code_objects[codeobj.name] = codeobj
         else:
-            if '_synapses_create_array_' in name:
-                # we are handling a Synapses group that will be created from python arrays
-                # and need to extract the max_row_length/max_col_length information from
-                # the sources and targets arrays in the variables
-                src= variables["sources"].get_value()
-                trg= variables["targets"].get_value()
-                if (src.size > 0):
-                    row_lengths = numpy.bincount(src)
-                    if owner.name not in self.src_counts:
-                        self.src_counts[owner.name]= numpy.zeros(owner.source.__len__(),dtype=int)
-                    row_lengths.resize(self.src_counts[owner.name].shape)
-                    self.src_counts[owner.name]= numpy.add(self.src_counts[owner.name],row_lengths)
-                if (trg.size > 0):
-                    col_lengths = numpy.bincount(trg)
-                    if owner.target is not None:
-                        trgN= owner.target.__len__()
-                    else:
-                        trgN= owner.source.__len__()
-                    if owner.name not in self.trg_counts:
-                        self.trg_counts[owner.name]= numpy.zeros(trgN,dtype=int)
-                    col_lengths.resize(self.trg_counts[owner.name].shape)
-                    self.trg_counts[owner.name]= numpy.add(self.trg_counts[owner.name],col_lengths)
-                self.max_row_length_array.add(owner.name)
-                
             codeobj_class = GeNNUserCodeObject
-            if '_synapses_create_generator_' in name:
-                # Here we process max_row_length for synapses created by an algorithm in C++
-                # the strategy is to do a dry run of connection generationin the model definition
+            if ('_synapses_create_generator_' in name) or ('_synapses_create_array_' in name):
+                # Here we process max_row_length for synapses 
+                # the strategy is to do a dry run of connection generationin in the model definition
                 # function that has the same random numbers and just counts synaptic connections
-                # rather than generating then for real
+                # rather than generating them for real
+                generator= '_synapses_create_generator_' in name
                 mrl_name= '%s_max_row_length' % owner.name
+                i= 1
+                while mrl_name in self.max_row_length_code_objects:
+                    mrl_name= '%s_max_row_length_%d' % (owner.name, i)
+                    i= i+1
+                if generator:
+                    mrl_template_name= 'max_row_length_generator'
+                else:
+                    mrl_template_name='max_row_length_array'
                 codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
                                                               abstract_code,
                                                               variables,
-                                                              'max_row_length_generator',
+                                                              mrl_template_name,
                                                               variable_indices,
                                                               codeobj_class=codeobj_class,
                                                               template_kwds=template_kwds,
                                                               override_conditional_write=override_conditional_write,
-                                                              )
+                )
                 #self.code_objects['%s_max_row_length' % owner.name] = codeobj
                 self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
                 self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
+                self.max_row_length_synapses.add(owner.name)
                 self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
-                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
-                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
-                self.max_row_length_code_2.append('_run_%s_max_row_length();' % owner.name)
-                
+                # add _array run functions to the first code block, _generator ones to the
+                # second so that they are executed in the right order
+                if generator:
+                    self.max_row_length_code_2.append('_run_%s();' % mrl_name)
+                else:
+                    self.max_row_length_code_1.append('_run_%s();' % mrl_name)
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -784,21 +771,6 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print('building genn executable ...')
-
-        # get the maxCol and maxRow values for synapses from disk
-        for name in self.max_row_length_array:
-            if name in self.src_counts:
-                print(name)
-                print(self.src_counts[name])
-                max_row= int(numpy.amax(self.src_counts[name]))
-                max_col= int(numpy.amax(self.trg_counts[name]))
-            else:
-                max_row= 1;
-                max_col= 1;
-            self.max_row_length_vars.add('long maxRow%s;' % name)
-            self.max_row_length_code_1.append('maxRow%s = %d;' % (name, max_row))
-            self.max_row_length_vars.add('long maxCol%s;' % name)
-            self.max_row_length_code_1.append('maxCol%s = %d;' % (name, max_col))
         
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
@@ -1706,7 +1678,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    max_row_length_include= self.max_row_length_include,
                                                    max_row_length_code_1=self.max_row_length_code_1,
                                                    max_row_length_code_2=self.max_row_length_code_2,
-                                                   max_row_length_vars=self.max_row_length_vars,
+                                                   max_row_length_synapses=self.max_row_length_synapses,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,

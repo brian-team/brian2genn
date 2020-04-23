@@ -14,8 +14,9 @@ double Network::_last_run_completed_fraction = 0.0;
 {{inc}}
 {% endfor %}
 
-{% for var in max_row_length_vars %}
-{{var}}
+{% for synapses in max_row_length_synapses %}
+long maxRow{{synapses}};
+long maxCol{{synapses}};
 {% endfor %}
 
 {% for inc in max_row_length_include %}
@@ -194,7 +195,21 @@ void modelDefinition(NNmodel &model)
   {{max_row_length}}
   {% endfor %}
 
-
+  {% for synapses in max_row_length_synapses %}
+  maxRow{{synapses}}= 1;
+  maxCol{{synapses}}= 1;
+  for (size_t Nrow : brian::_dynamic_array_{{synapses}}_N_outgoing) {
+    if (maxRow{{synapses}} < Nrow) {
+      maxRow{{synapses}}= Nrow;
+    }
+  }
+  for (size_t Ncol : brian::_dynamic_array_{{synapses}}_N_incoming) {
+    if (maxCol{{synapses}} < Ncol) {
+      maxCol{{synapses}}= Ncol;
+    }
+  }
+  {% endfor %}
+  
     {% if use_GPU %}
     // GENN_PREFERENCES set in brian2genn
     GENN_PREFERENCES.deviceSelectMethod = DeviceSelect::{{prefs['devices.genn.cuda_backend.device_select']}};
