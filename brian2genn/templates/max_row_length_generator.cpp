@@ -166,17 +166,4 @@ void _run_{{codeobj_name}}()
 	  }
         }
     
-	for (size_t _i= 0; _i < _N_pre; _i++) {
-	  long _pre_idx= _i + _source_offset;
-	  if (maxRow{{owner.name}} < {{_dynamic_N_outgoing}}[_pre_idx]) {
-	      maxRow{{owner.name}}= {{_dynamic_N_outgoing}}[_pre_idx];
-	  }
-	}
-	for (size_t _j= 0; _j < _N_post; _j++) {
-	  long _post_idx= _j + _target_offset;
-	  if (maxCol{{owner.name}} < {{_dynamic_N_incoming}}[_post_idx]) {
-	      maxCol{{owner.name}}= {{_dynamic_N_incoming}}[_post_idx];
-	  }
-	}
-
 }
