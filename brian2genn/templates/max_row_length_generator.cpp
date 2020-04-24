@@ -41,7 +41,7 @@ void _run_{{codeobj_name}}()
     {{_dynamic_N_outgoing}}.resize(_N_pre + _source_offset);
     size_t _raw_pre_idx, _raw_post_idx;
     // scalar code
-    const size_t _vectorisation_idx = -1;
+    const int _vectorisation_idx = -1;
     {{scalar_code['setup_iterator']|autoindent}}
     {{scalar_code['create_j']|autoindent}}
     {{scalar_code['create_cond']|autoindent}}
