@@ -1125,14 +1125,12 @@ class GeNNDevice(CPPStandaloneDevice):
                     genn_version = parse_version(f.read().strip())
                     logger.debug('GeNN version: %s' % genn_version)
             except (OSError, IOError) as ex:
-                logger.debug('Getting version from $GENN_PATH/version.txt '
-                             'failed: %s' % str(ex))
+                logger.debug('Getting version from %s/version.txt '
+                             'failed: %s' % (genn_path, str(ex)))
 
-        if prefs.core.default_float_dtype == numpy.float32:
-            if genn_version is None or not genn_version >= parse_version('3.2'):
-                logger.warn('Support for single-precision floats requires GeNN '
-                            '3.2 or later. Upgrade GeNN if the compilation '
-                            'fails.', once=True)
+        if genn_version is None or not genn_version >= parse_version('4.2.1'):
+            logger.warn('Brian2GeNN requires GeNN 4.2.1 or later. '
+                        'Upgrade GeNN if the compilation fails.', once=True)
 
         env = os.environ.copy()
         if use_GPU:
