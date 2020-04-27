@@ -14,10 +14,6 @@ double Network::_last_run_completed_fraction = 0.0;
 {{inc}}
 {% endfor %}
 
-{% for var in max_row_length_vars %}
-{{var}}
-{% endfor %}
-
 {% for inc in max_row_length_include %}
 {{inc}}
 {% endfor %}
@@ -165,11 +161,6 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
 ){% endif %};
 {% endfor %}
 
-// need the brian style random numbers for calculating max row length and max col length
-//namespace brian {
-//  std::vector< rk_state* > _mersenne_twister_states;
-//}
-
 
 void modelDefinition(NNmodel &model)
 {
@@ -182,19 +173,16 @@ void modelDefinition(NNmodel &model)
 	  using namespace brian;
 	  {{ main_lines | autoindent }}
   }
-  //   // Random number generator states (need one for each thread in OpenMP)
-  //  for (int i=0; i<{{openmp_pragma('get_num_threads')}}; i++)
-  //    brian::_mersenne_twister_states.push_back(new rk_state());
 
-  {% for max_row_length in max_row_length_code_1 %}
+  {% for max_row_length in max_row_length_run_calls %}
   {{max_row_length}}
   {% endfor %}
 
-  {% for max_row_length in max_row_length_code_2 %}
-  {{max_row_length}}
+  {% for synapses in max_row_length_synapses %}
+  const long maxRow{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_outgoing.begin(),brian::_dynamic_array_{{synapses}}_N_outgoing.end()),1);
+  const long maxCol{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_incoming.begin(),brian::_dynamic_array_{{synapses}}_N_incoming.end()),1);
   {% endfor %}
-
-
+  
     {% if use_GPU %}
     // GENN_PREFERENCES set in brian2genn
     GENN_PREFERENCES.deviceSelectMethod = DeviceSelect::{{prefs['devices.genn.cuda_backend.device_select']}};

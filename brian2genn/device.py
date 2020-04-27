@@ -343,9 +343,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.spikegenerator_models = []
         self.synapse_models = []
         self.max_row_length_include= []
-        self.max_row_length_code_1= []
-        self.max_row_length_code_2= []
-        self.max_row_length_vars= set()
+        self.max_row_length_run_calls= []
+        self.max_row_length_synapses= set()
         self.max_row_length_code_objects= {}
         self.delays = {}
         self.spike_monitor_models = []
@@ -356,7 +355,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.net = None
         self.simple_code_objects = {}
         self.report_func = ''
-
+        self.src_counts= dict()
+        self.trg_counts= dict()
         #: List of all source and header files (to be included in runner)
         self.source_files = []
         self.header_files = []
@@ -501,53 +501,40 @@ class GeNNDevice(CPPStandaloneDevice):
                                                           )
             self.simple_code_objects[codeobj.name] = codeobj
         else:
-            if '_synapses_create_array_' in name:
-                # we are handling a Synapses group that will be created from python arrays
-                # and need to extract the max_row_length/max_col_length information from
-                # the sources and targets arrays in the variables
-                src= variables["sources"].get_value()
-                trg= variables["targets"].get_value()
-                #which, max_row = Counter(src).most_common(1)[0]
-                #which, max_col = Counter(trg).most_common(1)[0]
-                if (src.size > 0):
-                    row_lengths = numpy.bincount(src, minlength=src.size)
-                    max_row = int(numpy.amax(row_lengths))
-                else:
-                    max_row= 1
-                if (trg.size > 0):
-                    col_lengths = numpy.bincount(trg, minlength=trg.size)
-                    max_col = int(numpy.amax(col_lengths))
-                else:
-                    max_col= 1
-                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
-                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
-                self.max_row_length_code_1.append('maxRow%s = %d;' % (owner.name, max_row))
-                self.max_row_length_code_1.append('maxCol%s = %d;' % (owner.name, max_col))
-                
             codeobj_class = GeNNUserCodeObject
-            if '_synapses_create_generator_' in name:
-                # Here we process max_row_length for synapses created by an algorithm in C++
-                # the strategy is to do a dry run of connection generationin the model definition
+            if ('_synapses_create_generator_' in name) or ('_synapses_create_array_' in name):
+                # Here we process max_row_length for synapses 
+                # the strategy is to do a dry run of connection generationin in the model definition
                 # function that has the same random numbers and just counts synaptic connections
-                # rather than generating then for real
+                # rather than generating them for real
+                generator= '_synapses_create_generator_' in name
                 mrl_name= '%s_max_row_length' % owner.name
+                i= 1
+                while mrl_name in self.max_row_length_code_objects:
+                    mrl_name= '%s_max_row_length_%d' % (owner.name, i)
+                    i= i+1
+                if generator:
+                    mrl_template_name= 'max_row_length_generator'
+                else:
+                    mrl_template_name='max_row_length_array'
                 codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
                                                               abstract_code,
                                                               variables,
-                                                              'max_row_length_generator',
+                                                              mrl_template_name,
                                                               variable_indices,
                                                               codeobj_class=codeobj_class,
                                                               template_kwds=template_kwds,
                                                               override_conditional_write=override_conditional_write,
-                                                              )
+                )
                 #self.code_objects['%s_max_row_length' % owner.name] = codeobj
                 self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
                 self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
+                self.max_row_length_synapses.add(owner.name)
                 self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
-                self.max_row_length_vars.add('long maxRow%s;' % owner.name)
-                self.max_row_length_vars.add('long maxCol%s;' % owner.name)
-                self.max_row_length_code_2.append('_run_%s_max_row_length();' % owner.name)
-                
+                # add _array run functions to the first code block, _generator ones to the
+                # second so that they are executed in the right order
+                self.max_row_length_run_calls.append('_run_%s();' % mrl_name)
+
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -781,7 +768,7 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print('building genn executable ...')
-
+        
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
 
@@ -876,7 +863,6 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
         self.process_synapses(synapse_groups, objects)
-        
         # Process monitors
         self.process_spike_monitors(spike_monitors)
         self.process_rate_monitors(rate_monitors)
@@ -1036,6 +1022,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         code_object_defs[codeobj.name]))
             writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
+              
+            
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
@@ -1683,9 +1671,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    synapse_models=self.synapse_models,
                                                    main_lines=dry_main_lines,
                                                    max_row_length_include= self.max_row_length_include,
-                                                   max_row_length_code_1=self.max_row_length_code_1,
-                                                   max_row_length_code_2=self.max_row_length_code_2,
-                                                   max_row_length_vars=self.max_row_length_vars,
+                                                   max_row_length_run_calls=self.max_row_length_run_calls,
+                                                   max_row_length_synapses=self.max_row_length_synapses,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,
