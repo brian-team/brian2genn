@@ -1117,8 +1117,8 @@ class GeNNDevice(CPPStandaloneDevice):
                              'failed: %s' % (genn_path, str(ex)))
 
         if genn_version is None or not genn_version >= parse_version('4.2.1'):
-            logger.warn('Brian2GeNN requires GeNN 4.2.1 or later. '
-                        'Upgrade GeNN if the compilation fails.', once=True)
+            raise RuntimeError('Brian2GeNN requires GeNN 4.2.1 or later. '
+                               'Please upgrade your GeNN version.')
 
         env = os.environ.copy()
         if use_GPU:
