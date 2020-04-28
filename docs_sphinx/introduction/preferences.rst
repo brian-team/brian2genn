@@ -54,8 +54,29 @@ can also be overriden like::
 
 ``pre_neuron_reset_blocksize``, ``pre_synapse_reset_blocksize``, ``synapse_blocksize``, 
 ``learning_blocksize``, ``synapse_dynamics_blocksize``, ``init_blocksize`` and 
-``init_sparse_blocksize``can also be configured in this way.
+``init_sparse_blocksize`` can also be configured in this way.
 
 List of preferences
 -------------------
-.. document_brian_prefs:: devices.genn
+
+.. _brian-pref-devices-genn-connectivity:
+
+``devices.genn.connectivity`` = ``'SPARSE'``
+    This preference determines which connectivity scheme is to be employed within GeNN. The valid alternatives are 'DENSE' and 'SPARSE'. For 'DENSE' the GeNN dense matrix methods are used for all connectivity matrices. When 'SPARSE' is chosen, the GeNN sparse matrix representations are used.
+
+.. _brian-pref-devices-genn-kernel-timing:
+
+``devices.genn.kernel_timing`` = ``False``
+    This preference determines whether GeNN should record kernel runtimes; note that this can affect performance.
+
+.. _brian-pref-devices-genn-path:
+
+``devices.genn.path`` = ``None``
+    The path to the GeNN installation (if not set, the version of GeNN in the path will be used instead)
+
+.. _brian-pref-devices-genn-synapse-span-type:
+
+``devices.genn.synapse_span_type`` = ``'POSTSYNAPTIC'``
+    This preference determines whether the spanType (parallelization mode) for a synapse population should be set to pre-synapstic or post-synaptic.
+
+.. document_brian_prefs:: devices.genn.cuda_backend

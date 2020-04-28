@@ -31,7 +31,7 @@ if sphinx.__version__ < '1.0.1':
 
 import brian2genn
 from brian2.core.preferences import prefs
-
+import brian2genn
 from .docscrape_sphinx import get_doc_object, SphinxDocString
 
 
