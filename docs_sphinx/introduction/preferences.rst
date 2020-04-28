@@ -15,6 +15,24 @@ sparse matrix methods ('SPARSE'). You can set the preference like this::
 
     prefs.devices.genn.connectivity = 'DENSE'
 
+
+Compiler preferences
+--------------------
+On Linux and Mac, Brian2GeNN will use the compiler preferences specified for Brian2 
+for compiling the executable. This means you should set the
+``codegen.cpp.extra_compile_args`` preference, or
+``codegen.cpp.extra_compile_args_gcc``
+
+Brian2GeNN also offers a preference to specify additional compiler flags for
+CUDA compilation on Linux and Mac with the nvcc compiler:
+`devices.genn.cuda_backend.extra_compile_args_nvcc`.
+
+Note that all of the above preferences expect a *Python list* of individual
+compiler arguments, i.e. to for example add an argument for the nvcc compiler,
+use::
+
+    prefs.devices.genn.cuda_backend.extra_compile_args_nvcc += ['--verbose']
+
 On Windows, Brian2GeNN will try to find the file ``vcvarsall.bat`` to enable
 compilation with the MSVC compiler automatically. If this fails, or if you have
 multiple versions of MSVC installed and want to select a specific one, you can
