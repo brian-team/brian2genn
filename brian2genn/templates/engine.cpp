@@ -25,18 +25,14 @@ double Network::_last_run_completed_fraction = 0.0;
 class engine
 {
  public:
-  NNmodel model;
   // end of data fields 
 
   engine();
   ~engine();
-  void init(unsigned int); 
   void free_device_mem(); 
-  void run(double, unsigned int); 
-#ifndef CPU_ONLY
+  void run(double);
   void getStateFromGPU(); 
   void getSpikesFromGPU(); 
-#endif
 };
 
 #endif
@@ -58,27 +54,10 @@ class engine
 
 engine::engine()
 {
-  modelDefinition(model);
   allocateMem();
   initialize();
   Network::_last_run_time= 0.0;
   Network::_last_run_completed_fraction= 0.0;
-}
-
-//--------------------------------------------------------------------------
-/*! \brief Method for initialising variables
- */
-//--------------------------------------------------------------------------
-
-void engine::init(unsigned int which)
-{
-#ifndef CPU_ONLY
-  if (which == CPU) {
-  }
-  if (which == GPU) {
-    copyStateToDevice();
-  }
-#endif
 }
 
 //--------------------------------------------------------------------------
@@ -94,14 +73,10 @@ engine::~engine()
  */
 //--------------------------------------------------------------------------
 
-void engine::run(double duration, //!< Duration of time to run the model for 
-		  unsigned int which //!< Flag determining whether to run on GPU or CPU only
-		  )
+void engine::run(double duration)  //!< Duration of time to run the model for
 {
   std::clock_t start, current; 
   const double t_start = t;
-  unsigned int pno;
-  unsigned int offset= 0;
 
   start = std::clock();
   int riT= (int) (duration/DT+1e-2);
@@ -121,7 +96,9 @@ void engine::run(double duration, //!< Duration of time to run the model for
                                             brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
                                             brian::_dynamic_array_{{obj.monitored}}_{{var}});
       {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(C{{obj.monitored}},
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
+					       ind{{obj.monitored}},
+					       maxRowLength{{obj.monitored}},
                                                {{var}}{{obj.monitored}},
                                                {{obj.srcN}}, {{obj.trgN}},
                                                brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
@@ -130,7 +107,7 @@ void engine::run(double duration, //!< Duration of time to run the model for
                                                b2g::FULL_MONTY);
       {% endif %}
       {% else %}
-      copy_genn_to_brian({{var}}{{obj.monitored}}, brian::_array_{{obj.monitored}}_{{var}}, {{obj.N}});
+      std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
       {% endif %}
       {% endfor %}
       _run_{{obj.name}}_codeobject();
@@ -140,11 +117,11 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {
           // Execute run_regularly operation: {{obj['name']}}
           {% for var in obj['read'] %}
-          {% if var == 't' %}
-          copy_genn_to_brian(&t, brian::_array_{{obj['owner'].clock.name}}_t, 1);
-          {% elif var == 'dt' %}
-          {# nothing to do #}
-          {% else %}
+        {% if var == 't' %}
+        std::copy_n(&t, 1, brian::_array_{{obj['owner'].clock.name}}_t);
+        {% elif var == 'dt' %}
+        {# nothing to do #}
+        {% else %}
           {% if obj['isSynaptic'] %}
           {% if obj['connectivity'] == 'DENSE' %}
           convert_dense_matrix_2_dynamic_arrays({{var}}{{obj['owner'].name}},
@@ -153,19 +130,21 @@ void engine::run(double duration, //!< Duration of time to run the model for
                                                 brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
                                                 brian::_dynamic_array_{{obj['owner'].name}}_{{var}});
           {% else %}
-          convert_sparse_synapses_2_dynamic_arrays(C{{obj['owner'].name}}, {{var}}{{obj['owner'].name}},
+          convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj['owner'].name}},
+		                                   ind{{obj['owner'].name}},
+						   maxRowLength{{obj['owner'].name}},
+		                                   {{var}}{{obj['owner'].name}},
                                                    {{obj['srcN']}}, {{obj['trgN']}},
                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_pre,
                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}}, b2g::FULL_MONTY);
           {% endif %}
           {% else %}
-           copy_genn_to_brian({{var}}{{obj['owner'].name}},
-                              brian::_array_{{obj['owner'].name}}_{{var}},
-                              {{obj['owner'].variables[var].size}});
+           std::copy_n({{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
+                       brian::_array_{{obj['owner'].name}}_{{var}});
           {% endif %}
-          {% endif %}
-          {% endfor %}
+        {% endif %}
+        {% endfor %}
 
           _run_{{obj['codeobj'].name}}();
 
@@ -178,92 +157,75 @@ void engine::run(double duration, //!< Duration of time to run the model for
                                                  {{var}}{{obj['owner'].name}},
                                                  {{obj['srcN']}}, {{obj['trgN']}});
            {% else %}
-           convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{obj['owner'].name}}__synaptic_pre,
-                                                    brian::_dynamic_array_{{obj['owner'].name}}__synaptic_post,
-                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}},
+           convert_dynamic_arrays_2_sparse_synapses(brian::_dynamic_array_{{obj['owner'].name}}_{{var}},
+						    sparseSynapseIndices{{obj['owner'].name}},
                                                     {{var}}{{obj['owner'].name}},
-                                                    {{obj['srcN']}}, {{obj['trgN']}},
-                                                    _{{obj['owner'].name}}_bypre);
+                                                    {{obj['srcN']}}, {{obj['trgN']}});
            {% endif %}
            {% else %}
-           copy_brian_to_genn(brian::_array_{{obj['owner'].name}}_{{var}},
-                              {{var}}{{obj['owner'].name}},
-                              {{obj['owner'].variables[var].size}});
+           std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, {{var}}{{obj['owner'].name}});
            {% endif %}
-           {% endfor %}
+        {% endfor %}
       }
       {% endif %}
       {% endfor %}
-#ifndef CPU_ONLY
-      if (which == GPU) {
-          {% set states_pushed = [] %}
-          {% for run_reg in run_regularly_operations %}
-          if (i % {{run_reg['step']}} == 0)  // only push state if we executed the operation
-          {
-              {% for var in run_reg['write'] %}
+      {% set states_pushed = [] %}
+      {% for run_reg in run_regularly_operations %}
+      if (i % {{run_reg['step']}} == 0)  // only push state if we executed the operation
+      {
+          {% for var in run_reg['write'] %}
               {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
               push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
               {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
               {% endif %}
-              {% endfor %}
-          }
-          {% endfor %}
-          stepTimeGPU();
-          // The stepTimeGPU function already updated everything for the next time step
-          iT--;
-          t = iT*DT;
-          {% for spkGen in spikegenerator_models %}
-          _run_{{spkGen.name}}_codeobject();
-          push{{spkGen.name}}SpikesToDevice();
-          {% endfor %}
-          {% set spikes_pulled = [] %}
-          {% for spkMon in spike_monitor_models %}
-          {% if (spkMon.notSpikeGeneratorGroup) %}
-          {% if not spkMon.neuronGroup in spikes_pulled %}
-          pull{{spkMon.neuronGroup}}SpikesFromDevice();
-          {% if spikes_pulled.append(spkMon.neuronGroup) %}{% endif %}
-          {% endif %}
-          {% endif %}
-          {% endfor %}
-          {% for rateMon in rate_monitor_models %}
-          {% if (rateMon.notSpikeGeneratorGroup) %}
-          {% if not rateMon.neuronGroup in spikes_pulled %}
-          pull{{rateMon.neuronGroup}}SpikesFromDevice();
-          {% if spikes_pulled.append(rateMon.neuronGroup) %}{% endif %}
-          {% endif %}
-          {% endif %}
-          {% endfor %}
-          {% set states_pulled = [] %}
-          {% for sm in state_monitor_models %}
-          {% if not sm.monitored in states_pulled %}
-          pull{{sm.monitored}}StateFromDevice();
-          {% if states_pulled.append(sm.monitored) %}{% endif %}
-          {% endif %}
-          {% endfor %}
-          {% for run_reg in run_regularly_operations %}
-            if ((i + 1) % {{run_reg['step']}} == 0)  // only pull state if next time step executes operation
-            {
-                {% for var in run_reg['read'] %}
-                {% if not var in ['t', 'dt'] %}
-                {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
-                pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
-                {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
-                {% endif %}
-                {% endif %}
-                {% endfor %}
-            }
           {% endfor %}
       }
-#endif
-      if (which == CPU) {
-          stepTimeCPU();
-          // The stepTimeCPU function already updated everything for the next time step
-          iT--;
-          t = iT*DT;
-          {% for spkGen in spikegenerator_models %}
-          _run_{{spkGen.name}}_codeobject();
-          {% endfor %}
-      }
+      {% endfor %}
+      stepTime();
+      // The stepTimeGPU function already updated everything for the next time step
+      iT--;
+      t = iT*DT;
+      {% for spkGen in spikegenerator_models %}
+      _run_{{spkGen.name}}_codeobject();
+      push{{spkGen.name}}SpikesToDevice();
+      {% endfor %}
+      {% set spikes_pulled = [] %}
+      {% for spkMon in spike_monitor_models %}
+      {% if (spkMon.notSpikeGeneratorGroup) %}
+      {% if not spkMon.neuronGroup in spikes_pulled %}
+      pull{{spkMon.neuronGroup}}CurrentSpikesFromDevice();
+      {% if spikes_pulled.append(spkMon.neuronGroup) %}{% endif %}
+      {% endif %}
+      {% endif %}
+      {% endfor %}
+      {% for rateMon in rate_monitor_models %}
+      {% if (rateMon.notSpikeGeneratorGroup) %}
+      {% if not rateMon.neuronGroup in spikes_pulled %}
+      pull{{rateMon.neuronGroup}}CurrentSpikesFromDevice();
+      {% if spikes_pulled.append(rateMon.neuronGroup) %}{% endif %}
+      {% endif %}
+      {% endif %}
+      {% endfor %}
+      {% set states_pulled = [] %}
+      {% for sm in state_monitor_models %}
+      {% if not sm.monitored in states_pulled %}
+      pull{{sm.monitored}}StateFromDevice();
+      {% if states_pulled.append(sm.monitored) %}{% endif %}
+      {% endif %}
+      {% endfor %}
+      {% for run_reg in run_regularly_operations %}
+        if ((i + 1) % {{run_reg['step']}} == 0)  // only pull state if next time step executes operation
+        {
+            {% for var in run_reg['read'] %}
+            {% if not var in ['t', 'dt'] %}
+            {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
+            pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
+            {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}{% endif %}
+            {% endif %}
+            {% endif %}
+            {% endfor %}
+        }
+      {% endfor %}
       // report state 
       {% for sm in state_monitor_models %}
       {% if sm.when != 'start' %}
@@ -272,10 +234,10 @@ void engine::run(double duration, //!< Duration of time to run the model for
       {% if sm.connectivity == 'DENSE' %}
       convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}},brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}});
       {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(C{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}}, ind{{sm.monitored}}, maxRowLength{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
       {% endif %}
       {% else %}
-      copy_genn_to_brian({{var}}{{sm.monitored}}, brian::_array_{{sm.monitored}}_{{var}}, {{sm.N}});
+      std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
       {% endif %}
       {% endfor %}
       _run_{{sm.name}}_codeobject();
@@ -312,8 +274,6 @@ void engine::run(double duration, //!< Duration of time to run the model for
   }
 }
 
-
-#ifndef CPU_ONLY
 //--------------------------------------------------------------------------
 /*! \brief Method for copying all variables of the last time step from the GPU
  
@@ -335,12 +295,9 @@ void engine::getStateFromGPU()
 
 void engine::getSpikesFromGPU()
 {
-  copySpikeNFromDevice();
-  copySpikesFromDevice();
+  copyCurrentSpikesFromDevice();
 }
 
-
-#endif
 
 
 #endif	

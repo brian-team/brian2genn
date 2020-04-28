@@ -61,11 +61,7 @@ template < > struct _higher_type<{xtype},{ytype}> {{ typedef {hightype} type; }}
 _mod_support_code = '''
 
 template < typename T1, typename T2 >
-#ifdef CPU_ONLY
-static inline typename _higher_type<T1,T2>::type
-#else
-__host__ __device__ static inline typename _higher_type<T1,T2>::type 
-#endif
+SUPPORT_CODE_FUNC typename _higher_type<T1,T2>::type 
 _brian_mod(T1 x, T2 y)
 {{
     return x-y*floor(1.0*x/y);
@@ -74,11 +70,7 @@ _brian_mod(T1 x, T2 y)
 
 _floordiv_support_code = '''
 template < typename T1, typename T2 >
-#ifdef CPU_ONLY
-static inline typename _higher_type<T1,T2>::type
-#else
-__host__ __device__ static inline typename _higher_type<T1,T2>::type
-#endif
+SUPPORT_CODE_FUNC typename _higher_type<T1,T2>::type
 _brian_floordiv(T1 x, T2 y)
 {{
     return floor(1.0*x/y);
@@ -353,26 +345,16 @@ abs_code = '''
 DEFAULT_FUNCTIONS['abs'].implementations.add_implementation(GeNNCodeGenerator,
                                                             code=abs_code,
                                                             name='_brian_abs')
-
-
 # Functions that need to be implemented specifically
 randn_code = '''
-#ifdef CPU_ONLY
-double _ranf(uint64_t &seed)
-#else
-__host__ __device__ double _ranf(uint64_t &seed)
-#endif
+SUPPORT_CODE_FUNC double _ranf(uint64_t &seed)
 {
-    uint64_t x;
-    MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
+    seed = seed * 1103515245 + 12345;
+    const uint64_t x = (seed >> 16);
+    return ((double)x)/0x0000FFFFFFFFFFFFLL;
 }
 
-#ifdef CPU_ONLY
-double _randn(uint64_t &seed)
-#else
-__host__ __device__ double _randn(uint64_t &seed)
-#endif
+SUPPORT_CODE_FUNC double _randn(uint64_t &seed)
 {
      double x1, x2, w;
      double y1, y2;
@@ -393,15 +375,11 @@ DEFAULT_FUNCTIONS['randn'].implementations.add_implementation(GeNNCodeGenerator,
                                                               name='_randn')
 
 rand_code = '''
-#ifdef CPU_ONLY
-double _rand(uint64_t &seed)
-#else
-__host__ __device__ double _rand(uint64_t &seed)
-#endif
+SUPPORT_CODE_FUNC double _rand(uint64_t &seed)
 {
-        uint64_t x;
-        MYRAND(seed,x);
-    return ((double)x)/MYRAND_MAX;
+    seed = seed * 1103515245 + 12345;
+    const uint64_t x = (seed >> 16);
+    return ((double)x)/0x0000FFFFFFFFFFFFLL;
 }
 '''
 DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
@@ -409,11 +387,7 @@ DEFAULT_FUNCTIONS['rand'].implementations.add_implementation(GeNNCodeGenerator,
                                                              name='_rand')
 
 clip_code = '''
-#ifdef CPU_ONLY
-double _clip(const float value, const float a_min, const float a_max)
-#else
-__host__ __device__ double _clip(const float value, const float a_min, const float a_max)
-#endif
+SUPPORT_CODE_FUNC double _clip(const float value, const float a_min, const float a_max)
 {
     if (value < a_min)
         return a_min;
@@ -427,11 +401,7 @@ DEFAULT_FUNCTIONS['clip'].implementations.add_implementation(GeNNCodeGenerator,
                                                              name='_clip')
 
 int_code = '''
-#ifdef CPU_ONLY
-int int_(const bool value)
-#else
-__host__ __device__ int int_(const bool value)
-#endif
+SUPPORT_CODE_FUNC int int_(const bool value)
 {
     return value ? 1 : 0;
 }
@@ -441,11 +411,7 @@ DEFAULT_FUNCTIONS['int'].implementations.add_implementation(GeNNCodeGenerator,
                                                             name='int_')
 
 sign_code = '''
-#ifdef CPU_ONLY
-template <typename T> int sign_(T val)
-#else
-template <typename T> __host__ __device__ int sign_(T val)
-#endif
+template <typename T> SUPPORT_CODE_FUNC int sign_(T val)
 {
     return (T(0) < val) - (val < T(0));
 }
@@ -457,11 +423,7 @@ DEFAULT_FUNCTIONS['sign'].implementations.add_implementation(GeNNCodeGenerator,
 # Add support for the `timestep` function added in Brian 2.3.1
 if 'timestep' in DEFAULT_FUNCTIONS:
     timestep_code = '''
-#ifdef CPU_ONLY
-static inline int64_t _timestep(double t, double dt)
-#else
-__host__ __device__ static inline int64_t _timestep(double t, double dt)
-#endif
+SUPPORT_CODE_FUNC int64_t _timestep(double t, double dt)
 {
     return (int64_t)((t + 1e-3*dt)/dt); 
 }'''

@@ -3,20 +3,7 @@
 
 {% block extra_headers %}
 {% set sourcename= eventspace_variable.owner.name %}
-extern double t;
-extern int which;
-#include "sparseProjection.h"
 #include "magicnetwork_model_CODE/definitions.h"
-{% for varname, var in record_variables.items() %}
-{% if varname != 't' %}
-{% if varname == 'i' %}
-extern unsigned int *glbSpkCnt{{sourcename}};
-extern unsigned int *glbSpk{{sourcename}};
-{% else %}
-extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
-{% endif %}
-{% endif %}
-{% endfor %}
 {% endblock %}
 
 {% block maincode %}
@@ -30,15 +17,12 @@ extern {{c_data_type(var.dtype)}} *{{var.name}}{{sourcename}};
     {% set _num_events = 'spikeCount_'+sourcename %}
 	int32_t _num_events = {{_num_events}};
 
-    #ifndef CPU_ONLY
-    if (which == 1) { // need to pull monitored data from GPU
 	{% for varname, var in record_variables.items() %}
 	{% if (varname != 't') and (varname != 'i') %}
-	pull{{sourcename}}StateFromDevice();
+	pull{{sourcename}}CurrentSpikesFromDevice();
 	{% endif %}
 	{% endfor %}
-    }
-    #endif
+
 
     if (_num_events > 0)
     {

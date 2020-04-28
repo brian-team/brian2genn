@@ -1,8 +1,8 @@
 {% extends 'common_group.cpp' %}
 
 {% block extra_headers %}
-extern double t;
-{% endblock %}
+#include "magicnetwork_model_CODE/definitions.h"
+{% endblock%}
 
 {% block maincode %}
     {# USES_VARIABLES { t, _clock_t, _indices, N } #}

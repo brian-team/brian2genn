@@ -2,6 +2,21 @@
 
 #include <stdint.h>
 #include "modelSpec.h"
+#include "brianlib/randomkit/randomkit.cc"
+
+#include "objects.h"
+#include "objects.cpp"
+// We need these to compile objects.cpp, but they are only used in _write_arrays which we never call.
+double Network::_last_run_time = 0.0;
+double Network::_last_run_completed_fraction = 0.0;
+
+{% for inc in codeobj_inc %}
+{{inc}}
+{% endfor %}
+
+{% for inc in max_row_length_include %}
+{{inc}}
+{% endfor %}
 
 //--------------------------------------------------------------------------
 /*! \brief This function defines the Brian2GeNN_model
@@ -38,6 +53,7 @@ public:
         {"{{var}}", "{{type}}"}{% if not loop.last %},{% endif %}
     {% endfor %}
     });
+    SET_NEEDS_AUTO_REFRACTORY(false);
 };
 IMPLEMENT_MODEL({{neuron_model.name}}NEURON);
 {% endfor %}
@@ -144,29 +160,51 @@ IMPLEMENT_MODEL({{synapse_model.name}}POSTSYN);
     {% endif %}
 ){% endif %};
 {% endfor %}
- 
+
 
 void modelDefinition(NNmodel &model)
 {
-    initGeNN();
-    GENN_PREFERENCES::autoRefractory = 0;
-    // Compiler optimization flags
-    GENN_PREFERENCES::userCxxFlagsWIN = "{{compile_args_msvc}}";
-    GENN_PREFERENCES::userCxxFlagsGNU = "{{compile_args_gcc}}";
-    GENN_PREFERENCES::userNvccFlags = "{{compile_args_nvcc}}";
+  _init_arrays();
+  _load_arrays();
+  {{'\n'.join(code_lines['before_start'])|autoindent}}
+  rk_randomseed(brian::_mersenne_twister_states[0]);
+  {{'\n'.join(code_lines['after_start'])|autoindent}}
+  {
+	  using namespace brian;
+	  {{ main_lines | autoindent }}
+  }
 
+  {% for max_row_length in max_row_length_run_calls %}
+  {{max_row_length}}
+  {% endfor %}
+
+  {% for synapses in max_row_length_synapses %}
+  const long maxRow{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_outgoing.begin(),brian::_dynamic_array_{{synapses}}_N_outgoing.end()),1);
+  const long maxCol{{synapses}}= std::max(*std::max_element(brian::_dynamic_array_{{synapses}}_N_incoming.begin(),brian::_dynamic_array_{{synapses}}_N_incoming.end()),1);
+  {% endfor %}
+  
+    {% if use_GPU %}
     // GENN_PREFERENCES set in brian2genn
-    GENN_PREFERENCES::autoChooseDevice = {{prefs['devices.genn.auto_choose_device']|int}};
-    GENN_PREFERENCES::defaultDevice = {{prefs['devices.genn.default_device']}};
-    GENN_PREFERENCES::optimiseBlockSize = {{prefs['devices.genn.optimise_blocksize']|int}};
-    GENN_PREFERENCES::preSynapseResetBlockSize = {{prefs['devices.genn.pre_synapse_reset_blocksize']}};
-    GENN_PREFERENCES::neuronBlockSize = {{prefs['devices.genn.neuron_blocksize']}};
-    GENN_PREFERENCES::synapseBlockSize = {{prefs['devices.genn.synapse_blocksize']}};
-    GENN_PREFERENCES::learningBlockSize = {{prefs['devices.genn.learning_blocksize']}};
-    GENN_PREFERENCES::synapseDynamicsBlockSize = {{prefs['devices.genn.synapse_dynamics_blocksize']}};
-    GENN_PREFERENCES::initBlockSize = {{prefs['devices.genn.init_blocksize']}};
-    GENN_PREFERENCES::initSparseBlockSize = {{prefs['devices.genn.init_sparse_blocksize']}};
+    GENN_PREFERENCES.deviceSelectMethod = DeviceSelect::{{prefs['devices.genn.cuda_backend.device_select']}};
+    {% if prefs['devices.genn.cuda_backend.device_select'] == 'MANUAL' %}
+    GENN_PREFERENCES.manualDeviceID = {{prefs['devices.genn.cuda_backend.manual_device']}};
+    {% endif %}
+    GENN_PREFERENCES.blockSizeSelectMethod = BlockSizeSelect::{{prefs['devices.genn.cuda_backend.blocksize_select_method']}};
 
+    {% if prefs['devices.genn.cuda_backend.blocksize_select_method'] == 'MANUAL' %}
+    GENN_PREFERENCES.manualBlockSizes = {
+        {{prefs['devices.genn.cuda_backend.neuron_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.learning_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.synapse_dynamics_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.init_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.init_sparse_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.pre_neuron_reset_blocksize']}},
+        {{prefs['devices.genn.cuda_backend.pre_synapse_reset_blocksize']}}};
+    {% endif %}
+    GENN_PREFERENCES.userNvccFlags = "{{' '.join(prefs['devices.genn.cuda_backend.extra_compile_args_nvcc'])}}";
+    {% endif %}
 
     {{ dtDef }}
 
@@ -184,23 +222,25 @@ void modelDefinition(NNmodel &model)
     {% for spikeGen_model in spikegenerator_models %}
     model.addNeuronPopulation<NeuronModels::SpikeSource>("{{spikeGen_model.name}}", {{spikeGen_model.N}}, {}, {});
     {% endfor %}
-    unsigned int delaySteps;
     {% for synapse_model in synapse_models %}
+    {
     // TODO: Consider flexible use of DENSE and SPARSE (but beware of difficulty of judging which to use at compile time)
     {% if synapse_model.delay == 0 %}
-    delaySteps = NO_DELAY;
+    const unsigned int delaySteps = NO_DELAY;
     {% else %}
-    delaySteps = {{synapse_model.delay}};
+    const unsigned int delaySteps = {{synapse_model.delay}};
     {% endif %}
-    model.addSynapsePopulation<{{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.name}}POSTSYN>(
+    auto *syn = model.addSynapsePopulation<{{synapse_model.name}}WEIGHTUPDATE, {{synapse_model.name}}POSTSYN>(
         "{{synapse_model.name}}", SynapseMatrixType::{{synapse_model.connectivity}}_INDIVIDUALG, delaySteps,
         "{{synapse_model.srcname}}", "{{synapse_model.trgname}}",
         {{synapse_model.name}}_p, {{synapse_model.name}}_ini,
         {}, {});
-    {% if prefs['devices.genn.synapse_span_type'] == 'PRESYNAPTIC' %}
-    model.setSpanTypeToPre("{{synapse_model.name}}");
+    syn->setSpanType(SynapseGroup::SpanType::{{prefs['devices.genn.synapse_span_type']}});
+    {% if synapse_model.connectivity == 'SPARSE' %}
+    syn->setMaxConnections(maxRow{{synapse_model.name}});
+    syn->setMaxSourceConnections(maxCol{{synapse_model.name}});
     {% endif %}
+    }
     {% endfor %}
-    model.finalize();
 }
 

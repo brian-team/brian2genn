@@ -3,8 +3,10 @@ Module implementing the bulk of the brian2genn interface by defining the "genn" 
 '''
 
 import os
-import shutil
 import platform
+import re
+import shutil
+import sys
 
 from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
@@ -16,7 +18,9 @@ import tempfile
 import itertools
 import numpy
 import numbers
+from collections import Counter
 
+from brian2.codegen.cpp_prefs import get_msvc_env
 from brian2.codegen.translation import make_statements
 from brian2.input.poissoninput import PoissonInput
 from brian2.spatialneuron.spatialneuron import (SpatialNeuron,
@@ -28,6 +32,7 @@ from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
 from brian2.core.functions import Function
+from brian2.core.network import Network
 from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
@@ -47,10 +52,8 @@ from brian2.synapses.synapses import StateUpdater as SynapsesStateUpdater
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
 from brian2 import prefs
-
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
 from .genn_generator import get_var_ndim, GeNNCodeGenerator
-
 
 __all__ = ['GeNNDevice']
 
@@ -99,14 +102,11 @@ def freeze(code, ns):
     return code
 
 
-def get_compile_args():
+def get_gcc_compile_args():
     '''
-    Get the compile args based on the users preferences. Uses Brian's
+    Get the compile args for GCC based on the users preferences. Uses Brian's
     preferences for the C++ compilation (either `codegen.cpp.extra_compile_args`
-    for both Windows and UNIX, or `codegen.cpp.extra_compile_args_gcc` for UNIX
-    and `codegen.cpp.extra_compile_args_msvc` for Windows), and the Brian2GeNN
-    preference `devices.genn.extra_compile_args_nvcc` for the CUDA compilation
-    with nvcc.
+    or `codegen.cpp.extra_compile_args_gcc`).
 
     Returns
     -------
@@ -116,14 +116,10 @@ def get_compile_args():
     if prefs.codegen.cpp.extra_compile_args is not None:
         args = ' '.join(prefs.codegen.cpp.extra_compile_args)
         compile_args_gcc = args
-        compile_args_msvc = args
     else:
         compile_args_gcc = ' '.join(prefs.codegen.cpp.extra_compile_args_gcc)
-        compile_args_msvc = ' '.join(prefs.codegen.cpp.extra_compile_args_msvc)
 
-    compile_args_nvcc = ' '.join(prefs.devices.genn.extra_compile_args_nvcc)
-
-    return compile_args_gcc, compile_args_msvc, compile_args_nvcc
+    return compile_args_gcc
 
 
 def decorate(code, variables, shared_variables, parameters, do_final=True):
@@ -137,7 +133,7 @@ def decorate(code, variables, shared_variables, parameters, do_final=True):
     code = word_substitute(code, {'dt': 'DT'}).strip()
     if do_final:
         code = stringify(code)
-        code = word_substitute(code, {'addtoinSyn': '$(addtoinSyn)'})
+        code = re.sub(r'addtoinSyn\s*=\s*(.*);', r'$(addToInSyn,\1);', code)
         code = word_substitute(code, {'_hidden_weightmatrix': '$(_hidden_weightmatrix)'})
     return code
 
@@ -160,6 +156,23 @@ def extract_source_variables(variables, varname, smvariables):
                                                        smvariables)
     return smvariables
 
+def find_executable(executable):
+    """Tries to find 'executable' in the path
+
+    Modified version of distutils.spawn.find_executable as 
+    this has stupid rules for extensions on Windows. 
+    Returns the complete filename or None if not found.
+    """
+    path = os.environ.get('PATH', os.defpath)
+
+    paths = path.split(os.pathsep)
+
+    for p in paths:
+        f = os.path.join(p, executable)
+        if os.path.isfile(f):
+            # the file exists, we have a shot at spawn working
+            return f
+    return None
 
 class DelayedCodeObject(object):
     '''
@@ -322,11 +335,10 @@ class GeNNDevice(CPPStandaloneDevice):
         self.neuron_models = []
         self.spikegenerator_models = []
         self.synapse_models = []
-        self.ktimer= dict()
-        self.ktimer['neuron_tme']= True
-        self.ktimer['synapse_tme']= False
-        self.ktimer['learning_tme']= False
-        self.ktimer['synDyn_tme']= False
+        self.max_row_length_include= []
+        self.max_row_length_run_calls= []
+        self.max_row_length_synapses= set()
+        self.max_row_length_code_objects= {}
         self.delays = {}
         self.spike_monitor_models = []
         self.rate_monitor_models = []
@@ -336,7 +348,8 @@ class GeNNDevice(CPPStandaloneDevice):
         self.net = None
         self.simple_code_objects = {}
         self.report_func = ''
-
+        self.src_counts= dict()
+        self.trg_counts= dict()
         #: List of all source and header files (to be included in runner)
         self.source_files = []
         self.header_files = []
@@ -457,7 +470,17 @@ class GeNNDevice(CPPStandaloneDevice):
                                         variables=variables,
                                         variable_indices=variable_indices,
                                         override_conditional_write=override_conditional_write)
+            # We need to clear the array cache for these at some point (normally
+            # would be done in cpp_standalone.device.code_object()
+            # I will do it here but not sure this is the best place
+            # I am also not sure whether "written_readonly_vars" apply here
+            # I WILL ASSUME NOT
+            for var in codeobj.variables.values():
+                if (isinstance(var, ArrayVariable) and
+                    not var.read_only):
+                    self.array_cache[var] = None
             self.simple_code_objects[name] = codeobj
+
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
             codeobj = super(GeNNDevice, self).code_object(owner, name,
@@ -472,6 +495,37 @@ class GeNNDevice(CPPStandaloneDevice):
             self.simple_code_objects[codeobj.name] = codeobj
         else:
             codeobj_class = GeNNUserCodeObject
+            if ('_synapses_create_generator_' in name) or ('_synapses_create_array_' in name):
+                # Here we process max_row_length for synapses 
+                # the strategy is to do a dry run of connection generationin in the model definition
+                # function that has the same random numbers and just counts synaptic connections
+                # rather than generating them for real
+                generator= '_synapses_create_generator_' in name
+                mrl_name= '%s_max_row_length' % owner.name
+                i= 1
+                while mrl_name in self.max_row_length_code_objects:
+                    mrl_name= '%s_max_row_length_%d' % (owner.name, i)
+                    i= i+1
+                if generator:
+                    mrl_template_name= 'max_row_length_generator'
+                else:
+                    mrl_template_name='max_row_length_array'
+                codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
+                                                              abstract_code,
+                                                              variables,
+                                                              mrl_template_name,
+                                                              variable_indices,
+                                                              codeobj_class=codeobj_class,
+                                                              template_kwds=template_kwds,
+                                                              override_conditional_write=override_conditional_write,
+                )
+                #self.code_objects['%s_max_row_length' % owner.name] = codeobj
+                self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
+                self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
+                self.max_row_length_synapses.add(owner.name)
+                self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
+                self.max_row_length_run_calls.append('_run_%s();' % mrl_name)
+
             codeobj = super(GeNNDevice, self).code_object(owner, name,
                                                           abstract_code,
                                                           variables,
@@ -481,6 +535,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                           template_kwds=template_kwds,
                                                           override_conditional_write=override_conditional_write,
                                                           )
+            # FIXME: is this actually necessary or is it already added by the super?
             self.code_objects[codeobj.name] = codeobj
         return codeobj
 
@@ -704,7 +759,7 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print('building genn executable ...')
-
+        
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
 
@@ -729,8 +784,8 @@ class GeNNDevice(CPPStandaloneDevice):
             arange_arrays = self.arange_arrays
 
         # write the static arrays
-        for code_object in self.code_objects.values():
-            for var in code_object.variables.values():
+        for code_object in itervalues(self.code_objects):
+            for var in itervalues(code_object.variables):
                 if isinstance(var, Function):
                     self._insert_func_namespace(var, code_object,
                                                 self.static_arrays)
@@ -749,9 +804,6 @@ class GeNNDevice(CPPStandaloneDevice):
             net_objects = _get_all_objects(self.net.objects)
         except ImportError:
             net_objects = self.net.objects
-
-        synapses = []
-        synapses.extend(s for s in net_objects if isinstance(s, Synapses))
 
         main_lines = self.make_main_lines()
 
@@ -802,19 +854,24 @@ class GeNNDevice(CPPStandaloneDevice):
         self.process_poisson_groups(objects, poisson_groups)
         self.process_spikegenerators(spikegenerator_groups)
         self.process_synapses(synapse_groups, objects)
-        # need to establish which kernel timers will be created if kernel riming is desired
-        if len(self.synapse_models) > 0:
-            self.ktimer['synapse_tme']= True
-            for synapse_model in self.synapse_models:
-                if len(synapse_model.main_code_lines['post']) > 0:
-                    self.ktimer['learning_tme']= True
-                if len(synapse_model.main_code_lines['dynamics']) > 0:
-                    self.ktimer['dynamics_tme']= True
         # Process monitors
         self.process_spike_monitors(spike_monitors)
         self.process_rate_monitors(rate_monitors)
         self.process_state_monitors(directory, state_monitors, writer)
 
+        # Turn anonymous namespaces into named namespaces to avoid
+        # issues when cpp files are included
+        for code_object in itertools.chain(self.code_objects.values(),
+                                           self.max_row_length_code_objects.values()):
+            cpp_code = getattr(code_object.code, 'cpp_file', code_object.code)
+            if 'namespace {' in cpp_code:
+                cpp_code = cpp_code.replace('namespace {', 'namespace {} {{'.format(code_object.name))
+                cpp_code = cpp_code.replace('using namespace brian;',
+                                            'using namespace brian;\nusing namespace {};'.format(code_object.name))
+                if hasattr(code_object.code, 'cpp_file'):
+                    code_object.code.cpp_file = cpp_code
+            else:
+                code_object.code = cpp_code
         # Write files from templates
         # Create an empty network.h file, this allows us to use Brian2's
         # objects.cpp template unchanged
@@ -823,7 +880,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         self.generate_objects_source(arange_arrays, self.net,
                                      static_array_specs,
-                                     synapses, writer)
+                                     synapse_groups, writer)
         self.copy_source_files(writer, directory)
 
         # Rename randomkit.c so that it gets compiled by an explicit rule in
@@ -833,7 +890,8 @@ class GeNNDevice(CPPStandaloneDevice):
         shutil.move(os.path.join(randomkit_dir, 'randomkit.c'),
                     os.path.join(randomkit_dir, 'randomkit.cc'))
         self.generate_code_objects(writer)
-        self.generate_model_source(writer)
+        self.generate_max_row_length_code_objects(writer)
+        self.generate_model_source(writer, main_lines, use_GPU)
         self.generate_main_source(writer, main_lines)
         self.generate_engine_source(writer, objects)
         self.generate_makefile(directory, use_GPU)
@@ -916,6 +974,47 @@ class GeNNDevice(CPPStandaloneDevice):
                     self.header_files.append(
                         'code_objects/' + codeobj.name + '.h')
 
+    def generate_max_row_length_code_objects(self, writer):
+        # Generate data for non-constant values
+        code_object_defs = defaultdict(set)
+        for codeobj in itervalues(self.max_row_length_code_objects):
+            for k, v in iteritems(codeobj.variables):
+                if isinstance(v, ArrayVariable):
+                    try:
+                        if isinstance(v, DynamicArrayVariable):
+                            if get_var_ndim(v) == 1:
+                                dyn_array_name = self.dynamic_arrays[v]
+                                array_name = self.arrays[v]
+                                # do the const stuff
+                                line = '{c_type}* const {array_name} = &{dyn_array_name}[0];'
+                                line = line.format(c_type=c_data_type(v.dtype),
+                                                   array_name=array_name,
+                                                   dyn_array_name=dyn_array_name)
+                                code_object_defs[codeobj.name].add(line)
+                                line = 'const int _num{k} = {dyn_array_name}.size();'
+                                line = line.format(k=k,
+                                                   dyn_array_name=dyn_array_name)
+                                code_object_defs[codeobj.name].add(line)
+                        else:
+                            array_name = self.arrays[v]
+                            line = '{c_type} {array_name}[{size}];'
+                            line = line.format(c_type=c_data_type(v.dtype),
+                                               array_name=array_name,
+                                               size=v.size)
+                            code_object_defs[codeobj.name].add('const int _num%s = %s;' % (k, v.size))
+                    except TypeError:
+                        pass
+    
+        for codeobj in itervalues(self.max_row_length_code_objects):
+            ns = codeobj.variables
+            # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
+            code = freeze(codeobj.code, ns)
+            code = code.replace('%CONSTANTS%', '\n'.join(
+                        code_object_defs[codeobj.name]))
+            writer.write('code_objects/' + codeobj.name + '.cpp', code)
+
+              
+            
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
@@ -935,12 +1034,12 @@ class GeNNDevice(CPPStandaloneDevice):
 
         with std_silent(with_output):
             if os.sys.platform == 'win32':
-                cmd = directory + "\\main.exe test " + str(
-                    self.run_duration) + " " + gpu_arg
+                cmd = directory + "\\main_Release.exe test " + str(
+                    self.run_duration)
                 check_call(cmd, cwd=directory)
             else:
                 # print ["./main", "test", str(self.run_duration), gpu_arg]
-                check_call(["./main", "test", str(self.run_duration), gpu_arg],
+                check_call(["./main", "test", str(self.run_duration)],
                            cwd=directory)
         self.has_been_run = True
         last_run_info = open(
@@ -982,9 +1081,20 @@ class GeNNDevice(CPPStandaloneDevice):
             logger.debug('Using GeNN path from environment variable: '
                          '"{}"'.format(genn_path))
         else:
-            raise RuntimeError('Set the GENN_PATH environment variable or '
-                               'the devices.genn.path preference.')
+            # Find genn-buildmodel
+            genn_bin = (find_executable("genn-buildmodel.bat")
+                        if os.sys.platform == 'win32'
+                        else find_executable("genn-buildmodel.sh"))
+            
+            if genn_bin is None:
+                raise RuntimeError('Add GeNN\'s bin directory to the path '
+                                   'or set the devices.genn.path preference.')
 
+            # Remove genn-buildmodel from path, navigate up a directory and normalize
+            genn_path = os.path.normpath(os.path.join(os.path.dirname(genn_bin), ".."))
+            logger.debug('Using GeNN path determined from path: '
+                         '"{}"'.format(genn_path))
+        
         # Check for GeNN compatibility
         genn_version = None
         version_file = os.path.join(genn_path, 'version.txt')
@@ -994,20 +1104,17 @@ class GeNNDevice(CPPStandaloneDevice):
                     genn_version = parse_version(f.read().strip())
                     logger.debug('GeNN version: %s' % genn_version)
             except (OSError, IOError) as ex:
-                logger.debug('Getting version from $GENN_PATH/version.txt '
-                             'failed: %s' % str(ex))
+                logger.debug('Getting version from %s/version.txt '
+                             'failed: %s' % (genn_path, str(ex)))
 
-        if prefs.core.default_float_dtype == numpy.float32:
-            if genn_version is None or not genn_version >= parse_version('3.2'):
-                logger.warn('Support for single-precision floats requires GeNN '
-                            '3.2 or later. Upgrade GeNN if the compilation '
-                            'fails.', once=True)
+        if genn_version is None or not genn_version >= parse_version('4.2.1'):
+            raise RuntimeError('Brian2GeNN requires GeNN 4.2.1 or later. '
+                               'Please upgrade your GeNN version.')
 
         env = os.environ.copy()
-        env['GENN_PATH'] = genn_path
         if use_GPU:
-            if prefs.devices.genn.cuda_path is not None:
-                cuda_path = prefs.devices.genn.cuda_path
+            if prefs.devices.genn.cuda_backend.cuda_path is not None:
+                cuda_path = prefs.devices.genn.cuda_backend.cuda_path
                 env['CUDA_PATH'] = cuda_path
                 logger.debug('Using CUDA path from preference: '
                              '"{}"'.format(cuda_path))
@@ -1018,48 +1125,67 @@ class GeNNDevice(CPPStandaloneDevice):
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
                                    'the devices.genn.cuda_path preference.')
-        if prefs['codegen.cpp.extra_link_args']:
-            # declare the link flags as an environment variable so that GeNN's
-            # generateALL can pick it up
-            env['LINK_FLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+
         with std_silent(debug):
             if os.sys.platform == 'win32':
-                vcvars_loc = prefs['codegen.cpp.msvc_vars_location']
-                if vcvars_loc == '':
-                    from distutils import msvc9compiler
-                    for version in range(16, 8, -1):
-                        fname = msvc9compiler.find_vcvarsall(version)
-                        if fname:
-                            vcvars_loc = fname
-                            break
-                if vcvars_loc == '':
-                    raise IOError("Cannot find vcvarsall.bat on standard "
-                                  "search path. Set the "
-                                  "codegen.cpp.msvc_vars_location preference "
-                                  "explicitly.")
+                # Make sure that all environment variables are upper case
+                env = {k.upper() : v for k, v in iteritems(env)}
+                
+                # If there is vcvars command to call, start cmd with that
+                cmd = ''
+                msvc_env, vcvars_cmd = get_msvc_env()
+                if vcvars_cmd:
+                    cmd += vcvars_cmd + ' && '
+                # Otherwise, update environment, again ensuring 
+                # that all variables are upper case
+                else:
+                    env.update({k.upper() : v for k, v in iteritems(msvc_env)})
 
-                arch_name = prefs['codegen.cpp.msvc_architecture']
-                if arch_name == '':
-                    mach = platform.machine()
-                    if mach == 'AMD64':
-                        arch_name = 'x86_amd64'
-                    else:
-                        arch_name = 'x86'
-
-                vcvars_cmd = '"{vcvars_loc}" {arch_name}'.format(
-                    vcvars_loc=vcvars_loc, arch_name=arch_name)
-                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin',
+                # Add start of call to genn-buildmodel
+                buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
-                cmd = vcvars_cmd + ' && ' + buildmodel_cmd + " magicnetwork_model.cpp"
+                cmd += buildmodel_cmd + ' -s'
+                
+                # If we're not using CPU, add CPU option
                 if not use_GPU:
                     cmd += ' -c'
-                cmd += ' && nmake /f WINmakefile clean && nmake /f WINmakefile'
-                check_call(cmd.format(genn_path=genn_path), cwd=directory, env=env)
+                    
+                # Add include directories
+                # **NOTE** on windows semicolons are used to seperate multiple include paths
+                # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
+                # files so we have to build argument string manually(https://bugs.python.org/issue23862)
+                wdir = os.getcwd()
+                cmd += ' -i "%s;%s;%s"' % (wdir, os.path.join(wdir, directory),
+                                           os.path.join(wdir, directory, 'brianlib','randomkit'))
+                cmd += ' magicnetwork_model.cpp'
+                
+                # Add call to build generated code
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'magicnetwork_model_CODE', 'runner.vcxproj') + '"'
+                
+                # Add call to build executable
+                cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'project.vcxproj') + '"'
+                
+                # Run combined command
+                # **NOTE** because vcvars MODIFIED environment, 
+                # making seperate check_calls doesn't work
+                check_call(cmd, cwd=directory, env=env)
             else:
-                buildmodel_cmd = os.path.join(genn_path, 'lib', 'bin', 'genn-buildmodel.sh')
-                args = [buildmodel_cmd, 'magicnetwork_model.cpp']
+                if prefs['codegen.cpp.extra_link_args']:
+                    # declare the link flags as an environment variable so that GeNN's
+                    # generateALL can pick it up
+                    env['LDFLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
+                
+                buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
+                args = [buildmodel_cmd]
                 if not use_GPU:
                     args += ['-c']
+                wdir= os.getcwd()
+                inc_path= wdir;
+                inc_path+= ':'+os.path.join(wdir, directory)
+                inc_path+= ':'+os.path.join(wdir, directory, 'brianlib','randomkit')
+                args += ['-i', inc_path]
+                args += ['magicnetwork_model.cpp']
+                print(args)
                 check_call(args, cwd=directory, env=env)
                 call(["make", "clean"], cwd=directory, env=env)
                 check_call(["make"], cwd=directory, env=env)
@@ -1125,8 +1251,8 @@ class GeNNDevice(CPPStandaloneDevice):
     def process_neuron_groups(self, neuron_groups, objects):
         for obj in neuron_groups:
             # throw error if events other than spikes are used
-            if len(list(obj.events)) > 1 or (len(
-                    list(obj.events)) == 1 and not next(iterkeys(obj.events)) == 'spike'):
+            event_keys = list(iterkeys(obj.events))
+            if len(event_keys) > 1 or (len(event_keys) == 1 and event_keys[0] != 'spike'):
                 raise NotImplementedError(
                     'Brian2GeNN does not support events that are not spikes')
             # Extract the variables
@@ -1306,8 +1432,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                     line = line.replace(
                                         '_hidden_weightmatrix *', '')
                             new_code_lines.append(line)
-                            if line.startswith('addtoinSyn'):
-                                new_code_lines.append('$(updatelinsyn);')
                         code = '\n'.join(new_code_lines)
 
                     self.fix_synapses_code(synapse_model, pathway, codeobj,
@@ -1511,10 +1635,9 @@ class GeNNDevice(CPPStandaloneDevice):
             self.header_files.append(
                 'code_objects/' + sm.name + '_codeobject.h')
 
-    def generate_model_source(self, writer):
+    def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
-        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
         default_dtype = prefs.core.default_float_dtype
         if default_dtype == numpy.float32:
             precision = 'GENN_FLOAT'
@@ -1523,14 +1646,26 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             raise NotImplementedError("GeNN does not support default dtype "
                                       "'{}'".format(default_dtype.__name__))
+        dry_main_lines= []
+        for line in main_lines:
+            if ('_synapses_create_' not in line) and ('monitor' not in line):
+                dry_main_lines.append(line)
+        codeobj_inc= []
+        for codeobj in itervalues(self.code_objects):
+            if ('group_variable' in codeobj.name):
+                codeobj_inc.append('#include "code_objects/'+codeobj.name+'.cpp"')
         model_tmp = GeNNCodeObject.templater.model(None, None,
+                                                   use_GPU=use_GPU,
+                                                   code_lines=self.code_lines,
                                                    neuron_models=self.neuron_models,
                                                    spikegenerator_models=self.spikegenerator_models,
                                                    synapse_models=self.synapse_models,
+                                                   main_lines=dry_main_lines,
+                                                   max_row_length_include= self.max_row_length_include,
+                                                   max_row_length_run_calls=self.max_row_length_run_calls,
+                                                   max_row_length_synapses=self.max_row_length_synapses,
+                                                   codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
-                                                   compile_args_gcc=compile_args_gcc,
-                                                   compile_args_msvc=compile_args_msvc,
-                                                   compile_args_nvcc=compile_args_nvcc,
                                                    prefs=prefs,
                                                    precision=precision
                                                    )
@@ -1546,7 +1681,6 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    header_files=header_files,
                                                    source_files=self.source_files,
                                                    prefs=prefs,
-                                                   ktimer=self.ktimer
                                                    )
         writer.write('main.*', runner_tmp)
 
@@ -1621,36 +1755,19 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('engine.*', engine_tmp)
 
     def generate_makefile(self, directory, use_GPU):
-        compile_args_gcc, compile_args_msvc, compile_args_nvcc = get_compile_args()
-        extra_link_args = list(prefs.codegen.cpp.extra_link_args)
-        if os.sys.platform == 'linux2':
-            extra_link_args += ['-no-pie']
-        linker_flags = ' '.join(extra_link_args)
         if os.sys.platform == 'win32':
-            makefile_tmp = GeNNCodeObject.templater.WINmakefile(None, None,
-                                                                neuron_models=self.neuron_models,
-                                                                ROOTDIR=os.path.abspath(
-                                                                    directory),
-                                                                source_files=self.source_files,
-                                                                use_GPU=use_GPU,
-                                                                compiler_flags=compile_args_msvc,
-                                                                linker_flags=linker_flags,
-                                                                nvcc_compiler_flags=compile_args_nvcc
-                                                                )
-            open(os.path.join(directory, 'WINmakefile'), 'w').write(
-                makefile_tmp)
+            project_tmp = GeNNCodeObject.templater.project_vcxproj(None, None,
+                                                                   source_files=self.source_files)
+            open(os.path.join(directory, 'project.vcxproj'), 'w').write(
+                project_tmp)
         else:
-            makefile_tmp = GeNNCodeObject.templater.GNUmakefile(None, None,
-                                                                neuron_models=self.neuron_models,
-                                                                ROOTDIR=os.path.abspath(
-                                                                    directory),
-                                                                source_files=self.source_files,
-                                                                use_GPU=use_GPU,
-                                                                compiler_flags=compile_args_gcc,
-                                                                linker_flags=linker_flags,
-                                                                nvcc_compiler_flags=compile_args_nvcc
-                                                                )
-            open(os.path.join(directory, 'GNUmakefile'), 'w').write(makefile_tmp)
+            compile_args_gcc = get_gcc_compile_args()
+            linker_flags = ' '.join(prefs.codegen.cpp.extra_link_args)
+            makefile_tmp = GeNNCodeObject.templater.Makefile(None, None,
+                                                             source_files=self.source_files,
+                                                             compiler_flags=compile_args_gcc,
+                                                             linker_flags=linker_flags)
+            open(os.path.join(directory, 'Makefile'), 'w').write(makefile_tmp)
 
     def generate_objects_source(self, arange_arrays, net, static_array_specs,
                                 synapses, writer):

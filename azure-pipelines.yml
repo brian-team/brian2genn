@@ -4,7 +4,7 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 variables:
-  genn_stable: '3.3.0'
+  genn_stable: '4.2.1'
 
 jobs:
 
