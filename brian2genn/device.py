@@ -531,8 +531,6 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.max_row_length_code_objects[mrl_name]= codeobj # add to this dict instead
                 self.max_row_length_synapses.add(owner.name)
                 self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
-                # add _array run functions to the first code block, _generator ones to the
-                # second so that they are executed in the right order
                 self.max_row_length_run_calls.append('_run_%s();' % mrl_name)
 
             codeobj = super(GeNNDevice, self).code_object(owner, name,
