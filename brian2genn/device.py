@@ -102,14 +102,11 @@ def freeze(code, ns):
     return code
 
 
-def get_compile_args():
+def get_gcc_compile_args():
     '''
-    Get the compile args based on the users preferences. Uses Brian's
+    Get the compile args for GCC based on the users preferences. Uses Brian's
     preferences for the C++ compilation (either `codegen.cpp.extra_compile_args`
-    for both Windows and UNIX, or `codegen.cpp.extra_compile_args_gcc` for UNIX
-    and `codegen.cpp.extra_compile_args_msvc` for Windows), and the Brian2GeNN
-    preference `devices.genn.extra_compile_args_nvcc` for the CUDA compilation
-    with nvcc.
+    or `codegen.cpp.extra_compile_args_gcc`).
 
     Returns
     -------
@@ -119,14 +116,10 @@ def get_compile_args():
     if prefs.codegen.cpp.extra_compile_args is not None:
         args = ' '.join(prefs.codegen.cpp.extra_compile_args)
         compile_args_gcc = args
-        compile_args_msvc = args
     else:
         compile_args_gcc = ' '.join(prefs.codegen.cpp.extra_compile_args_gcc)
-        compile_args_msvc = ' '.join(prefs.codegen.cpp.extra_compile_args_msvc)
 
-    compile_args_nvcc = ' '.join(prefs.devices.genn.extra_compile_args_nvcc)
-
-    return compile_args_gcc, compile_args_msvc, compile_args_nvcc
+    return compile_args_gcc
 
 
 def decorate(code, variables, shared_variables, parameters, do_final=True):
@@ -1768,8 +1761,12 @@ class GeNNDevice(CPPStandaloneDevice):
             open(os.path.join(directory, 'project.vcxproj'), 'w').write(
                 project_tmp)
         else:
+            compile_args_gcc = get_gcc_compile_args()
+            linker_flags = ' '.join(prefs.codegen.cpp.extra_link_args)
             makefile_tmp = GeNNCodeObject.templater.Makefile(None, None,
-                                                             source_files=self.source_files)
+                                                             source_files=self.source_files,
+                                                             compiler_flags=compile_args_gcc,
+                                                             linker_flags=linker_flags)
             open(os.path.join(directory, 'Makefile'), 'w').write(makefile_tmp)
 
     def generate_objects_source(self, arange_arrays, net, static_array_specs,

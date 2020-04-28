@@ -31,7 +31,7 @@ prefs.register_preferences(
     extra_compile_args_nvcc=BrianPreference(
         docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
         default=None,
-        validator=DeprecatedValidator('This preference is no longer supported by GeNN 4')
+        validator=DeprecatedValidator('This preference is no longer supported by GeNN 4, please set devices.gennn.cuda_backend.extra_compile_args_nvcc instead.')
     ),
     auto_choose_device=BrianPreference(
         validator=DeprecatedValidator('This preference is no longer supported by GeNN 4, please use the devices.genn.cuda_backend.device_select preference instead.'),
@@ -106,6 +106,10 @@ prefs.register_preferences(
         docs='''The path to the CUDA installation (if not set, the CUDA_PATH environment variable will be used instead)''',
         default=None,
         validator=lambda value: value is None or os.path.isdir(value)
+    ),
+    extra_compile_args_nvcc=BrianPreference(
+        docs='''Extra compile arguments (a list of strings) to pass to the nvcc compiler.''',
+        default=[]
     ),
     device_select=BrianPreference(
         validator=lambda value: value in ['OPTIMAL', 'MOST_MEMORY', 'MANUAL'],

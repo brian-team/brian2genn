@@ -202,7 +202,8 @@ void modelDefinition(NNmodel &model)
         {{prefs['devices.genn.cuda_backend.init_sparse_blocksize']}},
         {{prefs['devices.genn.cuda_backend.pre_neuron_reset_blocksize']}},
         {{prefs['devices.genn.cuda_backend.pre_synapse_reset_blocksize']}}};
-    {% endif %}
+    {% endif %}]
+    GENN_PREFERENCES.userNvccFlags = {{prefs['devices.genn.cuda_backend.extra_compile_args_nvcc']}},
     {% endif %}
 
     {{ dtDef }}
