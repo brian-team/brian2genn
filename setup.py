@@ -25,7 +25,7 @@ Documentation for Brian2GeNN can be found at http://brian2genn.readthedocs.org
 '''
 
 setup(name='Brian2GeNN',
-      version='1.4',
+      version='1.5',
       packages=find_packages(),
       package_data={# include template files
                     'brian2genn': ['templates/*.cpp',
