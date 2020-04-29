@@ -63,7 +63,7 @@ setup(name='Brian2GeNN',
       },
       data_files=data_files,
       install_requires=[
-                        'brian2>=2.2.2.1',
+                        'brian2>=2.3',
                         'setuptools>=6.0',
                         'six',
                        ],
