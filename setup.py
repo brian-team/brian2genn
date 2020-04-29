@@ -24,31 +24,6 @@ issues to the github issue tracker (https://github.com/brian-team/brian2genn/iss
 Documentation for Brian2GeNN can be found at http://brian2genn.readthedocs.org
 '''
 
-try:
-    sys.argv.remove('--with-genn')
-    data_files = [('opt/genn/lib', ['genn/lib/GNUmakefile',
-                                    'genn/lib/WINmakefile']),
-                  ('opt/genn/lib/bin', ['genn/lib/bin/buildmodel.bat',
-                                        'genn/lib/bin/buildmodel.sh',
-                                        'genn/lib/bin/genn-buildmodel.bat',
-                                        'genn/lib/bin/genn-buildmodel.sh']),
-                  ('opt/genn/lib/include', glob.glob('genn/lib/include/*.h')),
-                  ('opt/genn/lib/src', glob.glob('genn/lib/src/*.cc')),
-                  ('opt/genn/userproject/include', glob.glob('genn/userproject/include/*.mk'))]
-    # The remaining files have OS-dependent names
-    if sys.platform == 'win32':
-        data_files.extend([('opt/genn/lib/lib', ['genn/lib/lib/genn.lib',
-                                             'genn/lib/lib/genn_CPU_ONLY.lib']),
-                           ('opt/genn/lib/obj', glob.glob('genn/lib/obj/*.obj')),
-                           ('opt/genn/lib/obj_CPU_ONLY', glob.glob('genn/lib/obj_CPU_ONLY/*.obj'))])
-    else:
-        data_files.extend([('opt/genn/lib/lib', ['genn/lib/lib/libgenn.a',
-                                                 'genn/lib/lib/libgenn_CPU_ONLY.a']),
-                           ('opt/genn/lib/obj', glob.glob('genn/lib/obj/*.[od]')),
-                           ('opt/genn/lib/obj_CPU_ONLY', glob.glob('genn/lib/obj_CPU_ONLY/*.[od]'))])
-except ValueError:
-    data_files = []
-
 setup(name='Brian2GeNN',
       version='1.4',
       packages=find_packages(),
@@ -61,7 +36,6 @@ setup(name='Brian2GeNN',
                                    'b2glib/*.cpp',
                                    'b2glib/*.h'],
       },
-      data_files=data_files,
       install_requires=[
                         'brian2>=2.3',
                         'setuptools>=6.0',
