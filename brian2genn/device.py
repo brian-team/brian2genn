@@ -1488,7 +1488,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             addVar= addVar.replace(k,'$('+k+')')
                     code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'                    
                     synapse_model.main_code_lines['dynamics'] += code
-                    synapse_model.support_code_lines['dynamics'] += stringify('\n'.join(kwds['support_code_lines']))
+                    synapse_model.support_code_lines['dynamics'] = stringify('\n'.join(kwds['support_code_lines']))
                 else:
                     synapse_model.postSyntoCurrent = '0'
             self.synapse_models.append(synapse_model)
