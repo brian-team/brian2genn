@@ -18,7 +18,7 @@ def _generate_genn_code(n, p, use_normal, name):
         loc = n*p
         scale = np.sqrt(n*p*(1-p))
         genn_code = '''
-        SUPPORT_CODE_FUNC float %NAME%(uint64_t seed)
+        SUPPORT_CODE_FUNC float %NAME%(uint64_t &seed)
         {
             return _randn(seed) * %SCALE% + %LOC%;
         }
@@ -33,7 +33,7 @@ def _generate_genn_code(n, p, use_normal, name):
         # rk_binomial_inversion function
         # (numpy/random/mtrand/distributions.c)
         genn_code = '''
-        SUPPORT_CODE_FUNC long %NAME%(uint64_t seed)
+        SUPPORT_CODE_FUNC long %NAME%(uint64_t &seed)
         {
             long X = 0;
             double px = %QN%;
