@@ -107,8 +107,9 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                b2g::FULL_MONTY);
       {% endif %}
       {% else %}
-      {% if obj['owner'].variables[var].scalar %}
-      std::copy_n(&{{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});  {% else %}
+      {% if obj.src.variables[var].scalar %}
+      std::copy_n(&{{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+      {% else %}
       std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
       {% endif %}
       {% endif %}
