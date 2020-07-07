@@ -107,7 +107,10 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                b2g::FULL_MONTY);
       {% endif %}
       {% else %}
+      {% if obj['owner'].variables[var].scalar %}
+      std::copy_n(&{{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});  {% else %}
       std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+      {% endif %}
       {% endif %}
       {% endfor %}
       _run_{{obj.name}}_codeobject();
@@ -140,8 +143,13 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                    brian::_dynamic_array_{{obj['owner'].name}}_{{var}}, b2g::FULL_MONTY);
           {% endif %}
           {% else %}
+	  {% if obj['owner'].variables[var].scalar %}
+           std::copy_n(&{{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
+                       brian::_array_{{obj['owner'].name}}_{{var}});
+	  {% else %}
            std::copy_n({{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
                        brian::_array_{{obj['owner'].name}}_{{var}});
+	   {% endif %}
           {% endif %}
         {% endif %}
         {% endfor %}
@@ -163,7 +171,11 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                                                     {{obj['srcN']}}, {{obj['trgN']}});
            {% endif %}
            {% else %}
+	   {% if obj['owner'].variables[var].scalar %}
+	   std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, &{{var}}{{obj['owner'].name}});
+	   {% else %}
            std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, {{var}}{{obj['owner'].name}});
+	   {% endif %}
            {% endif %}
         {% endfor %}
       }
@@ -237,7 +249,11 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}}, ind{{sm.monitored}}, maxRowLength{{sm.monitored}}, {{var}}{{sm.monitored}}, {{sm.srcN}}, {{sm.trgN}}, brian::_dynamic_array_{{sm.monitored}}__synaptic_pre, brian::_dynamic_array_{{sm.monitored}}__synaptic_post, brian::_dynamic_array_{{sm.monitored}}_{{var}}, b2g::FULL_MONTY);
       {% endif %}
       {% else %}
+      {% if sm.src.variables[var].scalar %}
+      std::copy_n(&{{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+      {% else %}
       std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+      {% endif %}
       {% endif %}
       {% endfor %}
       _run_{{sm.name}}_codeobject();
