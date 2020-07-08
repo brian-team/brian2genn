@@ -283,6 +283,7 @@ class stateMonitorModel(object):
         self.name = ''
         self.order = 0
         self.monitored = ''
+        self.src = None
         self.isSynaptic = False
         self.variables = []
         self.srcN = 0
@@ -1600,6 +1601,7 @@ class GeNNDevice(CPPStandaloneDevice):
             if isinstance(src, Subgroup):
                 src = src.source
             sm.monitored = src.name
+            sm.src = src
             sm.when = obj.when
             if sm.when not in ['start', 'end']:
                 logger.warn("State monitor {!s} has 'when' property '{!s}'"
