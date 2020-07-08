@@ -108,7 +108,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       {% endif %}
       {% else %}
       {% if obj.src.variables[var].scalar %}
-      std::copy_n(&{{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+      *brian::_array_{{obj.monitored}}_{{var}} = {{var}}{{obj.monitored}};
       {% else %}
       std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
       {% endif %}
@@ -145,8 +145,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
           {% endif %}
           {% else %}
 	  {% if obj['owner'].variables[var].scalar %}
-           std::copy_n(&{{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
-                       brian::_array_{{obj['owner'].name}}_{{var}});
+	  *brian::_array_{{obj['owner'].name}}_{{var}} = {{var}}{{obj['owner'].name}};
 	  {% else %}
            std::copy_n({{var}}{{obj['owner'].name}}, {{obj['owner'].variables[var].size}},
                        brian::_array_{{obj['owner'].name}}_{{var}});
@@ -173,7 +172,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
            {% endif %}
            {% else %}
 	   {% if obj['owner'].variables[var].scalar %}
-	   std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, &{{var}}{{obj['owner'].name}});
+	   {{var}}{{obj['owner'].name}} = *brian::_array_{{obj['owner'].name}}_{{var}};
 	   {% else %}
            std::copy_n(brian::_array_{{obj['owner'].name}}_{{var}}, {{obj['owner'].variables[var].size}}, {{var}}{{obj['owner'].name}});
 	   {% endif %}
@@ -251,7 +250,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       {% endif %}
       {% else %}
       {% if sm.src.variables[var].scalar %}
-      std::copy_n(&{{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+      *brian::_array_{{sm.monitored}}_{{var}} = {{var}}{{sm.monitored}};
       {% else %}
       std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
       {% endif %}
