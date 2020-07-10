@@ -67,7 +67,7 @@ generated, compiled and executed.
 The ``set_device`` function can also take additional arguments, e.g. to run
 GeNN in its "CPU-only" mode and to get additional debugging output, use::
 
-  set_device('genn', useGPU=False, debug=True)
+  set_device('genn', use_GPU=False, debug=True)
 
 Not all features of Brian work with Brian2GeNN. The current list of
 excluded features is detailed in :doc:`exclusions`.
