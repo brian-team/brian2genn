@@ -1569,7 +1569,6 @@ class GeNNDevice(CPPStandaloneDevice):
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
             self.spike_monitor_models.append(sm)
-            self.header_files.append('code_objects/' + sm.name + '_codeobject.h')
 
             # ------------------------------------------------------------------------------
             # Process rate monitors
@@ -1589,8 +1588,6 @@ class GeNNDevice(CPPStandaloneDevice):
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
             self.rate_monitor_models.append(sm)
-            self.header_files.append(
-                'code_objects/' + sm.name + '_codeobject.h')
 
     def process_state_monitors(self, directory, state_monitors, writer):
         for obj in state_monitors:
@@ -1634,8 +1631,6 @@ class GeNNDevice(CPPStandaloneDevice):
                     sm.variables.append(varname)
 
             self.state_monitor_models.append(sm)
-            self.header_files.append(
-                'code_objects/' + sm.name + '_codeobject.h')
 
     def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
