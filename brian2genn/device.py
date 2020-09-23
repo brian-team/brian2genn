@@ -224,6 +224,7 @@ class spikegeneratorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.N = 0
 
 
@@ -261,6 +262,7 @@ class spikeMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.neuronGroup = ''
         self.notSpikeGeneratorGroup = True
 
@@ -271,6 +273,7 @@ class rateMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.neuronGroup = ''
         self.notSpikeGeneratorGroup = True
 
@@ -281,6 +284,7 @@ class stateMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.order = 0
         self.monitored = ''
         self.src = None
@@ -1372,6 +1376,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in spikegenerator_groups:
             spikegenerator_model = spikegeneratorModel()
             spikegenerator_model.name = obj.name
+            spikegenerator_model.codeobject_name = obj.codeobj.name
             spikegenerator_model.N = obj.N
             self.spikegenerator_models.append(spikegenerator_model)
 
@@ -1550,6 +1555,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     'GeNN does not yet support event monitors for non-spike events.');
             sm = spikeMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             if (hasattr(obj, 'when')):
                 if (not obj.when in ['end', 'thresholds']):
                     # GeNN always records in the end slot but this should
@@ -1577,6 +1583,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in rate_monitors:
             sm = rateMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             if obj.when != 'end':
                 logger.warn("Rate monitor {!s} has 'when' property '{!s}' which"
                             "is not supported in GeNN, defaulting to"
@@ -1593,6 +1600,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in state_monitors:
             sm = stateMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             sm.order = obj.order
             src = obj.source
             if isinstance(src, Subgroup):
