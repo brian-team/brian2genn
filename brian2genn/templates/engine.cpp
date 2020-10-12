@@ -114,7 +114,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       {% endif %}
       {% endif %}
       {% endfor %}
-      _run_{{obj.name}}_codeobject();
+      _run_{{obj.codeobject_name}}();
       {% endif %}
       {% else %}
       if (i % {{obj['step']}} == 0)
@@ -198,7 +198,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       iT--;
       t = iT*DT;
       {% for spkGen in spikegenerator_models %}
-      _run_{{spkGen.name}}_codeobject();
+      _run_{{spkGen.codeobject_name}}();
       push{{spkGen.name}}SpikesToDevice();
       {% endfor %}
       {% set spikes_pulled = [] %}
@@ -256,15 +256,15 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       {% endif %}
       {% endif %}
       {% endfor %}
-      _run_{{sm.name}}_codeobject();
+      _run_{{sm.codeobject_name}}();
       {% endif %}
       {% endfor %}
       // report spikes
       {% for spkMon in spike_monitor_models %}
-      _run_{{spkMon.name}}_codeobject();
+      _run_{{spkMon.codeobject_name}}();
       {% endfor %}
       {% for rateMon in rate_monitor_models %}
-      _run_{{rateMon.name}}_codeobject();
+      _run_{{rateMon.codeobject_name}}();
       {% endfor %}
       // Bring the time step back to the value for the next loop iteration
       iT++;

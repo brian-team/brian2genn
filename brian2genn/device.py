@@ -224,6 +224,7 @@ class spikegeneratorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.N = 0
 
 
@@ -261,6 +262,7 @@ class spikeMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.neuronGroup = ''
         self.notSpikeGeneratorGroup = True
 
@@ -271,6 +273,7 @@ class rateMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.neuronGroup = ''
         self.notSpikeGeneratorGroup = True
 
@@ -281,6 +284,7 @@ class stateMonitorModel(object):
     '''
     def __init__(self):
         self.name = ''
+        self.codeobject_name = ''
         self.order = 0
         self.monitored = ''
         self.src = None
@@ -1372,6 +1376,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in spikegenerator_groups:
             spikegenerator_model = spikegeneratorModel()
             spikegenerator_model.name = obj.name
+            spikegenerator_model.codeobject_name = obj.codeobj.name
             spikegenerator_model.N = obj.N
             self.spikegenerator_models.append(spikegenerator_model)
 
@@ -1550,6 +1555,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     'GeNN does not yet support event monitors for non-spike events.');
             sm = spikeMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             if (hasattr(obj, 'when')):
                 if (not obj.when in ['end', 'thresholds']):
                     # GeNN always records in the end slot but this should
@@ -1569,7 +1575,6 @@ class GeNNDevice(CPPStandaloneDevice):
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
             self.spike_monitor_models.append(sm)
-            self.header_files.append('code_objects/' + sm.name + '_codeobject.h')
 
             # ------------------------------------------------------------------------------
             # Process rate monitors
@@ -1578,6 +1583,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in rate_monitors:
             sm = rateMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             if obj.when != 'end':
                 logger.warn("Rate monitor {!s} has 'when' property '{!s}' which"
                             "is not supported in GeNN, defaulting to"
@@ -1589,13 +1595,12 @@ class GeNNDevice(CPPStandaloneDevice):
             if isinstance(src, SpikeGeneratorGroup):
                 sm.notSpikeGeneratorGroup = False
             self.rate_monitor_models.append(sm)
-            self.header_files.append(
-                'code_objects/' + sm.name + '_codeobject.h')
 
     def process_state_monitors(self, directory, state_monitors, writer):
         for obj in state_monitors:
             sm = stateMonitorModel()
             sm.name = obj.name
+            sm.codeobject_name = obj.codeobj.name
             sm.order = obj.order
             src = obj.source
             if isinstance(src, Subgroup):
@@ -1634,8 +1639,6 @@ class GeNNDevice(CPPStandaloneDevice):
                     sm.variables.append(varname)
 
             self.state_monitor_models.append(sm)
-            self.header_files.append(
-                'code_objects/' + sm.name + '_codeobject.h')
 
     def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
