@@ -4,6 +4,8 @@
 #include <stdint.h>
 #include <string>
 #include <fstream>
+#include <iostream>
+#include <cmath>
 
 template<class scalar>
 void convert_dynamic_arrays_2_dense_matrix(vector<int32_t> &source, vector<int32_t> &target, vector<scalar> &gvector, scalar *g, int srcNN, int trgNN)
