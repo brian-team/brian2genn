@@ -51,6 +51,7 @@ from brian2.input.spikegeneratorgroup import *
 from brian2.synapses.synapses import StateUpdater as SynapsesStateUpdater
 from brian2.utils.logger import get_logger, std_silent
 from brian2.devices.cpp_standalone.codeobject import CPPStandaloneCodeObject
+from brian2.devices.cpp_standalone.device import CPPWriter
 from brian2 import prefs
 from .codeobject import GeNNCodeObject, GeNNUserCodeObject
 from .genn_generator import get_var_ndim, GeNNCodeGenerator
@@ -296,32 +297,6 @@ class stateMonitorModel(object):
         self.connectivity = ''
 
 
-class CPPWriter(object):
-    '''
-    Class that provides the method for writing C++ files from a string of code.
-    '''
-    def __init__(self, project_dir):
-        self.project_dir = project_dir
-        self.source_files = []
-        self.header_files = []
-
-    def write(self, filename, contents):
-        logger.diagnostic('Writing file %s:\n%s' % (filename, contents))
-        if filename.lower().endswith('.cpp'):
-            self.source_files.append(filename)
-        elif filename.lower().endswith('.h'):
-            self.header_files.append(filename)
-        elif filename.endswith('.*'):
-            self.write(filename[:-1] + 'cpp', contents.cpp_file)
-            self.write(filename[:-1] + 'h', contents.h_file)
-            return
-        fullfilename = os.path.join(self.project_dir, filename)
-        if os.path.exists(fullfilename):
-            if open(fullfilename, 'r').read() == contents:
-                return
-        open(fullfilename, 'w').write(contents)
-
-
 # ------------------------------------------------------------------------------
 # Start of GeNNDevice
 # ------------------------------------------------------------------------------
@@ -355,9 +330,9 @@ class GeNNDevice(CPPStandaloneDevice):
         self.report_func = ''
         self.src_counts= dict()
         self.trg_counts= dict()
-        #: List of all source and header files (to be included in runner)
-        self.source_files = []
-        self.header_files = []
+        #: Set of all source and header files (to be included in runner)
+        self.source_files = set()
+        self.header_files = set()
 
         self.connectivityDict = dict()
         self.groupDict = dict()
@@ -881,7 +856,7 @@ class GeNNDevice(CPPStandaloneDevice):
         # Create an empty network.h file, this allows us to use Brian2's
         # objects.cpp template unchanged
         writer.write('network.*', GeNNUserCodeObject.templater.network(None, None))
-        self.header_files.append('network.h')
+        self.header_files.add('network.h')
 
         self.generate_objects_source(arange_arrays, self.net,
                                      static_array_specs,
@@ -972,11 +947,11 @@ class GeNNDevice(CPPStandaloneDevice):
                     code = '#include "objects.h"\n' + code
 
                     writer.write('code_objects/' + codeobj.name + '.cpp', code)
-                    self.source_files.append(
+                    self.source_files.add(
                         'code_objects/' + codeobj.name + '.cpp')
                     writer.write('code_objects/' + codeobj.name + '.h',
                                  codeobj.code.h_file)
-                    self.header_files.append(
+                    self.header_files.add(
                         'code_objects/' + codeobj.name + '.h')
 
     def generate_max_row_length_code_objects(self, writer):
@@ -1677,14 +1652,14 @@ class GeNNDevice(CPPStandaloneDevice):
         writer.write('magicnetwork_model.cpp', model_tmp)
 
     def generate_main_source(self, writer, main_lines):
-        header_files = self.header_files + prefs['codegen.cpp.headers']
+        header_files = sorted(self.header_files) + prefs['codegen.cpp.headers']
         runner_tmp = GeNNCodeObject.templater.main(None, None,
                                                    code_lines=self.code_lines,
                                                    neuron_models=self.neuron_models,
                                                    synapse_models=self.synapse_models,
                                                    main_lines=main_lines,
                                                    header_files=header_files,
-                                                   source_files=self.source_files,
+                                                   source_files=sorted(self.source_files),
                                                    prefs=prefs,
                                                    )
         writer.write('main.*', runner_tmp)
@@ -1795,8 +1770,8 @@ class GeNNDevice(CPPStandaloneDevice):
             code_objects=the_objects
         )
         writer.write('objects.*', arr_tmp)
-        self.header_files.append('objects.h')
-        self.source_files.append('objects.cpp')
+        self.header_files.add('objects.h')
+        self.source_files.add('objects.cpp')
 
     def copy_source_files(self, writer, directory):
         # Copies brianlib, spikequeue and randomkit
@@ -1810,9 +1785,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                       os.path.join(directory, 'b2glib'))
         for file in b2glib_files:
             if file.lower().endswith('.cpp'):
-                self.source_files.append('b2glib/' + file)
+                self.source_files.add('b2glib/' + file)
             elif file.lower().endswith('.h'):
-                self.header_files.append('b2glib/' + file)
+                self.header_files.add('b2glib/' + file)
 
     def network_run(self, net, duration, report=None, report_period=10 * second,
                     namespace=None, profile=False, level=0, **kwds):
