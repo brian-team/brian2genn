@@ -1418,7 +1418,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     self.fix_synapses_code(synapse_model, pathway, codeobj,
                                            code)
 
-            if obj.state_updater != None:
+            if obj.state_updater is not None:
                 codeobj = obj.state_updater.codeobj
                 code = codeobj.code.cpp_file
                 self.collect_synapses_variables(synapse_model, 'dynamics',
@@ -1427,23 +1427,23 @@ class GeNNDevice(CPPStandaloneDevice):
                                        code)
 
             synapse_model.summed_variables = [ s for s in objects if s.startswith(obj.name+'_summed_variable')]
-            if (len(synapse_model.summed_variables) > 0 and hasattr(obj, '_genn_post_write_var')):
+            if len(synapse_model.summed_variables) > 0 and hasattr(obj, '_genn_post_write_var'):
                 raise NotImplementedError("brian2genn only supports a "
                                           "either a single synaptic output variable "
                                           "or a single summed variable per Synapses group.")
-            if (len(synapse_model.summed_variables) > 0 and isinstance(obj.target,Subgroup)):
+            if len(synapse_model.summed_variables) > 0 and isinstance(obj.target,Subgroup):
                 raise NotImplementedError("brian2genn does not support summed variables "
                                           "when the target is a Subgroup.")
-            if (len(synapse_model.summed_variables) > 1):
+            if len(synapse_model.summed_variables) > 1:
                  raise NotImplementedError("brian2genn only supports a "
                                           "single summed variable per Synapses group.")
-            if (hasattr(obj, '_genn_post_write_var')):
+            if hasattr(obj, '_genn_post_write_var'):
                 synapse_model.postSyntoCurrent = '0; $(' + obj._genn_post_write_var.replace(
                     '_post', '') + ') += $(inSyn); $(inSyn)= 0'
             else:
-                if (len(synapse_model.summed_variables) > 0):
+                if len(synapse_model.summed_variables) > 0:
                     summed_variable_updater= objects.get(synapse_model.summed_variables[0], None)
-                    if (obj.target != summed_variable_updater.target):
+                    if obj.target != summed_variable_updater.target:
                         raise NotImplementedError("brian2genn only supports summed "
                                           "variables that target the post-synaptic neuron group of the Synapses the variable is defined in.")
                     synapse_model.postSyntoCurrent = '0; $(' + summed_variable_updater.target_var.name + ') = $(inSyn); $(inSyn)= 0'
@@ -1455,7 +1455,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     addVar = code_generator.translate_expression(addVar)
                     kwds = code_generator.determine_keywords()
                     identifiers = get_identifiers(addVar)
-                    for k,v in iteritems(obj.variables):
+                    for k, v in iteritems(codeobj.variables):
                         if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
                             pass
                         else:
