@@ -1804,7 +1804,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 'Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
         for obj in net.objects:
-            if obj.clock.name is not 'defaultclock' and not (obj.__class__ == CodeRunner):
+            if obj.clock.name != 'defaultclock' and not (obj.__class__ == CodeRunner):
                 raise NotImplementedError(
                     'Multiple clocks are not supported for the genn device')
 
