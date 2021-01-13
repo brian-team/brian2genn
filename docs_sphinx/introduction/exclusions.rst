@@ -4,14 +4,14 @@ Unsupported features in Brian2GeNN
 .. highlight:: python
    :linenothreshold: 5
 
-Summed variables
-----------------
-Summed variables are currently not supported in GeNN due to the cross-
-population nature of this feature. However, a simple form of summed
-variable is supported and intrinsic to GeNN. This is the action of
-'pre' code in a ``Synapses`` definition onto a pre-synaptic
-variable. The allowed interaction is summing onto one pre-synaptic
-variable from each ``Synapses`` group.
+Restrictions on summed variables
+--------------------------------
+Summed variables are supported starting with version 1.4. There are a number of
+restrictions, however. Most importantly:
+
+* the equations of a `Synapses` object can only use a single summed variable
+* a summed variable cannot be combined with another action on a post-synaptic variable
+  in the ``on_pre`` statement (e.g. ``g_exc_post += w_exc``).
 
 
 Linked variables
