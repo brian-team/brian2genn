@@ -14,20 +14,20 @@ jobs:
     vmImage: 'Ubuntu 20.04'
   strategy:
     matrix:
-      Python36_double_stable:
-        python.version: '3.6'
+      Python37_double_stable:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python36_double_latest:
-        python.version: '3.6'
+      Python37_double_latest:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
@@ -41,20 +41,20 @@ jobs:
     vmImage: 'macOS-10.14'
   strategy:
     matrix:
-      Python36_double_stable:
-        python.version: '3.6'
+      Python37_double_stable:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python36_double_latest:
-        python.version: '3.6'
+      Python37_double_latest:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
@@ -67,20 +67,20 @@ jobs:
     vmImage: 'vs2017-win2016'
   strategy:
     matrix:
-      Python36_double_stable:
-        python.version: '3.6'
+      Python37_double_stable:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python36_double_latest:
-        python.version: '3.6'
+      Python37_double_latest:
+        python.version: '3.7'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
