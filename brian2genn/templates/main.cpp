@@ -137,6 +137,7 @@ int main(int argc, char *argv[])
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
   fprintf(timef,"%f ", {{kt}});
   {% endfor %}
+  fprintf(timef,"\n");
   {% endif %} 
 
   // get the final results from the GPU 

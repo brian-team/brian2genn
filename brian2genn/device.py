@@ -1826,6 +1826,34 @@ class GeNNDevice(CPPStandaloneDevice):
         self.run_statement_used = True
 
 
+    def network_get_profiling_info(self, net):
+        fname = os.path.join(self.project_dir, 'test_output', 'test.time')
+        net._profiling_info = []
+        keys = []
+        if not prefs['devices.genn.kernel_timing']:
+            raise ValueError("No profiling info collected (need to set "
+                             "`prefs['devices.genn.kernel_timing'] = True`?)")
+        keys = ['neuronUpdateTime',
+                'presynapticUpdateTime',
+                'postsynapticUpdateTime',
+                'synapseDynamicsTime',
+                'initTime',
+                'initSparseTime']
+        with open(fname) as f:
+            # times are appended as new line in each run
+            last_line = f.read().splitlines()[-1]
+        times = last_line.split()
+        n_time = len(times)
+        n_key = len(keys)
+        assert n_time == n_key, (
+            f'{n_time} != {n_key} \ntimes: {times}\nkeys: {keys}'
+        )
+        for key, time in zip(keys, times):
+            net._profiling_info.append((key, float(time)*second))
+        return sorted(net._profiling_info, key=lambda item: item[1],
+                      reverse=True)
+
+
 # ------------------------------------------------------------------------------
 # End of GeNNDevice
 # ------------------------------------------------------------------------------
