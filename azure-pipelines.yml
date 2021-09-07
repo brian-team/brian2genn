@@ -14,14 +14,6 @@ jobs:
     vmImage: 'Ubuntu 20.04'
   strategy:
     matrix:
-      Python27_single_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: false
-      Python27_double_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: false
       Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
@@ -49,14 +41,6 @@ jobs:
     vmImage: 'macOS-10.14'
   strategy:
     matrix:
-      Python27_single_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: false
-      Python27_double_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: false
       Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
@@ -83,14 +67,6 @@ jobs:
     vmImage: 'vs2017-win2016'
   strategy:
     matrix:
-      Python27_single_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU_32bit.py
-        use_master: false
-      Python27_double_stable:
-        python.version: '2.7'
-        script_name: run_brian_tests_CPU.py
-        use_master: false
       Python36_double_stable:
         python.version: '3.6'
         script_name: run_brian_tests_CPU.py
