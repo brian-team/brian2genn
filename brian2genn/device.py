@@ -1647,7 +1647,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,
-                                                   precision=precision
+                                                   precision=precision,
+                                                   header_files=prefs['codegen.cpp.headers']
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
 
