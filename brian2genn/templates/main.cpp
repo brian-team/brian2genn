@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
 
-  fprintf(stderr, "# DT %f \n", DT);
+  fprintf(stderr, "# DT %g \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
   {{'\n'.join(code_lines['before_start'])|autoindent}}
