@@ -37,7 +37,7 @@ setup(name='Brian2GeNN',
                                    'b2glib/*.h'],
       },
       install_requires=[
-                        'brian2>=2.4.2',
+                        'brian2>=2.5.0.2,<2.6',
                         'setuptools>=6.0',
                         'six',
                        ],
@@ -63,4 +63,4 @@ setup(name='Brian2GeNN',
           'Topic :: Scientific/Engineering :: Bio-Informatics',
           'Intended Audience :: Science/Research'
       ]
-      )
+)
