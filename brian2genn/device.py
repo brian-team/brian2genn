@@ -32,7 +32,7 @@ from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
 from brian2.core.functions import Function
-from brian2.core.network import Network
+from brian2.core.network import _get_all_objects
 from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
@@ -326,6 +326,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.run_regularly_read_write = {}
         self.run_duration = None
         self.net = None
+        self.net_objects = set()
         self.simple_code_objects = {}
         self.report_func = ''
         self.src_counts= dict()
@@ -777,13 +778,7 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append(
                 (name, c_data_type(arr.dtype), arr.size, name))
 
-        try:
-            # Brian versions > 2.2.2.1 do not save the "contained objects" in
-            # net.objects anymore
-            from brian2.core.network import _get_all_objects
-            net_objects = _get_all_objects(self.net.objects)
-        except ImportError:
-            net_objects = self.net.objects
+        net_objects = self.net_objects
 
         main_lines = self.make_main_lines()
 
@@ -1818,7 +1813,9 @@ class GeNNDevice(CPPStandaloneDevice):
         print('running brian code generation ...')
 
         self.net = net
-
+        # We need to store all objects, since MagicNetwork.after_run will clear
+        # Network.objects to avoid memory leaks
+        self.net_objects = _get_all_objects(self.net.objects)
         super(GeNNDevice, self).network_run(net=net, duration=duration,
                                             report=report,
                                             report_period=report_period,
