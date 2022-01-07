@@ -15,8 +15,8 @@ G.V = rand()
 G2 = NeuronGroup(N, eqs, threshold='V>1', reset='V=0', name='LN')
 G2.V = 2 * rand()
 
-alpha = 20 * ms
-beta = 30 * ms
+alpha = 20/ms
+beta = 30/ms
 S = Synapses(G, G2,
              model='''
             ds/dt= alpha*(1-s) - beta*s: 1
@@ -25,8 +25,8 @@ S = Synapses(G, G2,
              pre='Iin_post+= g',
              name='ex_syns')
 
-alpha2 = 40 * ms
-beta2 = 60 * ms
+alpha2 = 40/ms
+beta2 = 60/ms
 p_post = 1
 p_pre = 30
 S2 = Synapses(G2, G,
@@ -41,7 +41,7 @@ S2 = Synapses(G2, G,
               name='inh_syns')
 
 S.connect(i=1, j=5)
-S.connect(i=[1, 2], j=[1, 2])
+S2.connect(i=[1, 2], j=[1, 2])
 
 S.g = 'rand()'
 
