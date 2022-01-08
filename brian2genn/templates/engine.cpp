@@ -85,40 +85,41 @@ void engine::run(double duration)  //!< Duration of time to run the model for
   for (int i= 0; i < riT; i++) {
     // The StateMonitor and run_regularly operations are ordered by their "order" value
         {% for is_state_monitor, obj in run_reg_state_monitor_operations %}
+    if (i % {{obj['step']}} == 0)
+    {
           {% if is_state_monitor %}
+      // Execute state monitor operation: {{obj['name']}}
             {% if obj.when == 'start' %}
               {% for var in obj.variables %}
                 {% if obj.isSynaptic %}
                   {% if obj.connectivity == 'DENSE' %}
-    convert_dense_matrix_2_dynamic_arrays({{var}}{{obj.monitored}},
-                                          {{obj.srcN}}, {{obj.trgN}},
-                                          brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
-                                          brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
-                                          brian::_dynamic_array_{{obj.monitored}}_{{var}});
+      convert_dense_matrix_2_dynamic_arrays({{var}}{{obj.monitored}},
+                                            {{obj.srcN}}, {{obj.trgN}},
+                                            brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
+                                            brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
+                                            brian::_dynamic_array_{{obj.monitored}}_{{var}});
                   {% else %}
-    convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
-                                             ind{{obj.monitored}},
-                                             maxRowLength{{obj.monitored}},
-                                             {{var}}{{obj.monitored}},
-                                             {{obj.srcN}}, {{obj.trgN}},
-                                             brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
-                                             brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
-                                             brian::_dynamic_array_{{obj.monitored}}_{{var}},
-                                                     b2g::FULL_MONTY);
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
+                                               ind{{obj.monitored}},
+                                               maxRowLength{{obj.monitored}},
+                                               {{var}}{{obj.monitored}},
+                                               {{obj.srcN}}, {{obj.trgN}},
+                                               brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
+                                               brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
+                                               brian::_dynamic_array_{{obj.monitored}}_{{var}},
+                                               b2g::FULL_MONTY);
                   {% endif %}
                 {% else %}
                   {% if obj.src.variables[var].scalar %}
-    *brian::_array_{{obj.monitored}}_{{var}} = {{var}}{{obj.monitored}};
+      *brian::_array_{{obj.monitored}}_{{var}} = {{var}}{{obj.monitored}};
                   {% else %}
-    std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+      std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
                   {% endif %}
                 {% endif %}
               {% endfor %}
-    _run_{{obj.codeobject_name}}();
+      _run_{{obj.codeobject_name}}();
             {% endif %}
           {% else %}
-    if (i % {{obj['step']}} == 0)
-    {
       // Execute run_regularly operation: {{obj['name']}}
             {% for var in obj['read'] %}
               {% if var == 't' %}
@@ -178,8 +179,8 @@ void engine::run(double duration)  //!< Duration of time to run the model for
                 {% endif %}
               {% endif %}
             {% endfor %}
-    }
           {% endif %}
+    }
         {% endfor %}
         {% set states_pushed = [] %}
         {% for run_reg in run_regularly_operations %}
@@ -246,34 +247,38 @@ void engine::run(double duration)  //!< Duration of time to run the model for
     // report state
         {% for sm in state_monitor_models %}
           {% if sm.when != 'start' %}
+    if (i % {{sm['step']}} == 0)
+    {
+      // Execute state monitor operation: {{sm['name']}}
             {% for var in sm.variables %}
               {% if sm.isSynaptic %}
                 {% if sm.connectivity == 'DENSE' %}
-    convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}},
-                                          {{sm.srcN}}, {{sm.trgN}},
-                                          brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
-                                          brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
-                                          brian::_dynamic_array_{{sm.monitored}}_{{var}});
+      convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}},
+                                            {{sm.srcN}}, {{sm.trgN}},
+                                            brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
+                                            brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
+                                            brian::_dynamic_array_{{sm.monitored}}_{{var}});
                 {% else %}
-    convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}},
-                                             ind{{sm.monitored}},
-                                             maxRowLength{{sm.monitored}},
-                                             {{var}}{{sm.monitored}},
-                                             {{sm.srcN}}, {{sm.trgN}},
-                                             brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
-                                             brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
-                                             brian::_dynamic_array_{{sm.monitored}}_{{var}},
-                                             b2g::FULL_MONTY);
+      convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}},
+                                               ind{{sm.monitored}},
+                                               maxRowLength{{sm.monitored}},
+                                               {{var}}{{sm.monitored}},
+                                               {{sm.srcN}}, {{sm.trgN}},
+                                               brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
+                                               brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
+                                               brian::_dynamic_array_{{sm.monitored}}_{{var}},
+                                               b2g::FULL_MONTY);
                 {% endif %}
               {% else %}
                 {% if sm.src.variables[var].scalar %}
-    *brian::_array_{{sm.monitored}}_{{var}} = {{var}}{{sm.monitored}};
+      *brian::_array_{{sm.monitored}}_{{var}} = {{var}}{{sm.monitored}};
                 {% else %}
-    std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+      std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
                 {% endif %}
               {% endif %}
             {% endfor %}
-    _run_{{sm.codeobject_name}}();
+      _run_{{sm.codeobject_name}}();
+    }
           {% endif %}
         {% endfor %}
     // report spikes
