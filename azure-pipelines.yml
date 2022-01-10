@@ -38,7 +38,7 @@ jobs:
 - job: 'OSX'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'macOS-10.14'
+    vmImage: 'macOS-11'
   strategy:
     matrix:
       Python37_double_stable:
@@ -64,7 +64,7 @@ jobs:
 - job: 'Windows'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: 'windows-2019'
   strategy:
     matrix:
       Python37_double_stable:
