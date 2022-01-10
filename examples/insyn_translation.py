@@ -13,7 +13,5 @@ G = NeuronGroup(10, 'dv/dt=-v/second : 1\nu:1', threshold='v>1', reset='v=0',
 S = Synapses(G, G, 'w:1', pre='v += w*w*w; w=5',
              post='w=1',
              name='TheSynapses')
-
+S.connect()
 run(10*ms)
-
-device.build(directory='insyn_translation', compile=False, run=False)
