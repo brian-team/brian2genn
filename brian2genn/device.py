@@ -1588,15 +1588,15 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.when = 'end'
             if isinstance(src, Synapses):
                 sm.isSynaptic = True
-                neuron_src= src.source
+                neuron_src = src.source
                 # in brian2genn, we need the size of the entire pre-synaptic neuron population, not a sub-group size
                 if isinstance(neuron_src, Subgroup):
-                    neuron_src= neuron_src.source
+                    neuron_src = neuron_src.source
                 sm.srcN = neuron_src.variables['N'].get_value()
-                neuron_trg= src.target
+                neuron_trg = src.target
                 # in brian2genn, we need the size of the entire post-synaptic neuron population, not a sub-group size
                 if isinstance(neuron_trg, Subgroup):
-                    neuron_trg= neuron_trg.source
+                    neuron_trg = neuron_trg.source
                 sm.trgN = neuron_trg.variables['N'].get_value()
                 sm.connectivity = self.connectivityDict[src.name]
             else:
