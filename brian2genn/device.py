@@ -1259,20 +1259,24 @@ class GeNNDevice(CPPStandaloneDevice):
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
-            thresholder_codeobj = getattr(objects.get(obj.name + '_thresholder', None), 'codeobj', None)
-            if thresholder_codeobj is not None:
-                neuron_model.thresh_cond_lines = '_cond'
-            else:
-                neuron_model.thresh_cond_lines = '0'
+            has_thresholder = False
 
-            for suffix, code_slot in [('_stateupdater', 'stateupdate'),
-                                      ('_thresholder', 'stateupdate'),
-                                      ('_resetter', 'reset'),
-                                      ('_subexpression_update', 'subexpression_update')]:
-                full_name = obj.name + suffix
-                if full_name in objects and objects[full_name].codeobj is not None:
-                    codeobj = objects[full_name].codeobj
-                    combined_abstract_code[code_slot] += [codeobj.abstract_code[None]]
+            stateupdater_name = obj.name + '_stateupdater'
+            slot_mapping = {StateUpdater: 'stateupdate',
+                            Thresholder: 'stateupdate',
+                            Resetter: 'reset',
+                            SubexpressionUpdater: 'subexpression_update'}
+            for klass, code_slot in slot_mapping.items():
+                codeobj = None
+                for contained_obj in obj.contained_objects:
+                    if isinstance(contained_obj, klass):
+                        codeobj = contained_obj.codeobj
+                        if klass is StateUpdater:
+                            stateupdater_name = contained_obj.name
+                        break
+                if codeobj is not None:
+                    combined_abstract_code[code_slot] += [
+                        codeobj.abstract_code[None]]
                     combined_variables.update(codeobj.variables)
                     combined_variable_indices.update(codeobj.variable_indices)
                     # The resetter includes "not_refractory" as an override_conditional_write
@@ -1285,8 +1289,16 @@ class GeNNDevice(CPPStandaloneDevice):
                     # this would apply also to the state updater, and therefore
                     # remove the write-protection from "unless refractory" variables in the
                     # state update code.
-                    if suffix != '_resetter':
-                        combined_override_conditional_write.update(codeobj.override_conditional_write)
+                    if klass is not Resetter:
+                        combined_override_conditional_write.update(
+                            codeobj.override_conditional_write)
+                    if klass is Thresholder:
+                        has_thresholder = True
+
+            if has_thresholder:
+                neuron_model.thresh_cond_lines = '_cond'
+            else:
+                neuron_model.thresh_cond_lines = '0'
 
             if obj._refractory is not False:
                 combined_abstract_code['reset'] += ['lastspike = t',
@@ -1311,7 +1323,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 combined_abstract_code[code_block] = '\n'.join(combined_abstract_code[code_block])
 
             if any(len(ac) for ac in itervalues(combined_abstract_code)):
-                codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
+                codeobj = super(GeNNDevice, self).code_object(obj, stateupdater_name,
                                                               combined_abstract_code,
                                                               combined_variables.copy(),
                                                               'neuron_code',
