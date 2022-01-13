@@ -1203,9 +1203,11 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
             support_lines = []
-            suffix = '_thresholder';
-            lines = neuron_model.thresh_cond_lines;
-            codeobj = objects[obj.name + suffix].codeobj
+            for contained_obj in obj.contained_objects:
+                if isinstance(contained_obj, Thresholder):
+                    codeobj = contained_obj.codeobj
+                    break
+            lines = neuron_model.thresh_cond_lines
             for k, v in iteritems(codeobj.variables):
                 if k != 'dt' and isinstance(v, Constant):
                     if k not in neuron_model.parameters:
