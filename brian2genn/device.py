@@ -294,6 +294,7 @@ class stateMonitorModel(object):
         self.srcN = 0
         self.trgN = 0
         self.when = ''
+        self.step = 1
         self.connectivity = ''
 
 
@@ -1618,6 +1619,21 @@ class GeNNDevice(CPPStandaloneDevice):
                         "variable '%s' is unused - not monitoring" % varname)
                 else:
                     sm.variables.append(varname)
+            if obj.clock.name != 'defaultclock':
+                obj_dt = obj.clock.dt_
+                source_dt = src.dt_[:]
+                if obj_dt < source_dt:
+                    raise NotImplementedError(
+                        'Brian2GeNN does not support StateMonitors '
+                        'with a dt smaller than the dt of the '
+                        'monitored object')
+                dt_mismatch = abs(((obj_dt + source_dt / 2) % source_dt) - source_dt / 2)
+                if dt_mismatch > 1e-4 * source_dt:
+                    raise NotImplementedError(
+                        'Brian2GeNN does not support StateMonitors '
+                        'with a dt that is not a multiple of the dt of the '
+                        'monitored object.')
+                sm.step = int(obj_dt / source_dt + 0.5)
 
             self.state_monitor_models.append(sm)
 
@@ -1811,7 +1827,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 'Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
         for obj in net.objects:
-            if obj.clock.name != 'defaultclock' and not (obj.__class__ == CodeRunner):
+            if (obj.clock.name != 'defaultclock') and (obj.__class__ not in (CodeRunner, StateMonitor)):
                 raise NotImplementedError(
                     'Multiple clocks are not supported for the genn device')
 
