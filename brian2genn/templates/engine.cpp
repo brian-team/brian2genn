@@ -222,27 +222,33 @@ void engine::run(double duration)  //!< Duration of time to run the model for
             {% endif %}
           {% endif %}
         {% endfor %}
-        {% set states_pulled = [] %}
-        {% for sm in state_monitor_models %}
-          {% if not sm.monitored in states_pulled %}
-    pull{{sm.monitored}}StateFromDevice();
-            {% if states_pulled.append(sm.monitored) %}
-            {% endif %}
+        {% for key, steps in states_to_pull_for_start.items() %}
+          {% if steps[0] == 1 %}
+    pull{{key}}StateFromDevice();
+          {% else %}
+    if (
+            {%- for step in steps %}
+              {% if loop.index > 1 %} || {% endif -%}
+      ((i+1) % {{step}} == 0)
+            {%- endfor -%}
+    ) {
+      pull{{key}}StateFromDevice();
+    }
           {% endif %}
         {% endfor %}
-        {% for run_reg in run_regularly_operations %}
-    if ((i + 1) % {{run_reg['step']}} == 0)  // only pull state if next time step executes operation
-    {
-          {% for var in run_reg['read'] %}
-            {% if not var in ['t', 'dt'] %}
-              {% if not run_reg['owner'].variables[var].owner.name in states_pulled %}
-      pull{{run_reg['owner'].variables[var].owner.name}}StateFromDevice();
-                {% if states_pulled.append(run_reg['owner'].variables[var].owner.name) %}
-                {% endif %}
-              {% endif %}
-            {% endif %}
-          {% endfor %}
+        {% for key, steps in states_to_pull_for_end.items() %}
+          {% if steps[0] == 1 %}
+    pull{{key}}StateFromDevice();
+          {% else %}
+    if (
+            {%- for step in steps %}
+              {% if loop.index > 1 %} || {% endif -%}
+      ((i+1) % {{step}} == 0)
+            {%- endfor -%}
+    ) {
+      pull{{key}}StateFromDevice();
     }
+          {% endif %}
         {% endfor %}
     // report state
         {% for sm in state_monitor_models %}

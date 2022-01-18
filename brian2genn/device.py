@@ -1637,6 +1637,36 @@ class GeNNDevice(CPPStandaloneDevice):
 
             self.state_monitor_models.append(sm)
 
+    def consolidate_pull_operations(self, run_regularly_operations):
+        def append(adict, name, step):
+            if name in adict:
+                adict[name].append(step)
+            else:
+                adict[name] = [step]
+        models_start = {}
+        models_end = {}
+        for sm in self.state_monitor_models:
+            if sm.when == 'start':
+                append(models_start, sm.monitored, sm.step)
+            else:
+                append(models_end, sm.monitored, sm.step)
+        for op in run_regularly_operations:
+            for var in op['read']:
+                if var not in ['t', 'dt']:
+                    owner_name = op['owner'].variables[var].owner.name
+                    append(models_start, owner_name, op['step'])
+        # Shortcut: If a state is pulled on every turn, no need to list all steps
+        models_start = {key: [1] if 1 in val else list(set(val))
+                        for key, val in models_start.items()}
+        models_end = {key: [1] if 1 in val else list(set(val))
+                      for key, val in models_end.items()}
+        # Shortcut: If start or end pulls on every turn, pulling on start is enough.
+        for key, val in models_start.items():
+            if (key in models_end) and (val[0] == 1 or models_end[key][0] == 1):
+                models_end.pop(key)
+                models_start[key] = [1]
+        return models_start, models_end
+
     def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
@@ -1744,6 +1774,7 @@ class GeNNDevice(CPPStandaloneDevice):
         run_reg_state_monitor_operations = [(is_state_mon, obj)
                                             for _, _, is_state_mon, obj
                                             in sorted(run_reg_state_monitor_operations)]
+        states_to_pull_for_start, states_to_pull_for_end = self.consolidate_pull_operations(run_regularly_operations)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
@@ -1753,7 +1784,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      state_monitor_models=self.state_monitor_models,
                                                      run_regularly_operations=run_regularly_operations,
                                                      maximum_run_time=maximum_run_time,
-                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations
+                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations,
+                                                     states_to_pull_for_start=states_to_pull_for_start,
+                                                     states_to_pull_for_end=states_to_pull_for_end
                                                      )
         writer.write('engine.*', engine_tmp)
 
