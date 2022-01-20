@@ -1647,14 +1647,16 @@ class GeNNDevice(CPPStandaloneDevice):
         models_end = {}
         for sm in self.state_monitor_models:
             if sm.when == 'start':
-                append(models_start, sm.monitored, sm.step)
+                for varname in sm.variables:
+                    append(models_start, f'{varname}{sm.monitored}', sm.step)
             else:
-                append(models_end, sm.monitored, sm.step)
+                for varname in sm.variables:
+                    append(models_end, f'{varname}{sm.monitored}', sm.step)
         for op in run_regularly_operations:
-            for var in op['read']:
-                if var not in ['t', 'dt']:
-                    owner_name = op['owner'].variables[var].owner.name
-                    append(models_start, owner_name, op['step'])
+            for varname in op['read']:
+                if varname not in ['t', 'dt']:
+                    owner_name = op['owner'].variables[varname].owner.name
+                    append(models_start, f'{varname}{owner_name}', op['step'])
         # Shortcut: If a state is pulled on every turn, no need to list all steps
         models_start = {key: [1] if 1 in val else list(set(val))
                         for key, val in models_start.items()}
@@ -1774,7 +1776,7 @@ class GeNNDevice(CPPStandaloneDevice):
         run_reg_state_monitor_operations = [(is_state_mon, obj)
                                             for _, _, is_state_mon, obj
                                             in sorted(run_reg_state_monitor_operations)]
-        states_to_pull_for_start, states_to_pull_for_end = self.consolidate_pull_operations(run_regularly_operations)
+        vars_to_pull_for_start, vars_to_pull_for_end = self.consolidate_pull_operations(run_regularly_operations)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
@@ -1785,8 +1787,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      run_regularly_operations=run_regularly_operations,
                                                      maximum_run_time=maximum_run_time,
                                                      run_reg_state_monitor_operations=run_reg_state_monitor_operations,
-                                                     states_to_pull_for_start=states_to_pull_for_start,
-                                                     states_to_pull_for_end=states_to_pull_for_end
+                                                     vars_to_pull_for_start=vars_to_pull_for_start,
+                                                     vars_to_pull_for_end=vars_to_pull_for_end
                                                      )
         writer.write('engine.*', engine_tmp)
 

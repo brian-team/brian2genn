@@ -222,9 +222,9 @@ void engine::run(double duration)  //!< Duration of time to run the model for
             {% endif %}
           {% endif %}
         {% endfor %}
-        {% for key, steps in states_to_pull_for_start.items() %}
+        {% for key, steps in vars_to_pull_for_start.items() %}
           {% if steps[0] == 1 %}
-    pull{{key}}StateFromDevice();
+    pull{{key}}FromDevice();
           {% else %}
     if (
             {%- for step in steps %}
@@ -232,13 +232,13 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       ((i+1) % {{step}} == 0)
             {%- endfor -%}
     ) {
-      pull{{key}}StateFromDevice();
+      pull{{key}}FromDevice();
     }
           {% endif %}
         {% endfor %}
-        {% for key, steps in states_to_pull_for_end.items() %}
+        {% for key, steps in vars_to_pull_for_end.items() %}
           {% if steps[0] == 1 %}
-    pull{{key}}StateFromDevice();
+    pull{{key}}FromDevice();
           {% else %}
     if (
             {%- for step in steps %}
@@ -246,7 +246,7 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       ((i+1) % {{step}} == 0)
             {%- endfor -%}
     ) {
-      pull{{key}}StateFromDevice();
+      pull{{key}}FromDevice();
     }
           {% endif %}
         {% endfor %}
