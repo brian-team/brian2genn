@@ -708,6 +708,8 @@ class GeNNDevice(CPPStandaloneDevice):
         # commonly used. We cannot check for explicit names `_rand`, etc.,
         # since multiple uses of binomial or PoissonInput will need to names
         # that we cannot easily predict (poissoninput_binomial_2, etc.)
+        code = code.replace('_rand(_vectorisation_idx)', '$(gennrand_uniform)')
+        code = code.replace('_randn(_vectorisation_idx)', '$(gennrand_normal)')
         if '_vectorisation_idx)' in code:
             code = code.replace('_vectorisation_idx)',
                                 '_seed)')
