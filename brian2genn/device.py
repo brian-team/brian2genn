@@ -335,6 +335,7 @@ class GeNNDevice(CPPStandaloneDevice):
         #: Set of all source and header files (to be included in runner)
         self.source_files = set()
         self.header_files = set()
+        self._seed = 0
 
         self.connectivityDict = dict()
         self.groupDict = dict()
@@ -685,8 +686,15 @@ class GeNNDevice(CPPStandaloneDevice):
                 runfuncs[name] = main_lines
                 name, main_lines = procedures[-1]
             elif func == 'seed':
-                raise NotImplementedError('Setting a seed is currently '
-                                          'not supported')
+                logger.warn('Setting a seed with Brian2GeNN is experimental.')
+                self._seed = 0 if args is None else int(args)
+                if args == 0:
+                    logger.warn('In Brian2GeNN, seed(0) is equivalent to '
+                                'seed() and sets a randomly chosen seed.')
+                if self._seed == 0:
+                    main_lines.append('rk_randomseed(brian::_mersenne_twister_states[0]);')
+                else:
+                    main_lines.append(f'rk_seed({self._seed}, brian::_mersenne_twister_states[0]);')
             else:
                 raise TypeError("Unknown main queue function type " + func)
 
@@ -1672,7 +1680,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    dtDef=self.dtDef,
                                                    prefs=prefs,
                                                    precision=precision,
-                                                   header_files=prefs['codegen.cpp.headers']
+                                                   header_files=prefs['codegen.cpp.headers'],
+                                                   seed=self._seed,
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
 
