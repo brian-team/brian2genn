@@ -1258,7 +1258,7 @@ class GeNNDevice(CPPStandaloneDevice):
             combined_override_conditional_write = set()
             has_thresholder = False
 
-            stateupdater_name = obj.name + '_stateupdater'
+            stateupdater_name = None
             slot_mapping = {StateUpdater: 'stateupdate',
                             Thresholder: 'stateupdate',
                             Resetter: 'reset',
@@ -1320,6 +1320,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 combined_abstract_code[code_block] = '\n'.join(combined_abstract_code[code_block])
 
             if any(len(ac) for ac in itervalues(combined_abstract_code)):
+                assert stateupdater_name, 'No StateUpdater found in object.'
                 codeobj = super(GeNNDevice, self).code_object(obj, stateupdater_name,
                                                               combined_abstract_code,
                                                               combined_variables.copy(),
