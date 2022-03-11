@@ -342,8 +342,8 @@ class GeNNDevice(CPPStandaloneDevice):
         # Overwrite the code slots defined in standard C++ standalone
         self.code_lines = {'before_start': [],
                            'after_start': [],
-                           'before_run': [],
-                           'after_run': [],
+                           'before_network_run': [],
+                           'after_network_run': [],
                            'before_end': [],
                            'after_end': []}
 
@@ -355,7 +355,7 @@ class GeNNDevice(CPPStandaloneDevice):
         ``before_start`` / ``after_start``
             Before/after allocating memory for the arrays and loading arrays from
             disk.
-        ``before_run`` / ``after_run``
+        ``before_network_run`` / ``after_network_run``
             Before/after calling GeNN's ``run`` function.
         ``before_end`` / ``after_end``
             Before/after writing results to disk and deallocating memory.
