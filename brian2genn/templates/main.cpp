@@ -129,9 +129,9 @@ int main(int argc, char *argv[])
 
   t= 0.;
   void *devPtr;
-  {{'\n'.join(code_lines['before_run'])|autoindent}}
+  {{'\n'.join(code_lines['before_network_run'])|autoindent}}
   eng.run(totalTime); // run for the full duration
-  {{'\n'.join(code_lines['after_run'])|autoindent}}
+  {{'\n'.join(code_lines['after_network_run'])|autoindent}}
   cerr << t << " done ..." << endl;
   {% if prefs['devices.genn.kernel_timing'] %}
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
