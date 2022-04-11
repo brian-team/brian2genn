@@ -1650,29 +1650,24 @@ class GeNNDevice(CPPStandaloneDevice):
             self.state_monitor_models.append(sm)
 
     def consolidate_pull_operations(self, run_regularly_operations):
-        def append(adict, name, step):
-            if name in adict:
-                adict[name].append(step)
-            else:
-                adict[name] = [step]
-        models_start = {}
-        models_end = {}
+        models_start = defaultdict(list)
+        models_end = defaultdict(list)
         for sm in self.state_monitor_models:
             if sm.when == 'start':
                 for varname in sm.variables:
-                    append(models_start, f'{varname}{sm.monitored}', sm.step)
+                    models_start[f'{varname}{sm.monitored}'].append(sm.step)
             else:
                 for varname in sm.variables:
-                    append(models_end, f'{varname}{sm.monitored}', sm.step)
+                    models_end[f'{varname}{sm.monitored}'].append(sm.step)
         for op in run_regularly_operations:
             for varname in op['read']:
                 if varname not in ['t', 'dt']:
                     owner_name = op['owner'].variables[varname].owner.name
-                    append(models_start, f'{varname}{owner_name}', op['step'])
+                    models_start[f'{varname}{owner_name}'].append(op['step'])
         # Shortcut: If a state is pulled on every turn, no need to list all steps
-        models_start = {key: [1] if 1 in val else list(set(val))
+        models_start = {key: [1] if 1 in val else sorted(set(val))
                         for key, val in models_start.items()}
-        models_end = {key: [1] if 1 in val else list(set(val))
+        models_end = {key: [1] if 1 in val else sorted(set(val))
                       for key, val in models_end.items()}
         # Shortcut: If start or end pulls on every turn, pulling on start is enough.
         for key, val in models_start.items():
