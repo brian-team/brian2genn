@@ -160,8 +160,8 @@ def extract_source_variables(variables, varname, smvariables):
 def find_executable(executable):
     """Tries to find 'executable' in the path
 
-    Modified version of distutils.spawn.find_executable as 
-    this has stupid rules for extensions on Windows. 
+    Modified version of distutils.spawn.find_executable as
+    this has stupid rules for extensions on Windows.
     Returns the complete filename or None if not found.
     """
     path = os.environ.get('PATH', os.defpath)
@@ -199,7 +199,7 @@ class DelayedCodeObject(object):
 
 class neuronModel(object):
     '''
-    Class that contains all relevant information of a neuron model. 
+    Class that contains all relevant information of a neuron model.
     '''
 
     def __init__(self):
@@ -478,7 +478,7 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             codeobj_class = GeNNUserCodeObject
             if ('_synapses_create_generator_' in name) or ('_synapses_create_array_' in name):
-                # Here we process max_row_length for synapses 
+                # Here we process max_row_length for synapses
                 # the strategy is to do a dry run of connection generationin in the model definition
                 # function that has the same random numbers and just counts synaptic connections
                 # rather than generating them for real
@@ -741,7 +741,7 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print('building genn executable ...')
-        
+
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
 
@@ -980,7 +980,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             code_object_defs[codeobj.name].add('const int _num%s = %s;' % (k, v.size))
                     except TypeError:
                         pass
-    
+
         for codeobj in itervalues(self.max_row_length_code_objects):
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
@@ -989,8 +989,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         code_object_defs[codeobj.name]))
             writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
-              
-            
+
+
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
@@ -1061,7 +1061,7 @@ class GeNNDevice(CPPStandaloneDevice):
             genn_bin = (find_executable("genn-buildmodel.bat")
                         if os.sys.platform == 'win32'
                         else find_executable("genn-buildmodel.sh"))
-            
+
             if genn_bin is None:
                 raise RuntimeError('Add GeNN\'s bin directory to the path '
                                    'or set the devices.genn.path preference.')
@@ -1070,7 +1070,7 @@ class GeNNDevice(CPPStandaloneDevice):
             genn_path = os.path.normpath(os.path.join(os.path.dirname(genn_bin), ".."))
             logger.debug('Using GeNN path determined from path: '
                          '"{}"'.format(genn_path))
-        
+
         # Check for GeNN compatibility
         genn_version = None
         version_file = os.path.join(genn_path, 'version.txt')
@@ -1106,13 +1106,13 @@ class GeNNDevice(CPPStandaloneDevice):
             if os.sys.platform == 'win32':
                 # Make sure that all environment variables are upper case
                 env = {k.upper() : v for k, v in iteritems(env)}
-                
+
                 # If there is vcvars command to call, start cmd with that
                 cmd = ''
                 msvc_env, vcvars_cmd = get_msvc_env()
                 if vcvars_cmd:
                     cmd += vcvars_cmd + ' && '
-                # Otherwise, update environment, again ensuring 
+                # Otherwise, update environment, again ensuring
                 # that all variables are upper case
                 else:
                     env.update({k.upper() : v for k, v in iteritems(msvc_env)})
@@ -1121,11 +1121,11 @@ class GeNNDevice(CPPStandaloneDevice):
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
                 cmd += buildmodel_cmd + ' -s'
-                
+
                 # If we're not using CPU, add CPU option
                 if not use_GPU:
                     cmd += ' -c'
-                    
+
                 # Add include directories
                 # **NOTE** on windows semicolons are used to seperate multiple include paths
                 # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
@@ -1134,15 +1134,15 @@ class GeNNDevice(CPPStandaloneDevice):
                 cmd += ' -i "%s;%s;%s"' % (wdir, os.path.join(wdir, directory),
                                            os.path.join(wdir, directory, 'brianlib','randomkit'))
                 cmd += ' magicnetwork_model.cpp'
-                
+
                 # Add call to build generated code
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'magicnetwork_model_CODE', 'runner.vcxproj') + '"'
-                
+
                 # Add call to build executable
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'project.vcxproj') + '"'
-                
+
                 # Run combined command
-                # **NOTE** because vcvars MODIFIED environment, 
+                # **NOTE** because vcvars MODIFIED environment,
                 # making seperate check_calls doesn't work
                 check_call(cmd, cwd=directory, env=env)
             else:
@@ -1150,7 +1150,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     # declare the link flags as an environment variable so that GeNN's
                     # generateALL can pick it up
                     env['LDFLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
-                
+
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
                 if not use_GPU:
@@ -1192,7 +1192,7 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in poisson_groups:
             # throw error if events other than spikes are used
             event_keys = list(iterkeys(obj.events))
-            if (len(event_keys) > 1 
+            if (len(event_keys) > 1
                 or (len(event_keys) == 1 and event_keys[0] != 'spike')):
                 raise NotImplementedError(
                     'Brian2GeNN does not support events that are not spikes')
@@ -1475,7 +1475,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                     if k not in synapse_model.variables:
                                         self.add_array_variable(synapse_model, k, v)
                             addVar= addVar.replace(k,'$('+k+')')
-                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'                    
+                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'
                     synapse_model.main_code_lines['dynamics'] += code
                     #quick and dirty test to avoid adding the same support code twice
                     support_code = stringify('\n'.join(kwds['support_code_lines']))
@@ -1649,6 +1649,33 @@ class GeNNDevice(CPPStandaloneDevice):
 
             self.state_monitor_models.append(sm)
 
+    def consolidate_pull_operations(self, run_regularly_operations):
+        models_start = defaultdict(list)
+        models_end = defaultdict(list)
+        for sm in self.state_monitor_models:
+            if sm.when == 'start':
+                for varname in sm.variables:
+                    models_start[f'{varname}{sm.monitored}'].append(sm.step)
+            else:
+                for varname in sm.variables:
+                    models_end[f'{varname}{sm.monitored}'].append(sm.step)
+        for op in run_regularly_operations:
+            for varname in op['read']:
+                if varname not in ['t', 'dt']:
+                    owner_name = op['owner'].variables[varname].owner.name
+                    models_start[f'{varname}{owner_name}'].append(op['step'])
+        # Shortcut: If a state is pulled on every turn, no need to list all steps
+        models_start = {key: [1] if 1 in val else sorted(set(val))
+                        for key, val in models_start.items()}
+        models_end = {key: [1] if 1 in val else sorted(set(val))
+                      for key, val in models_end.items()}
+        # Shortcut: If start or end pulls on every turn, pulling on start is enough.
+        for key, val in models_start.items():
+            if (key in models_end) and (val[0] == 1 or models_end[key][0] == 1):
+                models_end.pop(key)
+                models_start[key] = [1]
+        return models_start, models_end
+
     def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
         writer.write('synapses_classes.*', synapses_classes_tmp)
@@ -1756,6 +1783,7 @@ class GeNNDevice(CPPStandaloneDevice):
         run_reg_state_monitor_operations = [(is_state_mon, obj)
                                             for _, _, is_state_mon, obj
                                             in sorted(run_reg_state_monitor_operations)]
+        vars_to_pull_for_start, vars_to_pull_for_end = self.consolidate_pull_operations(run_regularly_operations)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
@@ -1765,7 +1793,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      state_monitor_models=self.state_monitor_models,
                                                      run_regularly_operations=run_regularly_operations,
                                                      maximum_run_time=maximum_run_time,
-                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations
+                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations,
+                                                     vars_to_pull_for_start=vars_to_pull_for_start,
+                                                     vars_to_pull_for_end=vars_to_pull_for_end
                                                      )
         writer.write('engine.*', engine_tmp)
 
