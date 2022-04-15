@@ -187,9 +187,9 @@ void engine::run(double duration)  //!< Duration of time to run the model for
     if (i % {{run_reg['step']}} == 0)  // only push state if we executed the operation
     {
           {% for var in run_reg['write'] %}
-            {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
-      push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
-              {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}
+            {% if not run_reg['owner'].variables[var] in states_pushed %}
+      pushCurrent{{var}}{{run_reg['owner'].variables[var].owner.name}}ToDevice();
+              {% if states_pushed.append(run_reg['owner'].variables[var]) %}
               {% endif %}
             {% endif %}
           {% endfor %}
