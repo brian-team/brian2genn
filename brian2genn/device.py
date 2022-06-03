@@ -1100,7 +1100,7 @@ class GeNNDevice(CPPStandaloneDevice):
                              '"{}"'.format(cuda_path))
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
-                                   'the devices.genn.cuda_path preference.')
+                                   'the devices.genn.cuda_backend.cuda_path preference.')
 
         with std_silent(debug):
             if os.sys.platform == 'win32':
