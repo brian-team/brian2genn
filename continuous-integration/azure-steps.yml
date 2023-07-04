@@ -36,12 +36,6 @@ steps:
       git checkout $(genn_stable)  # Always use stable version for now
     displayName: 'Install GeNN'
 
-  - task: CopyFiles@2
-    inputs:
-      sourceFolder: $(Build.SourcesDirectory)/continuous-integration/
-      contents: 'brian_preferences'
-      targetFolder: $(Build.SourcesDirectory)/..
-
   - bash: |
       source activate $HOME/test_env
       export GENN_PATH=$(GENN_PATH)
