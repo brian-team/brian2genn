@@ -1100,7 +1100,7 @@ class GeNNDevice(CPPStandaloneDevice):
                              '"{}"'.format(cuda_path))
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
-                                   'the devices.genn.cuda_path preference.')
+                                   'the devices.genn.cuda_backend.cuda_path preference.')
 
         with std_silent(debug):
             if os.sys.platform == 'win32':
@@ -1367,6 +1367,10 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in synapse_groups:
             synapse_model = synapseModel()
             synapse_model.name = obj.name
+            if isinstance(obj.source, Synapses) or isinstance(obj.target, Synapses):
+                raise NotImplementedError('Brian2GeNN does not support '
+                                          'Synapses objects as source or '
+                                          'target of Synapses objects.')
             if isinstance(obj.source, Subgroup):
                 synapse_model.srcname = obj.source.source.name
                 synapse_model.srcN = obj.source.source.variables['N'].get_value()

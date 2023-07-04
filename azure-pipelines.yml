@@ -4,30 +4,30 @@
 # https://docs.microsoft.com/azure/devops/pipelines/languages/python
 
 variables:
-  genn_stable: '4.2.1'
+  genn_stable: '4.8.0'
 
 jobs:
 
 - job: 'Linux'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'Ubuntu 20.04'
+    vmImage: ubuntu-latest
   strategy:
     matrix:
-      Python37_double_stable:
-        python.version: '3.7'
+      Python38_double_stable:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python37_double_latest:
-        python.version: '3.7'
+      Python38_double_latest:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python39_double_stable:
-        python.version: '3.9'
+      Python311_double_stable:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python39_double_latest:
-        python.version: '3.9'
+      Python311_double_latest:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
@@ -38,23 +38,23 @@ jobs:
 - job: 'OSX'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'macOS-11'
+    vmImage: macOS-latest
   strategy:
     matrix:
-      Python37_double_stable:
-        python.version: '3.7'
+      Python38_double_stable:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python37_double_latest:
-        python.version: '3.7'
+      Python38_double_latest:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python39_double_stable:
-        python.version: '3.9'
+      Python311_double_stable:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python39_double_latest:
-        python.version: '3.9'
+      Python311_double_latest:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
@@ -64,23 +64,23 @@ jobs:
 - job: 'Windows'
   timeoutInMinutes: 0
   pool:
-    vmImage: 'vs2017-win2016'
+    vmImage: windows-latest
   strategy:
     matrix:
-      Python37_double_stable:
-        python.version: '3.7'
+      Python38_double_stable:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python37_double_latest:
-        python.version: '3.7'
+      Python38_double_latest:
+        python.version: '3.8'
         script_name: run_brian_tests_CPU.py
         use_master: true
-      Python39_double_stable:
-        python.version: '3.9'
+      Python311_double_stable:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python39_double_latest:
-        python.version: '3.9'
+      Python311_double_latest:
+        python.version: '3.11'
         script_name: run_brian_tests_CPU.py
         use_master: true
 
