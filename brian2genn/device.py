@@ -1628,14 +1628,17 @@ class GeNNDevice(CPPStandaloneDevice):
                         "variable '%s' is a constant - not monitoring" % varname)
                 elif varname not in self.groupDict[sm.monitored].variables:
                     # Check that the variable is also not updated by any run_regularly operation
-                    run_regularly_objects = [o for o in self.net_objects
-                                             if '_run_regularly' in o.name]
+                    run_regularly_objects = {o.name: o for o in self.net_objects
+                                             if '_run_regularly' in o.name}
                     updated = False
-                    for run_reg in run_regularly_objects:
-                        if run_reg.codeobj.owner.name == sm.monitored:
-                            if varname in self.run_regularly_read_write[run_reg.codeobj.name]['write']:
-                                updated = True
-                                break
+                    for codeobj_name, read_write in self.run_regularly_read_write.items():
+                        if (
+                                varname in read_write['write'] and
+                                run_regularly_objects[codeobj_name].owner.name == sm.monitored
+                        ):
+                            updated = True
+                            break
+
                     if updated:
                         sm.variables.append(varname)
                     else:
