@@ -14,12 +14,12 @@ jobs:
     vmImage: ubuntu-latest
   strategy:
     matrix:
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
       Python311_double_stable:
@@ -41,12 +41,12 @@ jobs:
     vmImage: macOS-latest
   strategy:
     matrix:
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
       Python311_double_stable:
@@ -67,12 +67,12 @@ jobs:
     vmImage: windows-latest
   strategy:
     matrix:
-      Python38_double_stable:
-        python.version: '3.8'
+      Python39_double_stable:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: false
-      Python38_double_latest:
-        python.version: '3.8'
+      Python39_double_latest:
+        python.version: '3.9'
         script_name: run_brian_tests_CPU.py
         use_master: true
       Python311_double_stable:
