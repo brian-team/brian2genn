@@ -225,6 +225,7 @@ void modelDefinition(NNmodel &model)
     {% if prefs['devices.genn.kernel_timing'] %}
     model.setTiming(true);
     {% endif %}
+    model.setSeed({{seed}});
     {% for neuron_model in neuron_models %}
     model.addNeuronPopulation<{{neuron_model.name}}NEURON>("{{neuron_model.name}}", {{neuron_model.N}}, {{neuron_model.name}}_p, {{neuron_model.name}}_ini);
     {% endfor %}
