@@ -1631,8 +1631,22 @@ class GeNNDevice(CPPStandaloneDevice):
                     logger.warn(
                         "variable '%s' is a constant - not monitoring" % varname)
                 elif varname not in self.groupDict[sm.monitored].variables:
-                    logger.warn(
-                        "variable '%s' is unused - not monitoring" % varname)
+                    # Check that the variable is also not updated by any run_regularly operation
+                    run_regularly_objects = {o.name: o for o in self.net_objects
+                                             if '_run_regularly' in o.name}
+                    updated = False
+                    for codeobj_name, read_write in self.run_regularly_read_write.items():
+                        if (
+                                varname in read_write['write'] and
+                                run_regularly_objects[codeobj_name].owner.name == sm.monitored
+                        ):
+                            updated = True
+                            break
+
+                    if updated:
+                        sm.variables.append(varname)
+                    else:
+                        raise NotImplementedError("variable '%s' is unused - cannot monitor it" % varname)
                 else:
                     sm.variables.append(varname)
             if obj.clock.name != 'defaultclock':
@@ -1659,10 +1673,13 @@ class GeNNDevice(CPPStandaloneDevice):
         for sm in self.state_monitor_models:
             if sm.when == 'start':
                 for varname in sm.variables:
-                    models_start[f'{varname}{sm.monitored}'].append(sm.step)
+                    # Do not pull variables that are only updated in run_regularly
+                    if varname in self.groupDict[sm.monitored].variables:
+                        models_start[f'{varname}{sm.monitored}'].append(sm.step)
             else:
                 for varname in sm.variables:
-                    models_end[f'{varname}{sm.monitored}'].append(sm.step)
+                    if varname in self.groupDict[sm.monitored].variables:
+                        models_end[f'{varname}{sm.monitored}'].append(sm.step)
         for op in run_regularly_operations:
             for varname in op['read']:
                 if varname not in ['t', 'dt']:
@@ -1799,7 +1816,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      maximum_run_time=maximum_run_time,
                                                      run_reg_state_monitor_operations=run_reg_state_monitor_operations,
                                                      vars_to_pull_for_start=vars_to_pull_for_start,
-                                                     vars_to_pull_for_end=vars_to_pull_for_end
+                                                     vars_to_pull_for_end=vars_to_pull_for_end,
+                                                     groupDict=self.groupDict
                                                      )
         writer.write('engine.*', engine_tmp)
 

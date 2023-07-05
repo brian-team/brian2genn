@@ -91,29 +91,32 @@ void engine::run(double duration)  //!< Duration of time to run the model for
       // Execute state monitor operation: {{obj['name']}}
             {% if obj.when == 'start' %}
               {% for var in obj.variables %}
-                {% if obj.isSynaptic %}
-                  {% if obj.connectivity == 'DENSE' %}
-      convert_dense_matrix_2_dynamic_arrays({{var}}{{obj.monitored}},
-                                            {{obj.srcN}}, {{obj.trgN}},
-                                            brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
-                                            brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
-                                            brian::_dynamic_array_{{obj.monitored}}_{{var}});
+                {# No need to convert/copy for variables only changed on the host #}
+                {% if var + obj.monitored in vars_to_pull_for_start %}
+                  {% if obj.isSynaptic %}
+                    {% if obj.connectivity == 'DENSE' %}
+        convert_dense_matrix_2_dynamic_arrays({{var}}{{obj.monitored}},
+                                              {{obj.srcN}}, {{obj.trgN}},
+                                              brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
+                                              brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
+                                              brian::_dynamic_array_{{obj.monitored}}_{{var}});
+                    {% else %}
+        convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
+                                                ind{{obj.monitored}},
+                                                maxRowLength{{obj.monitored}},
+                                                {{var}}{{obj.monitored}},
+                                                {{obj.srcN}}, {{obj.trgN}},
+                                                brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
+                                                brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
+                                                brian::_dynamic_array_{{obj.monitored}}_{{var}},
+                                                b2g::FULL_MONTY);
+                    {% endif %}
                   {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(rowLength{{obj.monitored}},
-                                               ind{{obj.monitored}},
-                                               maxRowLength{{obj.monitored}},
-                                               {{var}}{{obj.monitored}},
-                                               {{obj.srcN}}, {{obj.trgN}},
-                                               brian::_dynamic_array_{{obj.monitored}}__synaptic_pre,
-                                               brian::_dynamic_array_{{obj.monitored}}__synaptic_post,
-                                               brian::_dynamic_array_{{obj.monitored}}_{{var}},
-                                               b2g::FULL_MONTY);
-                  {% endif %}
-                {% else %}
-                  {% if obj.src.variables[var].scalar %}
-      *brian::_array_{{obj.monitored}}_{{var}} = {{var}}{{obj.monitored}};
-                  {% else %}
-      std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+                    {% if obj.src.variables[var].scalar %}
+        *brian::_array_{{obj.monitored}}_{{var}} = {{var}}{{obj.monitored}};
+                    {% else %}
+        std::copy_n({{var}}{{obj.monitored}}, {{obj.N}}, brian::_array_{{obj.monitored}}_{{var}});
+                    {% endif %}
                   {% endif %}
                 {% endif %}
               {% endfor %}
@@ -187,9 +190,17 @@ void engine::run(double duration)  //!< Duration of time to run the model for
     if (i % {{run_reg['step']}} == 0)  // only push state if we executed the operation
     {
           {% for var in run_reg['write'] %}
-            {% if not run_reg['owner'].variables[var].owner.name in states_pushed %}
-      push{{run_reg['owner'].variables[var].owner.name}}StateToDevice();
-              {% if states_pushed.append(run_reg['owner'].variables[var].owner.name) %}
+            {# Don't push variables that are not used on the device #}
+            {% if var in groupDict[run_reg['owner'].name].variables %}
+              {% if not run_reg['owner'].variables[var] in states_pushed %}
+                {% set var_owner = run_reg['owner'].variables[var].owner %}
+                {% if var_owner.__class__.__name__ == 'Synapses' %}
+                  {% set push_name = var + var_owner.name%}
+                {% else %}
+                  {% set push_name = 'Current' + var + var_owner.name %}
+                {% endif %}
+                push{{push_name}}ToDevice();
+                {% if states_pushed.append(run_reg['owner'].variables[var]) %}{% endif %}
               {% endif %}
             {% endif %}
           {% endfor %}
@@ -257,29 +268,32 @@ void engine::run(double duration)  //!< Duration of time to run the model for
     {
       // Execute state monitor operation: {{sm['name']}}
             {% for var in sm.variables %}
-              {% if sm.isSynaptic %}
-                {% if sm.connectivity == 'DENSE' %}
-      convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}},
-                                            {{sm.srcN}}, {{sm.trgN}},
-                                            brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
-                                            brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
-                                            brian::_dynamic_array_{{sm.monitored}}_{{var}});
+              {# No need to convert/copy for variables only changed on the host #}
+              {% if var + sm.monitored in vars_to_pull_for_end %}
+                {% if sm.isSynaptic %}
+                  {% if sm.connectivity == 'DENSE' %}
+        convert_dense_matrix_2_dynamic_arrays({{var}}{{sm.monitored}},
+                                              {{sm.srcN}}, {{sm.trgN}},
+                                              brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
+                                              brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
+                                              brian::_dynamic_array_{{sm.monitored}}_{{var}});
+                  {% else %}
+        convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}},
+                                                ind{{sm.monitored}},
+                                                maxRowLength{{sm.monitored}},
+                                                {{var}}{{sm.monitored}},
+                                                {{sm.srcN}}, {{sm.trgN}},
+                                                brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
+                                                brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
+                                                brian::_dynamic_array_{{sm.monitored}}_{{var}},
+                                                b2g::FULL_MONTY);
+                  {% endif %}
                 {% else %}
-      convert_sparse_synapses_2_dynamic_arrays(rowLength{{sm.monitored}},
-                                               ind{{sm.monitored}},
-                                               maxRowLength{{sm.monitored}},
-                                               {{var}}{{sm.monitored}},
-                                               {{sm.srcN}}, {{sm.trgN}},
-                                               brian::_dynamic_array_{{sm.monitored}}__synaptic_pre,
-                                               brian::_dynamic_array_{{sm.monitored}}__synaptic_post,
-                                               brian::_dynamic_array_{{sm.monitored}}_{{var}},
-                                               b2g::FULL_MONTY);
-                {% endif %}
-              {% else %}
-                {% if sm.src.variables[var].scalar %}
-      *brian::_array_{{sm.monitored}}_{{var}} = {{var}}{{sm.monitored}};
-                {% else %}
-      std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+                  {% if sm.src.variables[var].scalar %}
+        *brian::_array_{{sm.monitored}}_{{var}} = {{var}}{{sm.monitored}};
+                  {% else %}
+        std::copy_n({{var}}{{sm.monitored}}, {{sm.N}}, brian::_array_{{sm.monitored}}_{{var}});
+                  {% endif %}
                 {% endif %}
               {% endif %}
             {% endfor %}
