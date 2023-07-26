@@ -86,7 +86,7 @@ def brianobj_role(role, rawtext, text, lineno, inliner, options={}, content=[]):
     '''
     if text in prefs:
         linktext = text.replace('_', '-').replace('.', '-')
-        text = '%s <brian-pref-%s>' % (text, linktext)
+        text = f'{text} <brian-pref-{linktext}>'
         # Use sphinx's cross-reference role
         xref = XRefRole(warn_dangling=True)
         return xref('std:ref', rawtext, text, lineno, inliner, options, content)
@@ -221,15 +221,15 @@ from docutils.statemachine import ViewList
 from sphinx.domains.c import CDomain
 from sphinx.domains.python import PythonDomain
 
-class ManglingDomainBase(object):
+class ManglingDomainBase:
     directive_mangling_map = {}
 
     def __init__(self, *a, **kw):
-        super(ManglingDomainBase, self).__init__(*a, **kw)
+        super().__init__(*a, **kw)
         self.wrap_mangling_directives()
 
     def wrap_mangling_directives(self):
-        for name, objtype in iteritems(self.directive_mangling_map):
+        for name, objtype in self.directive_mangling_map.items():
             self.directives[name] = wrap_mangling_directive(
                 self.directives[name], objtype)
 

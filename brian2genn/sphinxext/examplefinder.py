@@ -26,7 +26,7 @@ def get_map(environ_var, relrootdir, pattern, the_map, path_exclusions=[]):
     shortfnames = [os.path.relpath(fname, rootdir) for fname in fnames]
     exnames = [fname.replace('/', '.').replace('\\', '.').replace(pattern, '') for fname in shortfnames]
     for fname, shortfname, exname in zip(fnames, shortfnames, exnames):
-        ex = open(fname, 'r').read()
+        ex = open(fname).read()
         ids = get_identifiers(ex)
         for id in ids:
             the_map[id].append((shortfname.replace('\\', '/'), exname))
@@ -60,10 +60,10 @@ def auto_find_examples(obj, headersymbol='='):
     txt = txt+'\n'+headersymbol*len(txt)+'\n\n'
     for tutname, tutloc in tutorials:
         tutname = tutname.replace('.ipynb', '')
-        txt += '* Tutorial :doc:`%s </resources/tutorials/%s>`\n' % (tutname, tutloc)
+        txt += f'* Tutorial :doc:`{tutname} </resources/tutorials/{tutloc}>`\n'
     for exname, exloc in examples:
         exname = exname.replace('.py', '')
-        txt += '* Example :doc:`%s </examples/%s>`\n' % (exname, exloc)
+        txt += f'* Example :doc:`{exname} </examples/{exloc}>`\n'
     return txt+'\n'
     
     

@@ -61,7 +61,7 @@ def main(rootpath, destdir):
         examplesbasenames.append(filebase)
         relativepaths.append(relpath)
         outnames.append(exname)
-    examplescode = [open(fname, 'rU').read() for fname in examplesfnames]
+    examplescode = [open(fname).read() for fname in examplesfnames]
     examplesdocs = []
     examplesafterdoccode = []
     examplesdocumentablenames = []
@@ -132,7 +132,7 @@ def main(rootpath, destdir):
         mainpage_text += '   :maxdepth: 1\n\n'
         curpath = ''
         for exname, basename in sorted(categories[category]):
-            mainpage_text += '   %s <%s>\n' % (basename, exname)
+            mainpage_text += f'   {basename} <{exname}>\n'
         return mainpage_text
             
     mainpage_text = insert_category('', mainpage_text)
@@ -145,4 +145,3 @@ def main(rootpath, destdir):
 
 if __name__=='__main__':
     main('../../examples', '../../docs_sphinx/examples')
-    

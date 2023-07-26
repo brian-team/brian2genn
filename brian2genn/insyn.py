@@ -87,7 +87,7 @@ def check_pre_code(codegen, stmts, vars_pre, vars_syn, vars_post,
                 # "write-protect" a variable during refractoriness to match Brian's semantics
                 if stmt.var in conditional_write_vars:
                     assert conditional_write_vars[stmt.var] == 'not_refractory'
-                    accumulation_expr = 'int(not_refractory_post) * ({})'.format(accumulation_expr)
+                    accumulation_expr = f'int(not_refractory_post) * ({accumulation_expr})'
             else:
                 # TODO: we could support expressions like v = v + expr, but this requires some additional work
                 # namely, for an expression like v = expr we need to check if (expr-v) when simplified reduces to

@@ -1,4 +1,3 @@
-# -*- coding: utf-8 -*-
 """
     Automatically generate Brian's reference documentation.
     
@@ -30,7 +29,7 @@ def makename(package, module):
 
 def write_file(name, text, destdir, suffix):
     """Write the output file for module/package <name>."""
-    fname = path.join(destdir, '%s.%s' % (name, suffix))
+    fname = path.join(destdir, f'{name}.{suffix}')
     print('Creating file %s.' % fname)
     f = open(fname, 'w')
     try:
@@ -42,7 +41,7 @@ def write_file(name, text, destdir, suffix):
 def format_heading(level, text):
     """Create a heading of <level> [1, 2 or 3 supported]."""
     underlining = ['=', '-', '~', ][level-1] * len(text)
-    return '%s\n%s\n\n' % (text, underlining)
+    return f'{text}\n{underlining}\n\n'
 
 
 def format_directive(module, destdir, package=None, basename='brian2genn'):
@@ -169,7 +168,7 @@ def create_package_file(root, master_package, subroot, py_files, subs,
         text += '    :maxdepth: 2\n\n'
         for sub in subs:
             if not is_excluded(os.path.join(root, sub), excludes):
-                text += '    %s.%s\n' % (makename(master_package, subroot), sub)
+                text += f'    {makename(master_package, subroot)}.{sub}\n'
         text += '\n'
 
     write_file(makename(master_package, subroot), text, destdir, suffix)

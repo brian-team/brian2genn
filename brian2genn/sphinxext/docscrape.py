@@ -11,7 +11,7 @@ from warnings import warn
 
 from sphinx.pycode import ModuleAnalyzer
 
-class Reader(object):
+class Reader:
     """A line-based string reader.
 
     """
@@ -85,7 +85,7 @@ class Reader(object):
         return not ''.join(self._str).strip()
 
 
-class NumpyDocString(object):
+class NumpyDocString:
     def __init__(self, docstring, config={}):
         docstring = textwrap.dedent(docstring).split('\n')
 
@@ -272,7 +272,7 @@ class NumpyDocString(object):
 
         summary = self._doc.read_to_next_empty_line()
         summary_str = " ".join([s.strip() for s in summary]).strip()
-        if re.compile('^([\w., ]+=)?\s*[\w\.]+\(.*\)$').match(summary_str):
+        if re.compile(r'^([\w., ]+=)?\s*[\w\.]+\(.*\)$').match(summary_str):
             self['Signature'] = summary_str
             if not self._is_at_section():
                 self['Summary'] = self._doc.read_to_next_empty_line()
@@ -312,7 +312,7 @@ class NumpyDocString(object):
 
     def _str_signature(self):
         if self['Signature']:
-            return [self['Signature'].replace('*','\*')] + ['']
+            return [self['Signature'].replace('*',r'\*')] + ['']
         else:
             return ['']
 
@@ -333,7 +333,7 @@ class NumpyDocString(object):
         if self[name]:
             out += self._str_header(name)
             for param,param_type,desc in self[name]:
-                out += ['%s : %s' % (param, param_type)]
+                out += [f'{param} : {param_type}']
                 out += self._str_indent(desc)
             out += ['']
         return out
@@ -354,9 +354,9 @@ class NumpyDocString(object):
         last_had_desc = True
         for func, desc, role in self['See Also']:
             if role:
-                link = ':%s:`%s`' % (role, func)
+                link = f':{role}:`{func}`'
             elif func_role:
-                link = ':%s:`%s`' % (func_role, func)
+                link = f':{func_role}:`{func}`'
             else:
                 link = "`%s`_" % func
             if desc or last_had_desc:
@@ -376,10 +376,10 @@ class NumpyDocString(object):
         idx = self['index']
         out = []
         out += ['.. index:: %s' % idx.get('default','')]
-        for section, references in iteritems(idx):
+        for section, references in idx.items():
             if section == 'default':
                 continue
-            out += ['   :%s: %s' % (section, ', '.join(references))]
+            out += ['   :{}: {}'.format(section, ', '.join(references))]
         return out
 
     def __str__(self, func_role=''):
@@ -432,8 +432,8 @@ class FunctionDoc(NumpyDocString):
                 # try to read signature
                 argspec = inspect.getargspec(func)
                 argspec = inspect.formatargspec(*argspec)
-                argspec = argspec.replace('*','\*')
-                signature = '%s%s' % (func_name, argspec)
+                argspec = argspec.replace('*',r'\*')
+                signature = f'{func_name}{argspec}'
             except TypeError:
                 signature = '%s()' % func_name
             self['Signature'] = signature
@@ -457,10 +457,10 @@ class FunctionDoc(NumpyDocString):
         if self._role:
             if self._role not in roles:
                 print("Warning: invalid role %s" % self._role)
-            out += '.. %s:: %s\n    \n\n' % (roles.get(self._role,''),
+            out += '.. {}:: {}\n    \n\n'.format(roles.get(self._role,''),
                                              func_name)
 
-        out += super(FunctionDoc, self).__str__(func_role=self._role)
+        out += super().__str__(func_role=self._role)
         return out
 
 
@@ -496,7 +496,7 @@ class ClassDoc(NumpyDocString):
     def methods(self):
         if self._cls is None:
             return [] 
-        methods = [name for name, func in iteritems(getattr(self._cls, '__dict__'))
+        methods = [name for name, func in getattr(self._cls, '__dict__').items()
                    if ((not name.startswith('_')
                         or name in self.extra_public_methods)
                        and ((callable(func) and not isinstance(func, type)) or
@@ -508,11 +508,11 @@ class ClassDoc(NumpyDocString):
         if self._cls is None:
             return []
         analyzer = ModuleAnalyzer.for_module(self._cls.__module__)
-        instance_members = set([attr_name for (class_name, attr_name) in
-                                iterkeys(analyzer.find_attr_docs())
-                                if class_name == self._cls.__name__])
-        class_members = set([name for name, func in iteritems(getattr(self._cls, '__dict__'))
+        instance_members = {attr_name for (class_name, attr_name) in
+                                analyzer.find_attr_docs().keys()
+                                if class_name == self._cls.__name__}
+        class_members = {name for name, func in getattr(self._cls, '__dict__').items()
                              if not name.startswith('_') and (func is None or
-                                                              inspect.isdatadescriptor(func))])
+                                                              inspect.isdatadescriptor(func))}
 
         return instance_members | class_members
