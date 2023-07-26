@@ -12,7 +12,7 @@ issues to the github issue tracker (https://github.com/brian-team/brian2genn/iss
 
 Documentation for Brian2GeNN can be found at http://brian2genn.readthedocs.org
 
-[![PyPI package](https://img.shields.io/pypi/v/Brian2GeNN.svg)](https://pypi.python.org/pypi/Brian2)
+[![PyPI package](https://img.shields.io/pypi/v/Brian2GeNN.svg)](https://pypi.python.org/pypi/Brian2GeNN)
 [![Documentation Status](https://readthedocs.org/projects/brian2genn/badge/?version=stable)](https://brian2genn.readthedocs.io/en/stable/?badge=stable)
 [![Build Status](https://github.com/brian-team/brian2genn/actions/workflows/testsuite.yml/badge.svg)](https://github.com/brian-team/brian2genn/actions/workflows/testsuite.yml)
 
