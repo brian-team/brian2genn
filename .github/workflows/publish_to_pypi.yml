@@ -22,7 +22,7 @@ jobs:
     steps:
       - uses: actions/checkout@v3
         with:
-          fetch-depth: 1
+          fetch-depth: 0  # we need the full history for the version calculation
       - name: Set up Python 3.x
         uses: actions/setup-python@v4
         with:
