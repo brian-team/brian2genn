@@ -66,7 +66,6 @@ jobs:
       - name: Run Tests
         run: |
           cd  $GITHUB_WORKSPACE/.. # move out of the workspace to avoid direct import
-          python -Wd $GITHUB_WORKSPACE/dev/continuous-integration/run_test_suite.py
           if [ $FLOAT_DTYPE_32 == 'true' ]; then
             python -Wd $GITHUB_WORKSPACE/scripts/run_brian_tests_CPU_32bit.py
           else
