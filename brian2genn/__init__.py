@@ -8,19 +8,27 @@ import brian2genn.preferences
 import brian2genn.binomial
 
 
-from pkg_resources import get_distribution, DistributionNotFound
 try:
-    __version__ = get_distribution(__name__).version
-except DistributionNotFound:
-    # Apparently we are running directly from a git clone, let
-    # setuptools_scm fetch the version from git
+    from ._version import __version__, __version_tuple__
+except ImportError:
     try:
         from setuptools_scm import get_version
-        __version__ = get_version(relative_to=os.path.dirname(__file__))
+
+        __version__ = get_version(
+            root="..",
+            relative_to=__file__,
+            version_scheme="post-release",
+            local_scheme="no-local-version",
+        )
+        __version_tuple__ = tuple(int(x) if x.isdigit() else x
+                                  for x in __version__.split("."))
     except ImportError:
-        warnings.warn('Cannot determine brian2genn version (running directly '
-                      'from source code and no setuptools_scm package '
-                      'available).')
+        warnings.warn(
+            "Cannot determine Brian version, running from source and "
+            "setuptools_scm is not installed."
+        )
+        __version__ = "unknown"
+        __version_tuple__ = (0, 0, 0)
 
 
 def example_run(debug=False, **build_options):

@@ -1,0 +1,54 @@
+[project]
+name = "Brian2GeNN"
+authors = [
+    {name = 'Thomas Nowotny'},
+    {name = 'Marcel Stimberg'},
+    {name = 'Dan Goodman'},
+]
+requires-python = '>=3.9'
+dependencies = [
+    'brian2>=2.5.0.2,<2.6',
+    'setuptools>=61'
+]
+dynamic = ["version", "readme"]
+description = 'An interface to use the GeNN framework as a device in Brian 2'
+classifiers = [
+    'Development Status :: 4 - Beta',
+    'Intended Audience :: Science/Research',
+    'License :: OSI Approved :: GNU General Public License v2 (GPLv2)',
+    'Natural Language :: English',
+    'Operating System :: OS Independent',
+    'Programming Language :: Python',
+    'Programming Language :: Python :: 3',
+    'Topic :: Scientific/Engineering :: Bio-Informatics'
+]
+
+[project.optional-dependencies]
+test = ['pytest', 'pytest-xdist>=1.22.3']
+docs = ['sphinx>=1.0.1', 'sphinxcontrib-issuetracker']
+
+[project.urls]
+Documentation ='https://brian2genn.readthedocs.io/'
+Source = 'https://github.com/brian-team/brian2genn'
+Tracker = 'https://github.com/brian-team/brian2genn/issues'
+
+[tool.setuptools]
+zip-safe = false
+packages = ['brian2genn']
+
+[tool.setuptools.dynamic]
+readme = {file = 'README.md', content-type = "text/markdown"}
+
+[tool.setuptools_scm]
+version_scheme = 'post-release'
+local_scheme = 'no-local-version'
+write_to = 'brian2genn/_version.py'
+tag_regex = '^(?P<version>\d+(?:\.\d+){0,2}[^\+]*(?:\+.*)?)$'
+fallback_version = 'unknown'
+
+[build-system]
+requires = [
+    "setuptools>=61",
+    "setuptools_scm[toml]>=6.2"
+]
+build-backend = "setuptools.build_meta"
