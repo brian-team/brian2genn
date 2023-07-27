@@ -94,7 +94,8 @@ prefs.register_preferences(
         validator=lambda value: value is None or os.path.isdir(value)
     ),
     kernel_timing=BrianPreference(
-        docs='''This preference determines whether GeNN should record kernel runtimes; note that this can affect performance.''',
+        docs='''This preference determines whether GeNN should record kernel runtimes; note that this can affect performance.
+        This preference is deprecated, use profile=True in the set_device or run call instead.''',
         default=False,
     )
 )

@@ -1646,7 +1646,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    max_row_length_synapses=self.max_row_length_synapses,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
-                                                   prefs=prefs,
+                                                   profiled=self.enable_profiling,
                                                    precision=precision
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
@@ -1660,7 +1660,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    main_lines=main_lines,
                                                    header_files=header_files,
                                                    source_files=sorted(self.source_files),
-                                                   prefs=prefs,
+                                                   profiled=self.enable_profiling,
                                                    )
         writer.write('main.*', runner_tmp)
 
@@ -1791,10 +1791,18 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def network_run(self, net, duration, report=None, report_period=10 * second,
                     namespace=None, profile=False, level=0, **kwds):
-        if profile is True:
-            raise NotImplementedError('Brian2GeNN does not yet support '
-                                      'detailed profiling.')
+        # We store this as an instance variable for later access
+        self.enable_profiling = profile
 
+        # Allow setting `profile` in the `set_device` call (used e.g. in brian2cuda
+        # SpeedTest configurations)
+        if profile is None:
+            self.enable_profiling = self.build_options.get("profile", None)
+            # If not set, check the deprecated preference
+            if prefs.devices.genn.kernel_timing:
+                logger.warn("The preference 'devices.genn.kernel_timing' is "
+                            "deprecated, please set profile=True instead")
+                self.enable_profiling = True
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
                          + '%s') % ', '.join(iterkeys(kwds)))
@@ -1828,11 +1836,10 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def network_get_profiling_info(self, net):
         fname = os.path.join(self.project_dir, 'test_output', 'test.time')
-        net._profiling_info = []
-        keys = []
-        if not prefs['devices.genn.kernel_timing']:
+        if not os.path.exists(fname):
             raise ValueError("No profiling info collected (need to set "
-                             "`prefs['devices.genn.kernel_timing'] = True`?)")
+                             "profile = True ?)")
+        net._profiling_info = []
         keys = ['neuronUpdateTime',
                 'presynapticUpdateTime',
                 'postsynapticUpdateTime',

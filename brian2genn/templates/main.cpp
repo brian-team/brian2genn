@@ -133,7 +133,7 @@ int main(int argc, char *argv[])
   eng.run(totalTime); // run for the full duration
   {{'\n'.join(code_lines['after_run'])|autoindent}}
   cerr << t << " done ..." << endl;
-  {% if prefs['devices.genn.kernel_timing'] %}
+  {% if profiled %}
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
   fprintf(timef,"%f ", {{kt}});
   {% endfor %}
