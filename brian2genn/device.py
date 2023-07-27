@@ -345,6 +345,9 @@ class GeNNDevice(CPPStandaloneDevice):
                            'before_end': [],
                            'after_end': []}
 
+        #: Use GeNN's kernel timings?
+        self.kernel_timings = False
+
     def insert_code(self, slot, code):
         '''
         Insert custom C++ code directly into ``main.cpp``. The available slots
@@ -407,14 +410,15 @@ class GeNNDevice(CPPStandaloneDevice):
             # the run_regularly operation (will be directly called from
             # engine.cpp)
             codeobj = super().code_object(owner, name,
-                                                          abstract_code,
-                                                          variables,
-                                                          'stateupdate',
-                                                          variable_indices,
-                                                          codeobj_class=CPPStandaloneCodeObject,
-                                                          template_kwds=template_kwds,
-                                                          override_conditional_write=override_conditional_write,
-                                                          )
+                                          abstract_code,
+                                          variables,
+                                          'stateupdate',
+                                          variable_indices,
+                                          codeobj_class=CPPStandaloneCodeObject,
+                                          template_kwds=template_kwds,
+                                          override_conditional_write=override_conditional_write,
+                                          )
+
             # FIXME: The following is redundant with what is done during
             # the code object creation above. At the moment, the code
             # object does not allow us to access the information we
@@ -464,13 +468,13 @@ class GeNNDevice(CPPStandaloneDevice):
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
             codeobj = super().code_object(owner, name,
-                                                          abstract_code,
-                                                          variables,
-                                                          template_name,
-                                                          variable_indices,
-                                                          codeobj_class=codeobj_class,
-                                                          template_kwds=template_kwds,
-                                                          override_conditional_write=override_conditional_write,
+                                          abstract_code,
+                                          variables,
+                                          template_name,
+                                          variable_indices,
+                                          codeobj_class=codeobj_class,
+                                          template_kwds=template_kwds,
+                                          override_conditional_write=override_conditional_write,
                                                           )
             self.simple_code_objects[codeobj.name] = codeobj
         else:
@@ -491,13 +495,13 @@ class GeNNDevice(CPPStandaloneDevice):
                 else:
                     mrl_template_name='max_row_length_array'
                 codeobj = super().code_object(owner, mrl_name,
-                                                              abstract_code,
-                                                              variables,
-                                                              mrl_template_name,
-                                                              variable_indices,
-                                                              codeobj_class=codeobj_class,
-                                                              template_kwds=template_kwds,
-                                                              override_conditional_write=override_conditional_write,
+                                              abstract_code,
+                                              variables,
+                                              mrl_template_name,
+                                              variable_indices,
+                                              codeobj_class=codeobj_class,
+                                              template_kwds=template_kwds,
+                                              override_conditional_write=override_conditional_write,
                 )
                 #self.code_objects['%s_max_row_length' % owner.name] = codeobj
                 self.code_objects.pop(mrl_name, None)   # remove this from the normal list of code objects
@@ -507,14 +511,14 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.max_row_length_run_calls.append('_run_%s();' % mrl_name)
 
             codeobj = super().code_object(owner, name,
-                                                          abstract_code,
-                                                          variables,
-                                                          template_name,
-                                                          variable_indices,
-                                                          codeobj_class=codeobj_class,
-                                                          template_kwds=template_kwds,
-                                                          override_conditional_write=override_conditional_write,
-                                                          )
+                                          abstract_code,
+                                          variables,
+                                          template_name,
+                                          variable_indices,
+                                          codeobj_class=codeobj_class,
+                                          template_kwds=template_kwds,
+                                          override_conditional_write=override_conditional_write,
+                                          )
             # FIXME: is this actually necessary or is it already added by the super?
             self.code_objects[codeobj.name] = codeobj
         return codeobj
@@ -754,14 +758,7 @@ class GeNNDevice(CPPStandaloneDevice):
         logger.debug(
             "Writing GeNN project to directory " + os.path.normpath(directory))
 
-        # FIXME: This is only needed to keep Brian2GeNN compatible with Brian2 2.0.1 and earlier
-        if isinstance(self.arange_arrays, dict):
-            arange_arrays = sorted([(var, start)
-                                    for var, start in
-                                    self.arange_arrays.items()],
-                                   key=lambda var_start: var_start[0].name)
-        else:
-            arange_arrays = self.arange_arrays
+        arange_arrays = self.arange_arrays
 
         # write the static arrays
         for code_object in self.code_objects.values():
@@ -1726,7 +1723,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    max_row_length_synapses=self.max_row_length_synapses,
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
-                                                   profiled=self.enable_profiling,
+                                                   profiled=self.kernel_timings,
+                                                   prefs=prefs,
                                                    precision=precision,
                                                    header_files=prefs['codegen.cpp.headers']
                                                    )
@@ -1741,7 +1739,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    main_lines=main_lines,
                                                    header_files=header_files,
                                                    source_files=sorted(self.source_files),
-                                                   profiled=self.enable_profiling,
+                                                   profiled=self.kernel_timings,
                                                    )
         writer.write('main.*', runner_tmp)
 
@@ -1875,19 +1873,17 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.header_files.add('b2glib/' + file)
 
     def network_run(self, net, duration, report=None, report_period=10 * second,
-                    namespace=None, profile=False, level=0, **kwds):
-        # We store this as an instance variable for later access
-        self.enable_profiling = profile
-
+                    namespace=None, profile=None, level=0, **kwds):
+        self.kernel_timings = profile
         # Allow setting `profile` in the `set_device` call (used e.g. in brian2cuda
         # SpeedTest configurations)
         if profile is None:
-            self.enable_profiling = self.build_options.get("profile", None)
+            self.kernel_timings = self.build_options.pop("profile", None)
             # If not set, check the deprecated preference
-            if prefs.devices.genn.kernel_timing:
+            if profile is None and prefs.devices.genn.kernel_timing:
                 logger.warn("The preference 'devices.genn.kernel_timing' is "
                             "deprecated, please set profile=True instead")
-                self.enable_profiling = True
+                self.kernel_timings = True
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
                          + '%s') % ', '.join(kwds.keys()))
@@ -1914,16 +1910,18 @@ class GeNNDevice(CPPStandaloneDevice):
         # Network.objects to avoid memory leaks
         self.net_objects = _get_all_objects(self.net.objects)
         super().network_run(net=net, duration=duration,
-                                            report=report,
-                                            report_period=report_period,
-                                            namespace=namespace,
-                                            level=level + 1)
+                            report=report,
+                            report_period=report_period,
+                            namespace=namespace,
+                            level=level + 1,
+                            profile=False)
+
         self.run_statement_used = True
 
 
     def network_get_profiling_info(self, net):
         fname = os.path.join(self.project_dir, 'test_output', 'test.time')
-        if not os.path.exists(fname):
+        if not self.kernel_timings:
             raise ValueError("No profiling info collected (need to set "
                              "profile = True ?)")
         net._profiling_info = []

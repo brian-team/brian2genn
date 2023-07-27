@@ -37,9 +37,10 @@ int main(int argc, char *argv[])
   string cmd= std::string("mkdir ") +OutDir;
   system(cmd.c_str());
   string name;
+  {% if profiled %}
   name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
-
+  {% endif %}
   fprintf(stderr, "# DT %g \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
