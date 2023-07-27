@@ -21,7 +21,6 @@ import pydoc
 import inspect
 from docutils import statemachine
 from docutils.parsers.rst import directives, Directive
-from six import iteritems
 
 import sphinx
 from sphinx.roles import XRefRole

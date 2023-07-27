@@ -1,7 +1,6 @@
 import re, inspect, textwrap, pydoc
 import sphinx
 from sphinx.pycode import ModuleAnalyzer
-from six import iteritems
 from .docscrape import NumpyDocString, FunctionDoc, ClassDoc
 
 class SphinxDocString(NumpyDocString):

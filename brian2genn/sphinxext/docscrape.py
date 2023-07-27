@@ -6,7 +6,6 @@ import inspect
 import textwrap
 import re
 import pydoc
-from six import iteritems, iterkeys
 from warnings import warn
 
 from sphinx.pycode import ModuleAnalyzer

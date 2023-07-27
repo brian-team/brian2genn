@@ -2,8 +2,6 @@
 The code generator for the "genn" language. This is mostly C++ with some specific
 decorators (mainly "__host__ __device__") to allow operation in a CUDA context.
 '''
-
-from six import iteritems
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
