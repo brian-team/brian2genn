@@ -1,18 +1,18 @@
 """
     Automatically generate Brian's reference documentation.
-    
+
     Based on sphinx-apidoc, published under a BSD license: http://sphinx-doc.org/
 """
+
+
 import inspect
-import sys
 import os
+import sys
 from os import path
 
-from .examplefinder import auto_find_examples
+INITPY = "__init__.py"
 
-INITPY = '__init__.py'
-
-OPTIONS = ['show-inheritance']
+OPTIONS = ["show-inheritance"]
 
 
 def makename(package, module):
@@ -21,7 +21,7 @@ def makename(package, module):
     if package:
         name = package
         if module:
-            name += '.' + module
+            name += f".{module}"
     else:
         name = module
     return name
@@ -29,9 +29,9 @@ def makename(package, module):
 
 def write_file(name, text, destdir, suffix):
     """Write the output file for module/package <name>."""
-    fname = path.join(destdir, f'{name}.{suffix}')
-    print('Creating file %s.' % fname)
-    f = open(fname, 'w')
+    fname = path.join(destdir, f"{name}.{suffix}")
+    print(f"Creating file {fname}.")
+    f = open(fname, "w")
     try:
         f.write(text)
     finally:
@@ -40,23 +40,19 @@ def write_file(name, text, destdir, suffix):
 
 def format_heading(level, text):
     """Create a heading of <level> [1, 2 or 3 supported]."""
-    underlining = ['=', '-', '~', ][level-1] * len(text)
-    return f'{text}\n{underlining}\n\n'
+    underlining = ["=", "-", "~"][level - 1] * len(text)
+    return f"{text}\n{underlining}\n\n"
 
 
-def format_directive(module, destdir, package=None, basename='brian2genn'):
+def format_directive(module, destdir, package=None, basename="brian2genn"):
     """Create the automodule directive and add the options."""
-    directive = '.. automodule:: %s\n' % makename(package, module)
+    directive = f".. automodule:: {makename(package, module)}\n"
     for option in OPTIONS:
-        directive += '    :%s:\n' % option
-    directive += '\n'
+        directive += f"    :{option}:\n"
+    directive += "\n"
     # document all the classes in the modules
-    full_name = basename + '.' + module
-    print('processing ' + full_name)
-    try:
-        __import__(full_name)
-    except:
-        return directive
+    full_name = f"{basename}.{module}"
+    __import__(full_name)
     mod = sys.modules[full_name]
     dir_members = dir(mod)
     classes = []
@@ -65,85 +61,86 @@ def format_directive(module, destdir, package=None, basename='brian2genn'):
     for member in dir_members:
         _temp = __import__(full_name, {}, {}, [member], 0)
         member_obj = getattr(_temp, member)
-        member_module = getattr(member_obj, '__module__', None)
+        member_module = getattr(member_obj, "__module__", None)
         # only document members that where defined in this module
-        if member_module == full_name and not member.startswith('_'):
+        if member_module == full_name and not member.startswith("_"):
             if inspect.isclass(member_obj):
                 classes.append((member, member_obj))
             elif inspect.isfunction(member_obj):
                 functions.append((member, member_obj))
             else:
                 variables.append((member, member_obj))
-                    
+
     if classes:
-        directive += '**Classes**\n\n'
+        directive += "**Classes**\n\n"
         for member, member_obj in classes:
-            directive += '.. autosummary:: %s\n' % (member)
-            directive += '    :toctree:\n\n'
+            directive += f".. autosummary:: {member}\n"
+            directive += "    :toctree:\n\n"
             create_member_file(full_name, member, member_obj, destdir)
     if functions:
-        directive += '**Functions**\n\n'
+        directive += "**Functions**\n\n"
         for member, member_obj in functions:
-            directive += '.. autosummary:: %s\n' % (member)
-            directive += '    :toctree:\n\n'
+            directive += f".. autosummary:: {member}\n"
+            directive += "    :toctree:\n\n"
             create_member_file(full_name, member, member_obj, destdir)
     if variables:
-        directive += '**Objects**\n\n'
+        directive += "**Objects**\n\n"
         for member, member_obj in variables:
-            directive += '.. autosummary:: %s\n' % (member)
-            directive += '    :toctree:\n\n'
+            directive += f".. autosummary:: {member}\n"
+            directive += "    :toctree:\n\n"
             create_member_file(full_name, member, member_obj, destdir)
-                
+
     return directive
 
 
 def find_shortest_import(module_name, obj_name):
-    parts = module_name.split('.')
+    parts = module_name.split(".")
     for idx in range(1, len(parts) + 1):
         try:
-            result = __import__('.'.join(parts[:idx]), globals(), {},
-                                fromlist=[str(obj_name)], level=0)
+            result = __import__(
+                ".".join(parts[:idx]), globals(), {}, fromlist=[str(obj_name)], level=0
+            )
             result_obj = getattr(result, obj_name, None)
-            if result_obj is not None and getattr(result_obj,
-                                                  '__module__',
-                                                  None) == module_name:
+            if (
+                result_obj is not None
+                and getattr(result_obj, "__module__", None) == module_name
+            ):
                 # import seems to have worked
-                return '.'.join(parts[:idx])
+                return ".".join(parts[:idx])
         except ImportError:
             pass
-    raise AssertionError("Couldn't import " + module_name + '.' + obj_name)
+    raise AssertionError(f"Couldn't import {module_name}.{obj_name}")
 
 
-def create_member_file(module_name, member, member_obj, destdir, suffix='rst'):
+def create_member_file(module_name, member, member_obj, destdir, suffix="rst"):
     """Build the text of the file and write the file."""
-    
-    text = '.. currentmodule:: ' + module_name + '\n\n'
+
+    text = f".. currentmodule:: {module_name}\n\n"
 
     shortest_import = find_shortest_import(module_name, member)
-    import_text = '(*Shortest import*: ``from {} import {})``\n\n'.format(shortest_import,
-                                                                          member)
+    import_text = f"(*Shortest import*: ``from {shortest_import} import {member})``\n\n"
     if inspect.isclass(member_obj):
-        text += format_heading(1, '%s class' % member)
+        text += format_heading(1, f"{member} class")
         text += import_text
-        text += '.. autoclass:: %s\n\n' % member
-        text += auto_find_examples(member_obj, headersymbol='-')
+        text += f".. autoclass:: {member}\n\n"
     elif inspect.isfunction(member_obj):
-        text += format_heading(1, '%s function' % member)
+        text += format_heading(1, f"{member} function")
         text += import_text
-        text += '.. autofunction:: %s\n\n' % member
+        text += f".. autofunction:: {member}\n\n"
     else:
-        text += format_heading(1, '%s object' % member)
+        text += format_heading(1, f"{member} object")
         text += import_text
-        text += '.. autodata:: %s\n' % member
+        text += f".. autodata:: {member}\n"
 
     write_file(makename(module_name, member), text, destdir, suffix)
 
 
-def create_package_file(root, master_package, subroot, py_files, subs,
-                        destdir, excludes, suffix='rst'):
+def create_package_file(
+    root, master_package, subroot, py_files, subs, destdir, excludes, suffix="rst"
+):
     """Build the text of the file and write the file."""
     package = path.split(root)[-1]
-    text = format_heading(1, '%s package' % package)
+    text = format_heading(1, f"{package} package")
     # add each module in the package
     for py_file in py_files:
         if shall_skip(path.join(root, py_file)):
@@ -153,23 +150,24 @@ def create_package_file(root, master_package, subroot, py_files, subs,
         py_path = makename(subroot, py_file)
         # we don't want an additional header for the package,
         if not is_package:
-            heading = ':mod:`%s` module' % py_file
+            heading = f":mod:`{py_file}` module"
             text += format_heading(2, heading)
-        text += format_directive(is_package and subroot or py_path, destdir,
-                                 master_package)
-        text += '\n'
+        text += format_directive(
+            is_package and subroot or py_path, destdir, master_package
+        )
+        text += "\n"
 
     # build a list of directories that are packages (contain an INITPY file)
     subs = [sub for sub in subs if path.isfile(path.join(root, sub, INITPY))]
     # if there are some package directories, add a TOC for theses subpackages
     if subs:
-        text += format_heading(2, 'Subpackages')
-        text += '.. toctree::\n'
-        text += '    :maxdepth: 2\n\n'
+        text += format_heading(2, "Subpackages")
+        text += ".. toctree::\n"
+        text += "    :maxdepth: 2\n\n"
         for sub in subs:
             if not is_excluded(os.path.join(root, sub), excludes):
-                text += f'    {makename(master_package, subroot)}.{sub}\n'
-        text += '\n'
+                text += f"    {makename(master_package, subroot)}.{sub}\n"
+        text += "\n"
 
     write_file(makename(master_package, subroot), text, destdir, suffix)
 
@@ -180,7 +178,7 @@ def shall_skip(module):
     return path.getsize(module) <= 2
 
 
-def recurse_tree(rootpath, excludes, destdir):
+def recurse_tree(rootpath, exclude_dirs, exclude_files, destdir):
     """
     Look for every file in the directory tree and create the corresponding
     ReST files.
@@ -197,11 +195,17 @@ def recurse_tree(rootpath, excludes, destdir):
 
     toplevels = []
     for root, subs, files in os.walk(rootpath):
-        if is_excluded(root, excludes):
+        if is_excluded(root, exclude_dirs):
             del subs[:]
             continue
         # document only Python module files
-        py_files = sorted([f for f in files if path.splitext(f)[1] == '.py'])
+        py_files = sorted(
+            [
+                f
+                for f in files
+                if (path.splitext(f)[1] == ".py" and f not in exclude_files)
+            ]
+        )
         is_pkg = INITPY in py_files
         if is_pkg:
             py_files.remove(INITPY)
@@ -211,19 +215,26 @@ def recurse_tree(rootpath, excludes, destdir):
             del subs[:]
             continue
         # remove hidden ('.') and private ('_') directories
-        subs[:] = sorted(sub for sub in subs if sub[0] not in ['.', '_'])
+        subs[:] = sorted(sub for sub in subs if sub[0] not in [".", "_"])
 
         if is_pkg:
             # we are in a package with something to document
-            if subs or len(py_files) > 1 or not \
-                shall_skip(path.join(root, INITPY)):
-                subpackage = root[len(rootpath):].lstrip(path.sep).\
-                    replace(path.sep, '.')
-                create_package_file(root, root_package, subpackage,
-                                    py_files, subs, destdir, excludes)
+            if subs or len(py_files) > 1 or not shall_skip(path.join(root, INITPY)):
+                subpackage = (
+                    root[len(rootpath) :].lstrip(path.sep).replace(path.sep, ".")
+                )
+                create_package_file(
+                    root,
+                    root_package,
+                    subpackage,
+                    py_files,
+                    subs,
+                    destdir,
+                    exclude_dirs,
+                )
                 toplevels.append(makename(root_package, subpackage))
         else:
-            raise AssertionError('Expected it to be a package')
+            raise AssertionError("Expected it to be a package")
 
     return toplevels
 
@@ -259,10 +270,9 @@ def is_excluded(root, excludes):
     return False
 
 
-def main(rootpath, excludes, destdir):
+def main(rootpath, exclude_dirs, exclude_files, destdir):
     if not os.path.exists(destdir):
         os.makedirs(destdir)
 
-    excludes = normalize_excludes(rootpath, excludes)
-    modules = recurse_tree(rootpath, excludes, destdir)
-
+    exclude_dirs = normalize_excludes(rootpath, exclude_dirs)
+    recurse_tree(rootpath, exclude_dirs, exclude_files, destdir)
