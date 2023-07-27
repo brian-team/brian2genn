@@ -2,4 +2,3 @@ prune benchmark_results
 prune scripts
 prune continuous-integration
 global-exclude .git*
-exclude azure-pipelines.yml

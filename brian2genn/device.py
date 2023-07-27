@@ -11,9 +11,7 @@ import sys
 from pkg_resources import parse_version
 from subprocess import call, check_call, CalledProcessError
 import inspect
-from builtins import map, range
 from collections import defaultdict
-from six import iteritems, iterkeys, itervalues
 import tempfile
 import itertools
 import numpy
@@ -32,7 +30,7 @@ from brian2.codegen.templates import MultiTemplate
 from brian2.core.clocks import defaultclock
 from brian2.core.variables import *
 from brian2.core.functions import Function
-from brian2.core.network import Network
+from brian2.core.network import _get_all_objects
 from brian2.devices.device import all_devices
 from brian2.devices.cpp_standalone.device import CPPStandaloneDevice
 from brian2.parsing.rendering import CPPNodeRenderer
@@ -81,7 +79,7 @@ def freeze(code, ns):
     Support function for substituting constant values.
     '''
     # this is a bit of a hack, it should be passed to the template somehow
-    for k, v in iteritems(ns):
+    for k, v in ns.items():
 
         if (isinstance(v, Variable) and
                 v.scalar and v.constant and v.read_only):
@@ -144,7 +142,7 @@ def extract_source_variables(variables, varname, smvariables):
     that is of instance `Subexpression`.
     '''
     identifiers = get_identifiers(variables[varname].expr)
-    for vnm, var in iteritems(variables):
+    for vnm, var in variables.items():
         if vnm in identifiers:
             if var in defaultclock.variables.values():
                 raise NotImplementedError('Recording an expression that depends on '
@@ -160,8 +158,8 @@ def extract_source_variables(variables, varname, smvariables):
 def find_executable(executable):
     """Tries to find 'executable' in the path
 
-    Modified version of distutils.spawn.find_executable as 
-    this has stupid rules for extensions on Windows. 
+    Modified version of distutils.spawn.find_executable as
+    this has stupid rules for extensions on Windows.
     Returns the complete filename or None if not found.
     """
     path = os.environ.get('PATH', os.defpath)
@@ -175,7 +173,7 @@ def find_executable(executable):
             return f
     return None
 
-class DelayedCodeObject(object):
+class DelayedCodeObject:
     '''
     Dummy class used for delaying the CodeObject creation of stateupdater,
     thresholder, and resetter of a NeuronGroup (which will all be merged into a
@@ -197,9 +195,9 @@ class DelayedCodeObject(object):
         pass
 
 
-class neuronModel(object):
+class neuronModel:
     '''
-    Class that contains all relevant information of a neuron model. 
+    Class that contains all relevant information of a neuron model.
     '''
 
     def __init__(self):
@@ -219,7 +217,7 @@ class neuronModel(object):
         self.support_code_lines = []
 
 
-class spikegeneratorModel(object):
+class spikegeneratorModel:
     '''
     Class that contains all relevant information of a spike generator group.
     '''
@@ -229,7 +227,7 @@ class spikegeneratorModel(object):
         self.N = 0
 
 
-class synapseModel(object):
+class synapseModel:
     '''
     Class that contains all relevant information about a synapse model.
     '''
@@ -257,7 +255,7 @@ class synapseModel(object):
         self.delay = 0
         self.summed_variables= None
 
-class spikeMonitorModel(object):
+class spikeMonitorModel:
     '''
     Class the contains all relevant information about a spike monitor.
     '''
@@ -268,7 +266,7 @@ class spikeMonitorModel(object):
         self.notSpikeGeneratorGroup = True
 
 
-class rateMonitorModel(object):
+class rateMonitorModel:
     '''
     CLass that contains all relevant information about a rate monitor.
     '''
@@ -279,7 +277,7 @@ class rateMonitorModel(object):
         self.notSpikeGeneratorGroup = True
 
 
-class stateMonitorModel(object):
+class stateMonitorModel:
     '''
     Class that contains all relvant information about a state monitor.
     '''
@@ -294,6 +292,7 @@ class stateMonitorModel(object):
         self.srcN = 0
         self.trgN = 0
         self.when = ''
+        self.step = 1
         self.connectivity = ''
 
 
@@ -307,7 +306,7 @@ class GeNNDevice(CPPStandaloneDevice):
     generated code to functional GeNN code, assisted by the "GeNN language".
     '''
     def __init__(self):
-        super(GeNNDevice, self).__init__()
+        super().__init__()
         # Remember whether we have already passed the "run" statement
         self.run_statement_used = False
         self.network_schedule = ['start', 'synapses', 'groups', 'thresholds',
@@ -326,6 +325,7 @@ class GeNNDevice(CPPStandaloneDevice):
         self.run_regularly_read_write = {}
         self.run_duration = None
         self.net = None
+        self.net_objects = set()
         self.simple_code_objects = {}
         self.report_func = ''
         self.src_counts= dict()
@@ -340,8 +340,8 @@ class GeNNDevice(CPPStandaloneDevice):
         # Overwrite the code slots defined in standard C++ standalone
         self.code_lines = {'before_start': [],
                            'after_start': [],
-                           'before_run': [],
-                           'after_run': [],
+                           'before_network_run': [],
+                           'after_network_run': [],
                            'before_end': [],
                            'after_end': []}
 
@@ -353,7 +353,7 @@ class GeNNDevice(CPPStandaloneDevice):
         ``before_start`` / ``after_start``
             Before/after allocating memory for the arrays and loading arrays from
             disk.
-        ``before_run`` / ``after_run``
+        ``before_network_run`` / ``after_network_run``
             Before/after calling GeNN's ``run`` function.
         ``before_end`` / ``after_end``
             Before/after writing results to disk and deallocating memory.
@@ -367,7 +367,7 @@ class GeNNDevice(CPPStandaloneDevice):
             The C++ code that should be inserted.
         '''
         # Only overwritten so that we can have custom documentation
-        super(GeNNDevice, self).insert_code(slot, code)
+        super().insert_code(slot, code)
 
     def activate(self, build_on_run=True, **kwargs):
         new_prefs = {'codegen.generators.cpp.restrict_keyword': '__restrict',
@@ -376,7 +376,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                        'groups', 'thresholds',
                                                        'resets', 'end']}
         changed = []
-        for new_pref, new_value in iteritems(new_prefs):
+        for new_pref, new_value in new_prefs.items():
             if prefs[new_pref] != new_value:
                 changed.append(new_pref)
                 prefs[new_pref] = new_value
@@ -387,7 +387,7 @@ class GeNNDevice(CPPStandaloneDevice):
                         'different device later in the same script: '
                         '{}'.format(', '.join(changed)), once=True)
             prefs._backup()
-        super(GeNNDevice, self).activate(build_on_run, **kwargs)
+        super().activate(build_on_run, **kwargs)
 
     def code_object_class(self, codeobj_class=None, *args, **kwds):
         if codeobj_class is None:
@@ -406,7 +406,7 @@ class GeNNDevice(CPPStandaloneDevice):
             # Add an extra code object that executes the scalar code of
             # the run_regularly operation (will be directly called from
             # engine.cpp)
-            codeobj = super(GeNNDevice, self).code_object(owner, name,
+            codeobj = super().code_object(owner, name,
                                                           abstract_code,
                                                           variables,
                                                           'stateupdate',
@@ -463,7 +463,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
         elif template_name in ['reset', 'synapses', 'stateupdate', 'threshold']:
             codeobj_class = GeNNCodeObject
-            codeobj = super(GeNNDevice, self).code_object(owner, name,
+            codeobj = super().code_object(owner, name,
                                                           abstract_code,
                                                           variables,
                                                           template_name,
@@ -476,7 +476,7 @@ class GeNNDevice(CPPStandaloneDevice):
         else:
             codeobj_class = GeNNUserCodeObject
             if ('_synapses_create_generator_' in name) or ('_synapses_create_array_' in name):
-                # Here we process max_row_length for synapses 
+                # Here we process max_row_length for synapses
                 # the strategy is to do a dry run of connection generationin in the model definition
                 # function that has the same random numbers and just counts synaptic connections
                 # rather than generating them for real
@@ -490,7 +490,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     mrl_template_name= 'max_row_length_generator'
                 else:
                     mrl_template_name='max_row_length_array'
-                codeobj = super(GeNNDevice, self).code_object(owner, mrl_name,
+                codeobj = super().code_object(owner, mrl_name,
                                                               abstract_code,
                                                               variables,
                                                               mrl_template_name,
@@ -506,7 +506,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.max_row_length_include.append('#include "code_objects/%s.cpp"' % codeobj.name)
                 self.max_row_length_run_calls.append('_run_%s();' % mrl_name)
 
-            codeobj = super(GeNNDevice, self).code_object(owner, name,
+            codeobj = super().code_object(owner, name,
                                                           abstract_code,
                                                           variables,
                                                           template_name,
@@ -546,7 +546,7 @@ class GeNNDevice(CPPStandaloneDevice):
                             'this warning',
                             name_suffix='lastspike_inf', once=True)
                 arr = numpy.array(-1e4)
-        super(GeNNDevice, self).fill_with_array(var, arr)
+        super().fill_with_array(var, arr)
 
     def variableview_set_with_index_array(self, variableview, item,
                                           value, check_units):
@@ -557,7 +557,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                       'synapses (heterogeneous delays are not '
                                       'supported) as an argument to the '
                                       'Synapses initializer.')
-        super(GeNNDevice, self).variableview_set_with_index_array(variableview,
+        super().variableview_set_with_index_array(variableview,
                                                                   item,
                                                                   value,
                                                                   check_units)
@@ -689,7 +689,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 raise TypeError("Unknown main queue function type " + func)
 
         # generate the finalisations
-        for codeobj in itervalues(self.code_objects):
+        for codeobj in self.code_objects.values():
             if hasattr(codeobj.code, 'main_finalise'):
                 main_lines.append(codeobj.code.main_finalise)
         return main_lines
@@ -739,7 +739,7 @@ class GeNNDevice(CPPStandaloneDevice):
         '''
 
         print('building genn executable ...')
-        
+
         if directory is None:  # used during testing
             directory = tempfile.mkdtemp()
 
@@ -758,14 +758,14 @@ class GeNNDevice(CPPStandaloneDevice):
         if isinstance(self.arange_arrays, dict):
             arange_arrays = sorted([(var, start)
                                     for var, start in
-                                    iteritems(self.arange_arrays)],
+                                    self.arange_arrays.items()],
                                    key=lambda var_start: var_start[0].name)
         else:
             arange_arrays = self.arange_arrays
 
         # write the static arrays
-        for code_object in itervalues(self.code_objects):
-            for var in itervalues(code_object.variables):
+        for code_object in self.code_objects.values():
+            for var in code_object.variables.values():
                 if isinstance(var, Function):
                     self._insert_func_namespace(var, code_object,
                                                 self.static_arrays)
@@ -777,18 +777,12 @@ class GeNNDevice(CPPStandaloneDevice):
             static_array_specs.append(
                 (name, c_data_type(arr.dtype), arr.size, name))
 
-        try:
-            # Brian versions > 2.2.2.1 do not save the "contained objects" in
-            # net.objects anymore
-            from brian2.core.network import _get_all_objects
-            net_objects = _get_all_objects(self.net.objects)
-        except ImportError:
-            net_objects = self.net.objects
+        net_objects = self.net_objects
 
         main_lines = self.make_main_lines()
 
         # assemble the model descriptions:
-        objects = dict((obj.name, obj) for obj in net_objects)
+        objects = {obj.name: obj for obj in net_objects}
         neuron_groups = [obj for obj in net_objects if
                          isinstance(obj, NeuronGroup)]
         poisson_groups = [obj for obj in net_objects if
@@ -845,9 +839,9 @@ class GeNNDevice(CPPStandaloneDevice):
                                            self.max_row_length_code_objects.values()):
             cpp_code = getattr(code_object.code, 'cpp_file', code_object.code)
             if 'namespace {' in cpp_code:
-                cpp_code = cpp_code.replace('namespace {', 'namespace {} {{'.format(code_object.name))
+                cpp_code = cpp_code.replace('namespace {', f'namespace {code_object.name} {{')
                 cpp_code = cpp_code.replace('using namespace brian;',
-                                            'using namespace brian;\nusing namespace {};'.format(code_object.name))
+                                            f'using namespace brian;\nusing namespace {code_object.name};')
                 if hasattr(code_object.code, 'cpp_file'):
                     code_object.code.cpp_file = cpp_code
             else:
@@ -906,9 +900,9 @@ class GeNNDevice(CPPStandaloneDevice):
     def generate_code_objects(self, writer):
         # Generate data for non-constant values
         code_object_defs = defaultdict(list)
-        for codeobj in itervalues(self.code_objects):
+        for codeobj in self.code_objects.values():
             lines = []
-            for k, v in iteritems(codeobj.variables):
+            for k, v in codeobj.variables.items():
                 if isinstance(v, ArrayVariable):
                     try:
                         if isinstance(v, DynamicArrayVariable):
@@ -925,7 +919,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    dyn_array_name=dyn_array_name)
                                 lines.append(line)
                         else:
-                            lines.append('const int _num%s = %s;' % (k, v.size))
+                            lines.append(f'const int _num{k} = {v.size};')
                     except TypeError:
                         pass
             for line in lines:
@@ -934,7 +928,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 if not line in code_object_defs[codeobj.name]:
                     code_object_defs[codeobj.name].append(line)
         # Generate the code objects
-        for codeobj in itervalues(self.code_objects):
+        for codeobj in self.code_objects.values():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
             if ((codeobj.template_name not in ['stateupdate', 'threshold',
@@ -957,8 +951,8 @@ class GeNNDevice(CPPStandaloneDevice):
     def generate_max_row_length_code_objects(self, writer):
         # Generate data for non-constant values
         code_object_defs = defaultdict(set)
-        for codeobj in itervalues(self.max_row_length_code_objects):
-            for k, v in iteritems(codeobj.variables):
+        for codeobj in self.max_row_length_code_objects.values():
+            for k, v in codeobj.variables.items():
                 if isinstance(v, ArrayVariable):
                     try:
                         if isinstance(v, DynamicArrayVariable):
@@ -981,11 +975,11 @@ class GeNNDevice(CPPStandaloneDevice):
                             line = line.format(c_type=c_data_type(v.dtype),
                                                array_name=array_name,
                                                size=v.size)
-                            code_object_defs[codeobj.name].add('const int _num%s = %s;' % (k, v.size))
+                            code_object_defs[codeobj.name].add(f'const int _num{k} = {v.size};')
                     except TypeError:
                         pass
-    
-        for codeobj in itervalues(self.max_row_length_code_objects):
+
+        for codeobj in self.max_row_length_code_objects.values():
             ns = codeobj.variables
             # TODO: fix these freeze/CONSTANTS hacks somehow - they work but not elegant.
             code = freeze(codeobj.code, ns)
@@ -993,8 +987,8 @@ class GeNNDevice(CPPStandaloneDevice):
                         code_object_defs[codeobj.name]))
             writer.write('code_objects/' + codeobj.name + '.cpp', code)
 
-              
-            
+
+
     def run(self, directory, use_GPU, with_output):
         gpu_arg = "1" if use_GPU else "0"
         if gpu_arg == "1":
@@ -1004,8 +998,8 @@ class GeNNDevice(CPPStandaloneDevice):
         print('executing genn binary %s ...' % where)
 
         pref_vars = prefs['devices.cpp_standalone.run_environment_variables']
-        for key, value in itertools.chain(iteritems(pref_vars),
-                                          iteritems(self.run_environment_variables)):
+        for key, value in itertools.chain(pref_vars.items(),
+                                          self.run_environment_variables.items()):
             if key in os.environ and os.environ[key] != value:
                 logger.info('Overwriting environment variable '
                             '"{key}"'.format(key=key),
@@ -1023,7 +1017,7 @@ class GeNNDevice(CPPStandaloneDevice):
                            cwd=directory)
         self.has_been_run = True
         last_run_info = open(
-            os.path.join(directory, 'results/last_run_info.txt'), 'r').read()
+            os.path.join(directory, 'results/last_run_info.txt')).read()
         self._last_run_time, self._last_run_completed_fraction = map(float,
                                                                      last_run_info.split())
 
@@ -1065,7 +1059,7 @@ class GeNNDevice(CPPStandaloneDevice):
             genn_bin = (find_executable("genn-buildmodel.bat")
                         if os.sys.platform == 'win32'
                         else find_executable("genn-buildmodel.sh"))
-            
+
             if genn_bin is None:
                 raise RuntimeError('Add GeNN\'s bin directory to the path '
                                    'or set the devices.genn.path preference.')
@@ -1074,16 +1068,16 @@ class GeNNDevice(CPPStandaloneDevice):
             genn_path = os.path.normpath(os.path.join(os.path.dirname(genn_bin), ".."))
             logger.debug('Using GeNN path determined from path: '
                          '"{}"'.format(genn_path))
-        
+
         # Check for GeNN compatibility
         genn_version = None
         version_file = os.path.join(genn_path, 'version.txt')
         if os.path.exists(version_file):
             try:
-                with open(version_file, 'r') as f:
+                with open(version_file) as f:
                     genn_version = parse_version(f.read().strip())
                     logger.debug('GeNN version: %s' % genn_version)
-            except (OSError, IOError) as ex:
+            except OSError as ex:
                 logger.debug('Getting version from %s/version.txt '
                              'failed: %s' % (genn_path, str(ex)))
 
@@ -1104,49 +1098,49 @@ class GeNNDevice(CPPStandaloneDevice):
                              '"{}"'.format(cuda_path))
             else:
                 raise RuntimeError('Set the CUDA_PATH environment variable or '
-                                   'the devices.genn.cuda_path preference.')
+                                   'the devices.genn.cuda_backend.cuda_path preference.')
 
         with std_silent(debug):
             if os.sys.platform == 'win32':
                 # Make sure that all environment variables are upper case
-                env = {k.upper() : v for k, v in iteritems(env)}
-                
+                env = {k.upper() : v for k, v in env.items()}
+
                 # If there is vcvars command to call, start cmd with that
                 cmd = ''
                 msvc_env, vcvars_cmd = get_msvc_env()
                 if vcvars_cmd:
                     cmd += vcvars_cmd + ' && '
-                # Otherwise, update environment, again ensuring 
+                # Otherwise, update environment, again ensuring
                 # that all variables are upper case
                 else:
-                    env.update({k.upper() : v for k, v in iteritems(msvc_env)})
+                    env.update({k.upper() : v for k, v in msvc_env.items()})
 
                 # Add start of call to genn-buildmodel
                 buildmodel_cmd = os.path.join(genn_path, 'bin',
                                               'genn-buildmodel.bat')
                 cmd += buildmodel_cmd + ' -s'
-                
+
                 # If we're not using CPU, add CPU option
                 if not use_GPU:
                     cmd += ' -c'
-                    
+
                 # Add include directories
                 # **NOTE** on windows semicolons are used to seperate multiple include paths
                 # **HACK** argument list syntax to check_call doesn't support quoting arguments to batch
                 # files so we have to build argument string manually(https://bugs.python.org/issue23862)
                 wdir = os.getcwd()
-                cmd += ' -i "%s;%s;%s"' % (wdir, os.path.join(wdir, directory),
+                cmd += ' -i "{};{};{}"'.format(wdir, os.path.join(wdir, directory),
                                            os.path.join(wdir, directory, 'brianlib','randomkit'))
                 cmd += ' magicnetwork_model.cpp'
-                
+
                 # Add call to build generated code
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'magicnetwork_model_CODE', 'runner.vcxproj') + '"'
-                
+
                 # Add call to build executable
                 cmd += ' && msbuild /m /verbosity:minimal /p:Configuration=Release "' + os.path.join(wdir, directory, 'project.vcxproj') + '"'
-                
+
                 # Run combined command
-                # **NOTE** because vcvars MODIFIED environment, 
+                # **NOTE** because vcvars MODIFIED environment,
                 # making seperate check_calls doesn't work
                 check_call(cmd, cwd=directory, env=env)
             else:
@@ -1154,7 +1148,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     # declare the link flags as an environment variable so that GeNN's
                     # generateALL can pick it up
                     env['LDFLAGS'] = ' '.join(prefs['codegen.cpp.extra_link_args'])
-                
+
                 buildmodel_cmd = os.path.join(genn_path, 'bin', 'genn-buildmodel.sh')
                 args = [buildmodel_cmd]
                 if not use_GPU:
@@ -1184,7 +1178,7 @@ class GeNNDevice(CPPStandaloneDevice):
             model.variablescope[varname] = 'brian'
 
     def add_array_variables(self, model, owner):
-        for varname, variable in iteritems(owner.variables):
+        for varname, variable in owner.variables.items():
             if varname in ['_spikespace', 't', 'dt']:
                 pass
             elif getattr(variable.owner, 'name', None) != owner.name:
@@ -1195,8 +1189,8 @@ class GeNNDevice(CPPStandaloneDevice):
     def process_poisson_groups(self, objects, poisson_groups):
         for obj in poisson_groups:
             # throw error if events other than spikes are used
-            event_keys = list(iterkeys(obj.events))
-            if (len(event_keys) > 1 
+            event_keys = list(obj.events.keys())
+            if (len(event_keys) > 1
                 or (len(event_keys) == 1 and event_keys[0] != 'spike')):
                 raise NotImplementedError(
                     'Brian2GeNN does not support events that are not spikes')
@@ -1208,10 +1202,9 @@ class GeNNDevice(CPPStandaloneDevice):
             neuron_model.N = obj.N
             self.add_array_variables(neuron_model, obj)
             support_lines = []
-            suffix = '_thresholder';
-            lines = neuron_model.thresh_cond_lines;
-            codeobj = objects[obj.name + suffix].codeobj
-            for k, v in iteritems(codeobj.variables):
+            codeobj = obj.thresholder['spike'].codeobj
+            lines = neuron_model.thresh_cond_lines
+            for k, v in codeobj.variables.items():
                 if k != 'dt' and isinstance(v, Constant):
                     if k not in neuron_model.parameters:
                         self.add_parameter(neuron_model, k, v)
@@ -1231,7 +1224,7 @@ class GeNNDevice(CPPStandaloneDevice):
     def process_neuron_groups(self, neuron_groups, objects):
         for obj in neuron_groups:
             # throw error if events other than spikes are used
-            event_keys = list(iterkeys(obj.events))
+            event_keys = list(obj.events.keys())
             if len(event_keys) > 1 or (len(event_keys) == 1 and event_keys[0] != 'spike'):
                 raise NotImplementedError(
                     'Brian2GeNN does not support events that are not spikes')
@@ -1262,20 +1255,24 @@ class GeNNDevice(CPPStandaloneDevice):
             combined_variables = {}
             combined_variable_indices = defaultdict(lambda: '_idx')
             combined_override_conditional_write = set()
-            thresholder_codeobj = getattr(objects.get(obj.name + '_thresholder', None), 'codeobj', None)
-            if thresholder_codeobj is not None:
-                neuron_model.thresh_cond_lines = '_cond'
-            else:
-                neuron_model.thresh_cond_lines = '0'
+            has_thresholder = False
 
-            for suffix, code_slot in [('_stateupdater', 'stateupdate'),
-                                      ('_thresholder', 'stateupdate'),
-                                      ('_resetter', 'reset'),
-                                      ('_subexpression_update', 'subexpression_update')]:
-                full_name = obj.name + suffix
-                if full_name in objects and objects[full_name].codeobj is not None:
-                    codeobj = objects[full_name].codeobj
-                    combined_abstract_code[code_slot] += [codeobj.abstract_code[None]]
+            stateupdater_name = None
+            slot_mapping = {StateUpdater: 'stateupdate',
+                            Thresholder: 'stateupdate',
+                            Resetter: 'reset',
+                            SubexpressionUpdater: 'subexpression_update'}
+            for klass, code_slot in slot_mapping.items():
+                codeobj = None
+                for contained_obj in obj.contained_objects:
+                    if isinstance(contained_obj, klass):
+                        codeobj = contained_obj.codeobj
+                        if klass is StateUpdater:
+                            stateupdater_name = contained_obj.name
+                        break
+                if codeobj is not None:
+                    combined_abstract_code[code_slot] += [
+                        codeobj.abstract_code[None]]
                     combined_variables.update(codeobj.variables)
                     combined_variable_indices.update(codeobj.variable_indices)
                     # The resetter includes "not_refractory" as an override_conditional_write
@@ -1288,15 +1285,23 @@ class GeNNDevice(CPPStandaloneDevice):
                     # this would apply also to the state updater, and therefore
                     # remove the write-protection from "unless refractory" variables in the
                     # state update code.
-                    if suffix != '_resetter':
-                        combined_override_conditional_write.update(codeobj.override_conditional_write)
+                    if klass is not Resetter:
+                        combined_override_conditional_write.update(
+                            codeobj.override_conditional_write)
+                    if klass is Thresholder:
+                        has_thresholder = True
+
+            if has_thresholder:
+                neuron_model.thresh_cond_lines = '_cond'
+            else:
+                neuron_model.thresh_cond_lines = '0'
 
             if obj._refractory is not False:
                 combined_abstract_code['reset'] += ['lastspike = t',
                                                     'not_refractory = False']
 
             # Find PoissonInputs targetting this NeuronGroup
-            poisson_inputs = [o for o in itervalues(objects)
+            poisson_inputs = [o for o in objects.values()
                               if isinstance(o, PoissonInput) and
                                  o.group.name == obj.name]
 
@@ -1310,11 +1315,12 @@ class GeNNDevice(CPPStandaloneDevice):
                 combined_variables.update(codeobj.variables)
                 combined_variable_indices.update(codeobj.variable_indices)
 
-            for code_block in iterkeys(combined_abstract_code):
+            for code_block in combined_abstract_code.keys():
                 combined_abstract_code[code_block] = '\n'.join(combined_abstract_code[code_block])
 
-            if any(len(ac) for ac in itervalues(combined_abstract_code)):
-                codeobj = super(GeNNDevice, self).code_object(obj, obj.name + '_stateupdater',
+            if any(len(ac) for ac in combined_abstract_code.values()):
+                assert stateupdater_name, 'No StateUpdater found in object.'
+                codeobj = super().code_object(obj, stateupdater_name,
                                                               combined_abstract_code,
                                                               combined_variables.copy(),
                                                               'neuron_code',
@@ -1328,7 +1334,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 # part of `generate_code_objects`.
                 del self.code_objects[codeobj.name]
 
-                for k, v in iteritems(codeobj.variables):
+                for k, v in codeobj.variables.items():
                     if k != 'dt' and isinstance(v, Constant):
                         if k not in neuron_model.parameters:
                             self.add_parameter(neuron_model, k, v)
@@ -1359,6 +1365,10 @@ class GeNNDevice(CPPStandaloneDevice):
         for obj in synapse_groups:
             synapse_model = synapseModel()
             synapse_model.name = obj.name
+            if isinstance(obj.source, Synapses) or isinstance(obj.target, Synapses):
+                raise NotImplementedError('Brian2GeNN does not support '
+                                          'Synapses objects as source or '
+                                          'target of Synapses objects.')
             if isinstance(obj.source, Subgroup):
                 synapse_model.srcname = obj.source.source.name
                 synapse_model.srcN = obj.source.source.variables['N'].get_value()
@@ -1455,7 +1465,7 @@ class GeNNDevice(CPPStandaloneDevice):
                     addVar = code_generator.translate_expression(addVar)
                     kwds = code_generator.determine_keywords()
                     identifiers = get_identifiers(addVar)
-                    for k, v in iteritems(codeobj.variables):
+                    for k, v in codeobj.variables.items():
                         if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
                             pass
                         else:
@@ -1467,9 +1477,12 @@ class GeNNDevice(CPPStandaloneDevice):
                                     if k not in synapse_model.variables:
                                         self.add_array_variable(synapse_model, k, v)
                             addVar= addVar.replace(k,'$('+k+')')
-                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'                    
+                    code= '\\n\\\n $(addToInSyn,'+addVar+');\\n'
                     synapse_model.main_code_lines['dynamics'] += code
-                    synapse_model.support_code_lines['dynamics'] += stringify('\n'.join(kwds['support_code_lines']))
+                    #quick and dirty test to avoid adding the same support code twice
+                    support_code = stringify('\n'.join(kwds['support_code_lines']))
+                    if support_code not in synapse_model.support_code_lines['dynamics']:
+                        synapse_model.support_code_lines['dynamics'] += support_code
                 else:
                     synapse_model.postSyntoCurrent = '0'
             self.synapse_models.append(synapse_model)
@@ -1477,10 +1490,10 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def collect_synapses_variables(self, synapse_model, pathway, codeobj):
         identifiers = set()
-        for code in itervalues(codeobj.code):
+        for code in codeobj.code.values():
             identifiers |= get_identifiers(code)
         indices = codeobj.variable_indices
-        for k, v in iteritems(codeobj.variables):
+        for k, v in codeobj.variables.items():
             if k in ['_spikespace', 't', 'dt'] or k not in identifiers:
                 pass
             elif isinstance(v, Constant):
@@ -1496,7 +1509,7 @@ class GeNNDevice(CPPStandaloneDevice):
                 else:
                     index = indices[k]
                     if (pathway in ['pre', 'post'] and
-                                index == '_{}synaptic_idx'.format(pathway)):
+                                index == f'_{pathway}synaptic_idx'):
                         raise NotImplementedError('brian2genn does not support '
                                                   'references to {pathway}-'
                                                   'synaptic variables in '
@@ -1590,14 +1603,22 @@ class GeNNDevice(CPPStandaloneDevice):
                 sm.when = 'end'
             if isinstance(src, Synapses):
                 sm.isSynaptic = True
-                sm.srcN = src.source.variables['N'].get_value()
-                sm.trgN = src.target.variables['N'].get_value()
+                neuron_src = src.source
+                # in brian2genn, we need the size of the entire pre-synaptic neuron population, not a sub-group size
+                if isinstance(neuron_src, Subgroup):
+                    neuron_src = neuron_src.source
+                sm.srcN = neuron_src.variables['N'].get_value()
+                neuron_trg = src.target
+                # in brian2genn, we need the size of the entire post-synaptic neuron population, not a sub-group size
+                if isinstance(neuron_trg, Subgroup):
+                    neuron_trg = neuron_trg.source
+                sm.trgN = neuron_trg.variables['N'].get_value()
                 sm.connectivity = self.connectivityDict[src.name]
             else:
                 sm.isSynaptic = False
                 sm.N = src.variables['N'].get_value()
             for varname in obj.record_variables:
-                if src.variables[varname] in itervalues(defaultclock.variables):
+                if src.variables[varname] in defaultclock.variables.values():
                     raise NotImplementedError('Recording the time t or the '
                                               'timestep dt is currently not '
                                               'supported in Brian2GeNN')
@@ -1608,12 +1629,71 @@ class GeNNDevice(CPPStandaloneDevice):
                     logger.warn(
                         "variable '%s' is a constant - not monitoring" % varname)
                 elif varname not in self.groupDict[sm.monitored].variables:
-                    logger.warn(
-                        "variable '%s' is unused - not monitoring" % varname)
+                    # Check that the variable is also not updated by any run_regularly operation
+                    run_regularly_objects = {o.name: o for o in self.net_objects
+                                             if '_run_regularly' in o.name}
+                    updated = False
+                    for codeobj_name, read_write in self.run_regularly_read_write.items():
+                        if (
+                                varname in read_write['write'] and
+                                run_regularly_objects[codeobj_name].owner.name == sm.monitored
+                        ):
+                            updated = True
+                            break
+
+                    if updated:
+                        sm.variables.append(varname)
+                    else:
+                        raise NotImplementedError("variable '%s' is unused - cannot monitor it" % varname)
                 else:
                     sm.variables.append(varname)
+            if obj.clock.name != 'defaultclock':
+                obj_dt = obj.clock.dt_
+                source_dt = src.dt_[:]
+                if obj_dt < source_dt:
+                    raise NotImplementedError(
+                        'Brian2GeNN does not support StateMonitors '
+                        'with a dt smaller than the dt of the '
+                        'monitored object')
+                dt_mismatch = abs(((obj_dt + source_dt / 2) % source_dt) - source_dt / 2)
+                if dt_mismatch > 1e-4 * source_dt:
+                    raise NotImplementedError(
+                        'Brian2GeNN does not support StateMonitors '
+                        'with a dt that is not a multiple of the dt of the '
+                        'monitored object.')
+                sm.step = int(obj_dt / source_dt + 0.5)
 
             self.state_monitor_models.append(sm)
+
+    def consolidate_pull_operations(self, run_regularly_operations):
+        models_start = defaultdict(list)
+        models_end = defaultdict(list)
+        for sm in self.state_monitor_models:
+            if sm.when == 'start':
+                for varname in sm.variables:
+                    # Do not pull variables that are only updated in run_regularly
+                    if varname in self.groupDict[sm.monitored].variables:
+                        models_start[f'{varname}{sm.monitored}'].append(sm.step)
+            else:
+                for varname in sm.variables:
+                    if varname in self.groupDict[sm.monitored].variables:
+                        models_end[f'{varname}{sm.monitored}'].append(sm.step)
+        for op in run_regularly_operations:
+            for varname in op['read']:
+                if varname not in ['t', 'dt']:
+                    owner_name = op['owner'].variables[varname].owner.name
+                    models_start[f'{varname}{owner_name}'].append(op['step'])
+        # Shortcut: If a state is pulled on every turn, no need to list all steps
+        models_start = {key: [1] if 1 in val else sorted(set(val))
+                        for key, val in models_start.items()}
+        models_end = {key: [1] if 1 in val else sorted(set(val))
+                      for key, val in models_end.items()}
+        # Shortcut: If start or end pulls on every turn, pulling on start is enough.
+        for key, val in models_start.items():
+            if (key in models_end) and (val[0] == 1 or models_end[key][0] == 1):
+                models_end.pop(key)
+                models_start[key] = [1]
+        return models_start, models_end
 
     def generate_model_source(self, writer, main_lines, use_GPU):
         synapses_classes_tmp = CPPStandaloneCodeObject.templater.synapses_classes(None, None)
@@ -1631,7 +1711,7 @@ class GeNNDevice(CPPStandaloneDevice):
             if ('_synapses_create_' not in line) and ('monitor' not in line):
                 dry_main_lines.append(line)
         codeobj_inc= []
-        for codeobj in itervalues(self.code_objects):
+        for codeobj in self.code_objects.values():
             if ('group_variable' in codeobj.name):
                 codeobj_inc.append('#include "code_objects/'+codeobj.name+'.cpp"')
         model_tmp = GeNNCodeObject.templater.model(None, None,
@@ -1647,7 +1727,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                    codeobj_inc=codeobj_inc,
                                                    dtDef=self.dtDef,
                                                    profiled=self.enable_profiling,
-                                                   precision=precision
+                                                   precision=precision,
+                                                   header_files=prefs['codegen.cpp.headers']
                                                    )
         writer.write('magicnetwork_model.cpp', model_tmp)
 
@@ -1721,6 +1802,7 @@ class GeNNDevice(CPPStandaloneDevice):
         run_reg_state_monitor_operations = [(is_state_mon, obj)
                                             for _, _, is_state_mon, obj
                                             in sorted(run_reg_state_monitor_operations)]
+        vars_to_pull_for_start, vars_to_pull_for_end = self.consolidate_pull_operations(run_regularly_operations)
         engine_tmp = GeNNCodeObject.templater.engine(None, None,
                                                      neuron_models=self.neuron_models,
                                                      spikegenerator_models=self.spikegenerator_models,
@@ -1730,7 +1812,10 @@ class GeNNDevice(CPPStandaloneDevice):
                                                      state_monitor_models=self.state_monitor_models,
                                                      run_regularly_operations=run_regularly_operations,
                                                      maximum_run_time=maximum_run_time,
-                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations
+                                                     run_reg_state_monitor_operations=run_reg_state_monitor_operations,
+                                                     vars_to_pull_for_start=vars_to_pull_for_start,
+                                                     vars_to_pull_for_end=vars_to_pull_for_end,
+                                                     groupDict=self.groupDict
                                                      )
         writer.write('engine.*', engine_tmp)
 
@@ -1753,7 +1838,7 @@ class GeNNDevice(CPPStandaloneDevice):
                                 synapses, writer):
         # ------------------------------------------------------------------------------
         # create the objects.cpp and objects.h code
-        the_objects = list(itervalues(self.code_objects))
+        the_objects = list(self.code_objects.values())
         arr_tmp = GeNNUserCodeObject.templater.objects(
             None, None,
             array_specs=self.arrays,
@@ -1775,7 +1860,7 @@ class GeNNDevice(CPPStandaloneDevice):
 
     def copy_source_files(self, writer, directory):
         # Copies brianlib, spikequeue and randomkit
-        super(GeNNDevice, self).copy_source_files(writer, directory)
+        super().copy_source_files(writer, directory)
 
         # Copy the b2glib directory
         b2glib_dir = os.path.join(
@@ -1805,14 +1890,14 @@ class GeNNDevice(CPPStandaloneDevice):
                 self.enable_profiling = True
         if kwds:
             logger.warn(('Unsupported keyword argument(s) provided for run: '
-                         + '%s') % ', '.join(iterkeys(kwds)))
+                         + '%s') % ', '.join(kwds.keys()))
 
         if self.run_duration is not None:
             raise NotImplementedError(
                 'Only a single run statement is supported for the genn device.')
         self.run_duration = float(duration)
         for obj in net.objects:
-            if obj.clock.name != 'defaultclock' and not (obj.__class__ == CodeRunner):
+            if (obj.clock.name != 'defaultclock') and (obj.__class__ not in (CodeRunner, StateMonitor)):
                 raise NotImplementedError(
                     'Multiple clocks are not supported for the genn device')
 
@@ -1825,8 +1910,10 @@ class GeNNDevice(CPPStandaloneDevice):
         print('running brian code generation ...')
 
         self.net = net
-
-        super(GeNNDevice, self).network_run(net=net, duration=duration,
+        # We need to store all objects, since MagicNetwork.after_run will clear
+        # Network.objects to avoid memory leaks
+        self.net_objects = _get_all_objects(self.net.objects)
+        super().network_run(net=net, duration=duration,
                                             report=report,
                                             report_period=report_period,
                                             namespace=namespace,

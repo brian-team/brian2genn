@@ -1,0 +1,77 @@
+name: Test against latest dependencies
+
+on:
+  schedule:
+    - cron:  '25 5 * * SUN'
+  workflow_dispatch:
+
+jobs:
+  get_python_versions:
+    name: "Determine Python versions"
+    runs-on: ubuntu-latest
+    outputs:
+      min-python: ${{ steps.nep29.outputs.min-python }}
+      max-python: ${{ steps.nep29.outputs.max-python }}
+    steps:
+      - name: "calculate versions according to NEP29"
+        id: nep29
+        uses: mstimberg/github-calc-nep29@v0.5
+        with:
+          token: ${{ secrets.GITHUB_TOKEN }}
+  
+  testing:
+    needs: [get_python_versions]
+    name: "Python ${{ matrix.python-version }} on ${{ matrix.os }} (32bit: ${{ matrix.float_dtype_32 }})"
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+        float_dtype_32: [false, true]
+        python-version: ["${{ needs.get_python_versions.outputs.max-python }}"]
+
+    defaults:
+      run:
+        shell: bash -l {0}
+    steps:
+      - name: Checkout Repository
+        uses: actions/checkout@v3
+        with:
+          fetch-depth: 1
+
+      - name: Setup Conda and Python
+        uses: conda-incubator/setup-miniconda@v2
+        with:
+          auto-update-conda: true
+          auto-activate-base: false
+          channels: conda-forge,defaults
+          channel-priority: true
+          activate-environment: 'test_env'
+          python-version: ${{ matrix.python-version }}
+
+      - name: Install GeNN
+        run: |
+          # clone GeNN from github
+          git clone --depth=1 --no-single-branch https://github.com/genn-team/genn.git ../genn
+          cd ../genn
+          echo "GENN_PATH=$(pwd)" >> "$GITHUB_ENV"
+
+      - name: Install Brian2 and dependencies
+        run: |
+          conda install -n test_env --quiet --yes -c conda-forge pip
+          conda activate test_env
+          python -m pip install --pre pytest cython sympy pyparsing numpy jinja2 scipy sphinx brian2
+          python -m pip install .
+
+      - name: Run Tests
+        run: |
+          cd  $GITHUB_WORKSPACE/.. # move out of the workspace to avoid direct import
+          if [ $FLOAT_DTYPE_32 == 'true' ]; then
+            python -Wd $GITHUB_WORKSPACE/scripts/run_brian_tests_CPU_32bit.py
+          else
+            python -Wd $GITHUB_WORKSPACE/scripts/run_brian_tests_CPU.py
+          fi
+        env:
+          DEPRECATION_ERROR: true
+          AGENT_OS: ${{runner.os}}
+          FLOAT_DTYPE_32: ${{ matrix.float_dtype_32 }}

@@ -5,7 +5,7 @@ import os
 
 from brian2.core.preferences import *
 
-class DeprecatedValidator(object):
+class DeprecatedValidator:
     '''
     'Validator' for deprecated preferences
     

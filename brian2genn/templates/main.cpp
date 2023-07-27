@@ -40,7 +40,7 @@ int main(int argc, char *argv[])
   name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
 
-  fprintf(stderr, "# DT %f \n", DT);
+  fprintf(stderr, "# DT %g \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
   {{'\n'.join(code_lines['before_start'])|autoindent}}
@@ -129,9 +129,9 @@ int main(int argc, char *argv[])
 
   t= 0.;
   void *devPtr;
-  {{'\n'.join(code_lines['before_run'])|autoindent}}
+  {{'\n'.join(code_lines['before_network_run'])|autoindent}}
   eng.run(totalTime); // run for the full duration
-  {{'\n'.join(code_lines['after_run'])|autoindent}}
+  {{'\n'.join(code_lines['after_network_run'])|autoindent}}
   cerr << t << " done ..." << endl;
   {% if profiled %}
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}

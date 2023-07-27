@@ -2,8 +2,6 @@
 The code generator for the "genn" language. This is mostly C++ with some specific
 decorators (mainly "__host__ __device__") to allow operation in a CUDA context.
 '''
-
-from six import iteritems
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
@@ -104,7 +102,7 @@ class GeNNCodeGenerator(CodeGenerator):
                               _floordiv_support_code + _pow_support_code)
 
     def __init__(self, *args, **kwds):
-        super(GeNNCodeGenerator, self).__init__(*args, **kwds)
+        super().__init__(*args, **kwds)
         self.c_data_type = c_data_type
 
     @property
@@ -126,7 +124,7 @@ class GeNNCodeGenerator(CodeGenerator):
             return device.get_array_name(var, access_data=False)
 
     def translate_expression(self, expr):
-        for varname, var in iteritems(self.variables):
+        for varname, var in self.variables.items():
             if isinstance(var, Function):
                 try:
                     impl_name = var.implementations[self.codeobj_class].name
@@ -179,9 +177,9 @@ class GeNNCodeGenerator(CodeGenerator):
     def translate_one_statement_sequence(self, statements, scalar=False):
         if len(statements) and self.template_name=='synapses':
             _, _, _, conditional_write_vars = self.arrays_helper(statements)
-            vars_pre = [k for k, v in iteritems(self.variable_indices) if v=='_presynaptic_idx']
-            vars_syn = [k for k, v in iteritems(self.variable_indices) if v=='_idx']
-            vars_post = [k for k, v in iteritems(self.variable_indices) if v=='_postsynaptic_idx']
+            vars_pre = [k for k, v in self.variable_indices.items() if v=='_presynaptic_idx']
+            vars_syn = [k for k, v in self.variable_indices.items() if v=='_idx']
+            vars_post = [k for k, v in self.variable_indices.items() if v=='_postsynaptic_idx']
             if '_pre_codeobject' in self.name:
                 post_write_var, statements = check_pre_code(self, statements,
                                                 vars_pre, vars_syn, vars_post,
@@ -213,7 +211,7 @@ class GeNNCodeGenerator(CodeGenerator):
         funccode = impl.get_code(self.owner)
         if isinstance(funccode, str):
             # Rename references to any dependencies if necessary
-            for dep_name, dep in iteritems(impl.dependencies):
+            for dep_name, dep in impl.dependencies.items():
                 dep_impl = dep.implementations[self.codeobj_class]
                 dep_impl_name = dep_impl.name
                 if dep_impl_name is None:
@@ -227,18 +225,18 @@ class GeNNCodeGenerator(CodeGenerator):
             # create global variables and assign to them in the main
             # code
             func_namespace = impl.get_namespace(self.owner) or {}
-            for ns_key, ns_value in iteritems(func_namespace):
+            for ns_key, ns_value in func_namespace.items():
                 if hasattr(ns_value, 'dtype'):
                     if ns_value.shape == ():
-                        raise NotImplementedError((
+                        raise NotImplementedError(
                         'Directly replace scalar values in the function '
-                        'instead of providing them via the namespace'))
+                        'instead of providing them via the namespace')
                     type_str = c_data_type(ns_value.dtype) + '*'
                 else:  # e.g. a function
                     type_str = 'py::object'
-                support_code.append('static {0} _namespace{1};'.format(type_str,
+                support_code.append('static {} _namespace{};'.format(type_str,
                                                                        ns_key))
-                pointers.append('_namespace{0} = {1};'.format(ns_key, ns_key))
+                pointers.append(f'_namespace{ns_key} = {ns_key};')
             support_code.append(deindent(funccode.get('support_code', '')))
             hash_defines.append(deindent(funccode.get('hashdefine_code', '')))
 
@@ -246,7 +244,7 @@ class GeNNCodeGenerator(CodeGenerator):
         dep_pointers = []
         dep_support_code = []
         if impl.dependencies is not None:
-            for dep_name, dep in iteritems(impl.dependencies):
+            for dep_name, dep in impl.dependencies.items():
                 if dep_name not in self.variables:  # do not add a dependency twice
                     self.variables[dep_name] = dep
                     dep_impl = dep.implementations[self.codeobj_class]
@@ -275,7 +273,7 @@ class GeNNCodeGenerator(CodeGenerator):
         # Again, do the import here to avoid a circular dependency.
         from brian2.devices.device import get_device
         device = get_device()
-        for varname, var in iteritems(self.variables):
+        for varname, var in self.variables.items():
             if isinstance(var, ArrayVariable):
                 # This is the "true" array name, not the restricted pointer.
                 array_name = device.get_array_name(var)
@@ -284,7 +282,7 @@ class GeNNCodeGenerator(CodeGenerator):
                     continue
                 if get_var_ndim(var, 1) > 1:
                     continue  # multidimensional (dynamic) arrays have to be treated differently
-                line = '{0}* {1} {2} = {3};'.format(self.c_data_type(var.dtype),
+                line = '{}* {} {} = {};'.format(self.c_data_type(var.dtype),
                                                     self.restrict,
                                                     pointer_name,
                                                     array_name)
@@ -295,7 +293,7 @@ class GeNNCodeGenerator(CodeGenerator):
         user_functions = []
         support_code = []
         hash_defines = []
-        for varname, variable in list(iteritems(self.variables)):
+        for varname, variable in list(self.variables.items()):
             if isinstance(variable, Function):
                 hd, ps, sc, uf = self._add_user_function(varname, variable)
                 user_functions.extend(uf)

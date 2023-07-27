@@ -6,6 +6,15 @@
 
 #include "objects.h"
 #include "objects.cpp"
+
+{% for header in header_files %}
+{% if header.startswith('"') or header.startswith('<') %}
+#include {{header}}
+{% else %}
+#include "{{header}}"
+{% endif %}
+{% endfor %}
+
 // We need these to compile objects.cpp, but they are only used in _write_arrays which we never call.
 double Network::_last_run_time = 0.0;
 double Network::_last_run_completed_fraction = 0.0;
