@@ -12,6 +12,6 @@ if __name__ == '__main__':
                           build_options={'use_GPU': False},
                           fail_for_not_implemented=False,
                           reset_preferences=False,
-                          additional_args=skip_args + ['--collect-only'])
+                          additional_args=skip_args)
     if not success:
         sys.exit(1)
