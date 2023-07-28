@@ -1,0 +1,5 @@
+# A list of test name prefixes to skip (usually because they are marked as "standalone-compatible", but make assumptions
+# that are only valid for C++ standalone).
+# Test names have to use pytest's syntax, i.e. "test_name.py::test_function". Note that these are *prefixes*, so all
+# tests with names starting with the given prefix will be skipped.
+test_network.py::test_profile

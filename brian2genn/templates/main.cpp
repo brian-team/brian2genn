@@ -37,9 +37,10 @@ int main(int argc, char *argv[])
   string cmd= std::string("mkdir ") +OutDir;
   system(cmd.c_str());
   string name;
+  {% if profiled %}
   name= OutDir+ "/"+ argv[1] + ".time";
   FILE *timef= fopen(name.c_str(),"a");
-
+  {% endif %}
   fprintf(stderr, "# DT %g \n", DT);
   fprintf(stderr, "# totalTime %f \n", totalTime);
 
@@ -133,10 +134,11 @@ int main(int argc, char *argv[])
   eng.run(totalTime); // run for the full duration
   {{'\n'.join(code_lines['after_network_run'])|autoindent}}
   cerr << t << " done ..." << endl;
-  {% if prefs['devices.genn.kernel_timing'] %}
+  {% if profiled %}
   {% for kt in ('neuronUpdateTime', 'presynapticUpdateTime', 'postsynapticUpdateTime', 'synapseDynamicsTime', 'initTime', 'initSparseTime') %}
   fprintf(timef,"%f ", {{kt}});
   {% endfor %}
+  fprintf(timef,"\n");
   {% endif %} 
 
   // get the final results from the GPU 

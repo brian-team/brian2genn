@@ -222,7 +222,7 @@ void modelDefinition(NNmodel &model)
     {% if precision == 'GENN_FLOAT' %}
     model.setTimePrecision(TimePrecision::DOUBLE);
     {% endif %}
-    {% if prefs['devices.genn.kernel_timing'] %}
+    {% if profiled %}
     model.setTiming(true);
     {% endif %}
     {% for neuron_model in neuron_models %}
