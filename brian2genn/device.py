@@ -1013,8 +1013,8 @@ class GeNNDevice(CPPStandaloneDevice):
                 check_call(["./main", "test", str(self.run_duration)],
                            cwd=directory)
         self.has_been_run = True
-        last_run_info = open(
-            os.path.join(directory, 'results/last_run_info.txt')).read()
+        with open(os.path.join(directory, 'results/last_run_info.txt')) as f:
+            last_run_info = f.read()
         self._last_run_time, self._last_run_completed_fraction = map(float,
                                                                      last_run_info.split())
 
@@ -1821,8 +1821,8 @@ class GeNNDevice(CPPStandaloneDevice):
         if os.sys.platform == 'win32':
             project_tmp = GeNNCodeObject.templater.project_vcxproj(None, None,
                                                                    source_files=self.source_files)
-            open(os.path.join(directory, 'project.vcxproj'), 'w').write(
-                project_tmp)
+            with open(os.path.join(directory, 'project.vcxproj'), 'w') as f:
+                f.write(project_tmp)
         else:
             compile_args_gcc = get_gcc_compile_args()
             linker_flags = ' '.join(prefs.codegen.cpp.extra_link_args)
@@ -1830,7 +1830,8 @@ class GeNNDevice(CPPStandaloneDevice):
                                                              source_files=self.source_files,
                                                              compiler_flags=compile_args_gcc,
                                                              linker_flags=linker_flags)
-            open(os.path.join(directory, 'Makefile'), 'w').write(makefile_tmp)
+            with open(os.path.join(directory, 'Makefile'), 'w') as f:
+                f.write(makefile_tmp)
 
     def generate_objects_source(self, arange_arrays, net, static_array_specs,
                                 synapses, writer):
