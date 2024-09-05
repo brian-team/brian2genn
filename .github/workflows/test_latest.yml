@@ -40,12 +40,10 @@ jobs:
           fetch-depth: 1
 
       - name: Setup Conda and Python
-        uses: conda-incubator/setup-miniconda@v2
+        uses: conda-incubator/setup-miniconda@v3
         with:
-          auto-update-conda: true
+          miniforge-version: "latest"
           auto-activate-base: false
-          channels: conda-forge,defaults
-          channel-priority: true
           activate-environment: 'test_env'
           python-version: ${{ matrix.python-version }}
 
