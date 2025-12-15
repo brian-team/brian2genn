@@ -32,7 +32,7 @@ jobs:
           python -m pip install --upgrade pip build wheel
           python -m build
       - name: store distribution 📦
-        uses: actions/upload-artifact@v4
+        uses: actions/upload-artifact@v6
         with:
           name: packages
           path: dist
