@@ -1881,7 +1881,7 @@ class GeNNDevice(CPPStandaloneDevice):
         if profile is None:
             self.kernel_timings = self.build_options.pop("profile", None)
             # If not set, check the deprecated preference
-            if profile is None and prefs.devices.genn.kernel_timing:
+            if self.kernel_timings is None and prefs.devices.genn.kernel_timing:
                 logger.warn("The preference 'devices.genn.kernel_timing' is "
                             "deprecated, please set profile=True instead")
                 self.kernel_timings = True
