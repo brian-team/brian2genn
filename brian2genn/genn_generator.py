@@ -2,10 +2,13 @@
 The code generator for the "genn" language. This is mostly C++ with some specific
 decorators (mainly "__host__ __device__") to allow operation in a CUDA context.
 '''
+import ast
+import numbers
+
 from brian2.utils.stringtools import (deindent, stripped_deindented_lines,
                                       word_substitute)
 from brian2.utils.logger import get_logger
-from brian2.parsing.rendering import CPPNodeRenderer
+from brian2.parsing.rendering import CPPNodeRenderer, get_node_value
 from brian2.core.functions import Function, DEFAULT_FUNCTIONS
 from brian2.core.preferences import prefs
 from brian2.core.variables import ArrayVariable
@@ -16,6 +19,48 @@ from brian2genn.insyn import check_pre_code
 logger = get_logger('brian2.devices.genn')
 
 __all__ = ['GeNNCodeGenerator']
+
+
+# Math functions that require floating-point arguments in CUDA
+# These functions don't have integer overloads in CUDA device code
+MATH_FUNCTIONS_NEEDING_CAST = {
+    'sin', 'cos', 'tan', 'sinh', 'cosh', 'tanh',
+    'exp', 'log', 'log10', 'sqrt', 'ceil', 'floor',
+    'asin', 'acos', 'atan', 'abs'
+}
+
+
+class GeNNNodeRenderer(CPPNodeRenderer):
+    '''
+    Custom C++ node renderer that adds type casting for math function arguments.
+
+    In CUDA, math functions like exp(), log(), etc. don't have integer overloads.
+    This renderer casts integer arguments to double to avoid compilation errors.
+
+    See: https://github.com/brian-team/brian2genn/issues/133
+    '''
+
+    def render_Call(self, node):
+        # Check if this is a math function that needs casting
+        func_name = node.func.id if hasattr(node.func, 'id') else None
+
+        if func_name in MATH_FUNCTIONS_NEEDING_CAST:
+            # Render arguments with casting for integer constants
+            rendered_args = []
+            for arg in node.args:
+                rendered_arg = self.render_node(arg)
+                # Check if it's an integer constant
+                if isinstance(arg, (ast.Num, ast.Constant)):
+                    value = get_node_value(arg)
+                    if isinstance(value, numbers.Integral):
+                        # Cast integer to double
+                        rendered_arg = f"(double)({rendered_arg})"
+                rendered_args.append(rendered_arg)
+
+            return f"{self.render_func(node.func)}({', '.join(rendered_args)})"
+
+        # Otherwise use parent implementation
+        return super().render_Call(node)
 
 
 def get_var_ndim(v, default_value=None):
@@ -135,7 +180,7 @@ class GeNNCodeGenerator(CodeGenerator):
                                                                      getattr(var, '__name__', None))))
                 if impl_name is not None:
                     expr = word_substitute(expr, {varname: impl_name})
-        return CPPNodeRenderer(auto_vectorise=self.auto_vectorise).render_expr(expr).strip()
+        return GeNNNodeRenderer(auto_vectorise=self.auto_vectorise).render_expr(expr).strip()
 
     def translate_statement(self, statement):
         var, op, expr, comment = (statement.var, statement.op,
